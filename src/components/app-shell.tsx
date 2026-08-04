@@ -32,9 +32,14 @@ export function AppShell({
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <aside className="w-52 shrink-0 bg-gray-900 text-gray-100 flex flex-col">
-        <div className="px-5 py-5 border-b border-gray-800">
-          <div className="text-lg font-semibold tracking-tight">Benchtop</div>
-          <div className="text-xs text-gray-400 mt-0.5">Launchtime Solutions</div>
+        <div className="px-4 py-4 border-b border-gray-800">
+          <img
+            src="/LaunchTime logo-transparent.png"
+            alt="LaunchTime Solutions"
+            className="w-full object-contain mb-2"
+            style={{ maxHeight: 56 }}
+          />
+          <div className="text-sm font-semibold tracking-tight text-white">Benchtop</div>
         </div>
 
         <nav className="flex-1 px-2 py-4 space-y-0.5">
