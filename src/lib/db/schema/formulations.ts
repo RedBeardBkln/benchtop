@@ -66,6 +66,16 @@ export const processSteps = pgTable('process_steps', {
 ])
 
 // Snapshot of project targets at iteration lock time (keeps old versions auditable)
+export const batchRuns = pgTable('batch_runs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),
+  batchMultiplier: numeric('batch_multiplier', { precision: 10, scale: 4 }).notNull().default('1'),
+  notes: text('notes'),
+  runAt: timestamp('run_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('batch_runs_formulation_idx').on(t.formulationId),
+])
+
 export const formulationTargets = pgTable('formulation_targets', {
   id: uuid('id').primaryKey().defaultRandom(),
   formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),

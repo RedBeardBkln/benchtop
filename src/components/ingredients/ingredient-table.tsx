@@ -12,11 +12,12 @@ import {
   type SortingState,
 } from '@tanstack/react-table'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Database, Trash2, ArrowUpDown } from 'lucide-react'
+import { Search, Plus, Database, Trash2, ArrowUpDown, Camera } from 'lucide-react'
 import { toast } from 'sonner'
 import type { IngredientListRow } from '@/lib/types'
 import { UsdaSearchDialog } from './usda-search-dialog'
 import { AddIngredientDialog } from './add-ingredient-dialog'
+import { PhotoIngredientDialog } from './photo-ingredient-dialog'
 
 const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
   usda:         { label: 'USDA', className: 'bg-blue-100 text-blue-700' },
@@ -35,6 +36,7 @@ export function IngredientTable() {
   const [sorting, setSorting] = useState<SortingState>([])
   const [usdaOpen, setUsdaOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [photoOpen, setPhotoOpen] = useState(false)
 
   const { data: ingredients = [], isLoading } = useQuery<IngredientListRow[]>({
     queryKey: ['ingredients'],
@@ -117,6 +119,19 @@ export function IngredientTable() {
           <span className="text-xs text-gray-400 font-mono">{info.getValue() ?? '—'}</span>
         ),
       }),
+      col.accessor('stockG', {
+        header: 'Stock',
+        cell: info => {
+          const v = info.getValue()
+          if (v == null) return <span className="text-xs text-gray-300">—</span>
+          const grams = parseFloat(v as string)
+          return (
+            <span className={`text-xs tabular-nums ${grams < 0 ? 'text-red-500 font-medium' : 'text-gray-600'}`}>
+              {grams.toFixed(0)} g
+            </span>
+          )
+        },
+      }),
       col.accessor('formulationCount', {
         header: ({ column }) => (
           <button
@@ -187,6 +202,13 @@ export function IngredientTable() {
                        rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
           >
             <Database size={14} /> Search USDA
+          </button>
+          <button
+            onClick={() => setPhotoOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-orange-200
+                       rounded-md bg-white hover:bg-orange-50 text-orange-600 transition-colors"
+          >
+            <Camera size={14} /> Scan photos
           </button>
           <button
             onClick={() => setAddOpen(true)}
@@ -262,6 +284,14 @@ export function IngredientTable() {
         onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ['ingredients'] })
           setAddOpen(false)
+        }}
+      />
+      <PhotoIngredientDialog
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ['ingredients'] })
+          setPhotoOpen(false)
         }}
       />
     </>

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         isIsolateOrConcentrate: ingredients.isIsolateOrConcentrate,
         naturallyDerived: ingredients.naturallyDerived,
         defaultCostPerKg: ingredients.defaultCostPerKg,
+        stockG: ingredients.stockG,
         notes: ingredients.notes,
         createdAt: ingredients.createdAt,
         updatedAt: ingredients.updatedAt,

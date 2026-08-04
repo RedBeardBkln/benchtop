@@ -24,7 +24,22 @@ const STANDARD_CERTS = [
   'Vegan', 'Gluten-Free', 'Fair Trade',
 ]
 
-type Tab = 'nutrients' | 'allergens' | 'certs' | 'subs' | 'docs' | 'formulations' | 'suppliers'
+type Tab = 'nutrients' | 'allergens' | 'certs' | 'subs' | 'docs' | 'formulations' | 'suppliers' | 'inventory'
+
+type InventoryData = {
+  id: string
+  name: string
+  stockG: string | null
+  depletions: Array<{
+    runId: string
+    runAt: string
+    formulationId: string
+    formulationName: string
+    batchMultiplier: number
+    depletedG: number
+    notes: string | null
+  }>
+}
 
 type SupplierLinkForm = {
   supplierId: string       // uuid or '__new__'
@@ -76,6 +91,10 @@ export function IngredientDetail({ id }: { id: string }) {
   const [docFile, setDocFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // ── Inventory ─────────────────────────────────────────────────────────
+  const [editingStock, setEditingStock] = useState(false)
+  const [stockEdit, setStockEdit] = useState('')
+
   // ── Suppliers ─────────────────────────────────────────────────────────
   const [showAddSupplier, setShowAddSupplier] = useState(false)
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null)
@@ -85,6 +104,12 @@ export function IngredientDetail({ id }: { id: string }) {
   const [linkForm, setLinkForm] = useState<SupplierLinkForm>(defaultLinkForm)
 
   // ── Queries ───────────────────────────────────────────────────────────
+  const { data: inventoryData, refetch: refetchInventory } = useQuery<InventoryData>({
+    queryKey: ['ingredient-inventory', id],
+    queryFn: () => fetch(`/api/ingredients/${id}/inventory`).then(r => r.json()),
+    enabled: activeTab === 'inventory',
+  })
+
   const { data: allSuppliers } = useQuery<Supplier[]>({
     queryKey: ['suppliers'],
     queryFn: () => fetch('/api/suppliers').then(r => r.json()),
@@ -153,7 +178,7 @@ export function IngredientDetail({ id }: { id: string }) {
   })
 
   const patchIngredientMutation = useMutation({
-    mutationFn: (fields: { name?: string; labelName?: string | null }) =>
+    mutationFn: (fields: { name?: string; labelName?: string | null; stockG?: number | null }) =>
       fetch(`/api/ingredients/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -586,6 +611,7 @@ export function IngredientDetail({ id }: { id: string }) {
           ['docs', `Documents (${data.docs?.length ?? 0})`],
           ['formulations', `Formulations (${data.formulations?.length ?? 0})`],
           ['suppliers', `Suppliers (${data.suppliers?.length ?? 0})`],
+          ['inventory', 'Inventory'],
         ] as const).map(([tab, label]) => (
           <button
             key={tab}
@@ -1365,6 +1391,103 @@ export function IngredientDetail({ id }: { id: string }) {
               <Plus size={12} /> Link another supplier
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── INVENTORY ── */}
+      {activeTab === 'inventory' && (
+        <div className="space-y-5">
+          {/* Stock level card */}
+          <div className="border border-gray-100 rounded-lg px-4 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-700">Current stock</span>
+              {!editingStock && (
+                <button
+                  onClick={() => {
+                    setStockEdit(data.stockG != null ? String(parseFloat(data.stockG)) : '')
+                    setEditingStock(true)
+                  }}
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+                >
+                  <Edit2 size={11} /> Edit
+                </button>
+              )}
+            </div>
+            {editingStock ? (
+              <form
+                className="flex items-center gap-2"
+                onSubmit={async e => {
+                  e.preventDefault()
+                  const val = stockEdit.trim()
+                  const stockGValue = val === '' ? null : parseFloat(val)
+                  patchIngredientMutation.mutate({ stockG: stockGValue }, {
+                    onSuccess: () => {
+                      setEditingStock(false)
+                      refetchInventory()
+                    },
+                  })
+                }}
+              >
+                <input
+                  autoFocus
+                  type="number"
+                  step="any"
+                  value={stockEdit}
+                  onChange={e => setStockEdit(e.target.value)}
+                  placeholder="Leave blank to disable tracking"
+                  className="w-44 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 tabular-nums"
+                />
+                <span className="text-xs text-gray-400">g</span>
+                <button type="submit" disabled={patchIngredientMutation.isPending}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                  <Save size={11} /> Save
+                </button>
+                <button type="button" onClick={() => setEditingStock(false)}
+                  className="px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50">
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <div>
+                {data.stockG != null ? (
+                  <span className={`text-2xl font-semibold tabular-nums ${parseFloat(data.stockG) < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+                    {parseFloat(data.stockG).toFixed(1)} g
+                  </span>
+                ) : (
+                  <span className="text-sm text-gray-400 italic">Tracking not enabled</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Depletion history */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Depletion history
+            </h3>
+            {!inventoryData ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : inventoryData.depletions.length === 0 ? (
+              <p className="text-sm text-gray-400">No batches recorded yet.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {inventoryData.depletions.map(d => (
+                  <div key={d.runId} className="flex items-center justify-between px-3 py-2.5 border border-gray-100 rounded-lg hover:bg-gray-50 text-sm">
+                    <div>
+                      <div className="font-medium text-gray-800">{d.formulationName}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {new Date(d.runAt).toLocaleDateString()} · ×{d.batchMultiplier}
+                        {d.notes && <span className="ml-2 text-gray-300">— {d.notes}</span>}
+                      </div>
+                    </div>
+                    <span className="text-red-500 font-medium tabular-nums text-sm">
+                      −{d.depletedG.toFixed(1)} g
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

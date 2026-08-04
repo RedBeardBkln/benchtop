@@ -119,6 +119,7 @@ const patchSchema = z.object({
   notes: z.string().max(2000).optional(),
   defaultCostPerKg: z.number().positive().nullable().optional(),
   moisturePct: z.number().min(0).max(100).nullable().optional(),
+  stockG: z.number().nullable().optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: Ctx) {
@@ -144,6 +145,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   if (d.notes !== undefined) updateValues.notes = d.notes
   if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null
   if (d.moisturePct !== undefined) updateValues.moisturePct = d.moisturePct?.toString() ?? null
+  if (d.stockG !== undefined) updateValues.stockG = d.stockG?.toString() ?? null
 
   try {
     const [row] = await db

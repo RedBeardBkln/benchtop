@@ -66,6 +66,7 @@ import { AddIngredientDialog } from '@/components/ingredients/add-ingredient-dia
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
 import { ReverseWizard } from '@/components/formulations/reverse-wizard'
 import { NfpDialog } from '@/components/formulations/nfp-dialog'
+import { CompleteBatchDialog } from '@/components/formulations/complete-batch-dialog'
 
 // Key nutrients to display as columns in the grid
 const GRID_NUTRIENT_NAMES = ['Energy', 'Protein', 'Total Fat', 'Total Carbohydrate', 'Dietary Fiber']
@@ -214,6 +215,7 @@ export function FormulationGrid({ id }: { id: string }) {
   const [editingName, setEditingName] = useState(false)
   const [nameEdit, setNameEdit] = useState('')
   const [showNfpDialog, setShowNfpDialog] = useState(false)
+  const [showCompleteBatch, setShowCompleteBatch] = useState(false)
   const initDoneRef = useRef(false)
 
   const { data, isLoading, error } = useQuery<FormulationDetail>({
@@ -684,6 +686,16 @@ export function FormulationGrid({ id }: { id: string }) {
                          text-sm rounded-md hover:bg-green-50 transition-colors"
             >
               <FileText size={13} /> NFP
+            </button>
+          )}
+          {lines.length > 0 && (
+            <button
+              onClick={() => setShowCompleteBatch(true)}
+              title="Record a completed batch — deplete ingredient stock"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-200 text-emerald-700
+                         text-sm rounded-md hover:bg-emerald-50 transition-colors"
+            >
+              <CheckCircle2 size={13} /> Complete batch
             </button>
           )}
           <button
@@ -1314,6 +1326,17 @@ export function FormulationGrid({ id }: { id: string }) {
           onClose={() => setShowNfpDialog(false)}
         />
       )}
+
+      <CompleteBatchDialog
+        open={showCompleteBatch}
+        formulationId={id}
+        formulationName={data.name}
+        onClose={() => setShowCompleteBatch(false)}
+        onCompleted={() => {
+          setShowCompleteBatch(false)
+          queryClient.invalidateQueries({ queryKey: ['ingredients'] })
+        }}
+      />
 
       {confirmAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

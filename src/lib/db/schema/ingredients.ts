@@ -18,6 +18,7 @@ export const ingredients = pgTable('ingredients', {
   naturallyDerived: boolean('naturally_derived').notNull().default(true),
   defaultCostPerKg: numeric('default_cost_per_kg', { precision: 10, scale: 4 }),
   moisturePct: numeric('moisture_pct', { precision: 6, scale: 4 }),
+  stockG: numeric('stock_g', { precision: 14, scale: 4 }),
   labelName: text('label_name'),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -29,6 +29,7 @@ import {
   formulationLines,
   processSteps,
   formulationTargets,
+  batchRuns,
 } from './formulations'
 import { reverseTargets, reverseCandidates } from './reverse'
 
@@ -127,6 +128,7 @@ export const formulationsRelations = relations(formulations, ({ one, many }) => 
   lines: many(formulationLines),
   processSteps: many(processSteps),
   targets: many(formulationTargets),
+  batchRuns: many(batchRuns),
 }))
 
 export const formulationLinesRelations = relations(formulationLines, ({ one }) => ({
@@ -155,6 +157,13 @@ export const formulationTargetsRelations = relations(formulationTargets, ({ one 
   nutrient: one(nutrients, {
     fields: [formulationTargets.nutrientId],
     references: [nutrients.id],
+  }),
+}))
+
+export const batchRunsRelations = relations(batchRuns, ({ one }) => ({
+  formulation: one(formulations, {
+    fields: [batchRuns.formulationId],
+    references: [formulations.id],
   }),
 }))
 
