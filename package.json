@@ -1,0 +1,52 @@
+{
+  "name": "benchtop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push --force",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/lib/db/seed.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@hookform/resolvers": "^5.4.0",
+    "@react-pdf/renderer": "^4.5.1",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.108.1",
+    "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-table": "^8.21.3",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "drizzle-orm": "^0.45.2",
+    "exceljs": "^4.4.0",
+    "glpk.js": "^5.0.0",
+    "html2canvas": "^1.4.1",
+    "javascript-lp-solver": "^1.0.3",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.17.0",
+    "next": "15.5.19",
+    "postgres": "^3.4.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hook-form": "^7.78.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
+  }
+}
