@@ -65,16 +65,57 @@ export function PhotoIngredientDialog({
     }
 
     setStep('analyzing')
-    const fd = new FormData()
-    if (labelPhoto) fd.append('label_photo', labelPhoto)
-    if (panelPhoto) fd.append('panel_photo', panelPhoto)
-    if (deckPhoto) fd.append('deck_photo', deckPhoto)
+
+    // Compress photos client-side before upload — phone camera shots can be 8-15 MB,
+    // which exceeds Vercel's 4.5 MB serverless request body limit.
+    const compress = (file: File): Promise<File> =>
+      new Promise(resolve => {
+        const img = new Image()
+        const url = URL.createObjectURL(file)
+        img.onload = () => {
+          URL.revokeObjectURL(url)
+          const MAX = 2048
+          let { width, height } = img
+          if (width > MAX || height > MAX) {
+            if (width > height) { height = Math.round((height * MAX) / width); width = MAX }
+            else { width = Math.round((width * MAX) / height); height = MAX }
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = width; canvas.height = height
+          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+          let quality = 0.88
+          const tryBlob = () => {
+            canvas.toBlob(blob => {
+              if (!blob) { resolve(file); return }
+              if (blob.size <= 1.4 * 1024 * 1024 || quality < 0.3) {
+                resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+              } else { quality -= 0.15; tryBlob() }
+            }, 'image/jpeg', quality)
+          }
+          tryBlob()
+        }
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+        img.src = url
+      })
 
     try {
+      const [label, panel, deck] = await Promise.all([
+        labelPhoto ? compress(labelPhoto) : null,
+        panelPhoto ? compress(panelPhoto) : null,
+        deckPhoto  ? compress(deckPhoto)  : null,
+      ])
+      const fd = new FormData()
+      if (label) fd.append('label_photo', label)
+      if (panel) fd.append('panel_photo', panel)
+      if (deck)  fd.append('deck_photo', deck)
+
       const r = await fetch('/api/ingredients/parse-photos', { method: 'POST', body: fd })
-      const body = await r.json()
-      if (!r.ok) throw new Error(body.error ?? 'Parsing failed')
-      setParsed(body)
+      const text = await r.text()
+      let body: Record<string, unknown>
+      try { body = JSON.parse(text) }
+      catch { throw new Error(r.status === 413 ? 'Photos too large — try fewer or smaller images' : `Server error ${r.status}`) }
+      if (!r.ok) throw new Error((body.error as string) ?? 'Parsing failed')
+      setParsed(body as unknown as ParsedIngredient)
       setStep('review')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Parsing failed')
