@@ -10,7 +10,7 @@ export default async function IngredientsPage() {
 
   return (
     <AppShell userEmail={user.email}>
-      <div className="px-8 py-8">
+      <div className="px-4 py-5 sm:px-8 sm:py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Ingredient Directory</h1>
           <p className="text-sm text-gray-500 mt-1">

@@ -181,11 +181,14 @@ export function IngredientTable() {
     getSortedRowModel: getSortedRowModel(),
   })
 
+  // Columns hidden on mobile to keep the table readable on small screens
+  const MOBILE_HIDDEN = new Set(['sourceType', 'isAbSpi', 'isIsolateOrConcentrate', 'fdcId', 'stockG', 'formulationCount'])
+
   return (
     <>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={globalFilter}
@@ -195,27 +198,29 @@ export function IngredientTable() {
                        focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setUsdaOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200
                        rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
           >
-            <Database size={14} /> Search USDA
+            <Database size={14} />
+            <span className="hidden sm:inline">Search </span>USDA
           </button>
           <button
             onClick={() => setPhotoOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-orange-200
                        rounded-md bg-white hover:bg-orange-50 text-orange-600 transition-colors"
           >
-            <Camera size={14} /> Scan photos
+            <Camera size={14} />
+            <span className="hidden sm:inline">Scan </span>photos
           </button>
           <button
             onClick={() => setAddOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600
                        text-white rounded-md hover:bg-blue-700 transition-colors"
           >
-            <Plus size={14} /> Add manually
+            <Plus size={14} /> Add
           </button>
         </div>
       </div>
@@ -229,39 +234,48 @@ export function IngredientTable() {
             No ingredients yet — search USDA or add manually.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              {table.getHeaderGroups().map(hg => (
-                <tr key={hg.id}>
-                  {hg.headers.map(header => (
-                    <th
-                      key={header.id}
-                      className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {table.getRowModel().rows.map(row => (
-                <tr
-                  key={row.id}
-                  onClick={() => router.push(`/ingredients/${row.original.id}`)}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  {row.getVisibleCells().map(cell => (
-                    <td key={cell.id} className="px-4 py-3">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                {table.getHeaderGroups().map(hg => (
+                  <tr key={hg.id}>
+                    {hg.headers.map(header => (
+                      <th
+                        key={header.id}
+                        className={`px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wide ${
+                          MOBILE_HIDDEN.has(header.column.id) ? 'hidden sm:table-cell' : ''
+                        }`}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {table.getRowModel().rows.map(row => (
+                  <tr
+                    key={row.id}
+                    onClick={() => router.push(`/ingredients/${row.original.id}`)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <td
+                        key={cell.id}
+                        className={`px-4 py-3 ${
+                          MOBILE_HIDDEN.has(cell.column.id) ? 'hidden sm:table-cell' : ''
+                        }`}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

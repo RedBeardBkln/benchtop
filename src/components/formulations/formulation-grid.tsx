@@ -553,7 +553,7 @@ export function FormulationGrid({ id }: { id: string }) {
     : 100
 
   return (
-    <div className="px-8 py-6 max-w-7xl">
+    <div className="px-3 py-4 sm:px-8 sm:py-6 max-w-7xl">
       {/* Back nav */}
       <button
         onClick={() => router.push(`/projects/${data.projectId}`)}
@@ -615,7 +615,7 @@ export function FormulationGrid({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isDirty && !isLocked && (
             <button
               onClick={() => saveMutation.mutate()}
@@ -710,7 +710,7 @@ export function FormulationGrid({ id }: { id: string }) {
       </div>
 
       {/* Settings bar */}
-      <div className="flex items-center gap-6 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-gray-500">Batch</span>
           <span className="font-medium text-gray-700">

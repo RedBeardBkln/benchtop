@@ -141,7 +141,7 @@ export function SupplierList() {
   })
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-4 py-5 sm:px-8 sm:py-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Suppliers</h1>

@@ -30,8 +30,8 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-52 shrink-0 bg-gray-900 text-gray-100 flex flex-col">
+      {/* Sidebar — desktop only */}
+      <aside className="hidden sm:flex w-52 shrink-0 bg-gray-900 text-gray-100 flex-col">
         <div className="px-4 py-4 border-b border-gray-800">
           <img
             src="/LaunchTime logo-transparent.png"
@@ -76,8 +76,34 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 min-w-0">{children}</main>
+      {/* Main content — extra bottom padding on mobile for the nav bar */}
+      <main className="flex-1 min-w-0 pb-16 sm:pb-0">{children}</main>
+
+      {/* Bottom nav — mobile only */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-gray-900 border-t border-gray-800 flex">
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs transition-colors ${
+                active ? 'text-white' : 'text-gray-400'
+              }`}
+            >
+              <Icon size={20} />
+              {label}
+            </Link>
+          )
+        })}
+        <button
+          onClick={signOut}
+          className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs text-gray-400"
+        >
+          <LogOut size={20} />
+          Sign out
+        </button>
+      </nav>
     </div>
   )
 }

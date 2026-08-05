@@ -18,8 +18,8 @@ export function ProjectList() {
 
   return (
     <>
-      <div className="px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="px-4 py-5 sm:px-8 sm:py-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
             <p className="text-sm text-gray-500 mt-1">Formulation projects</p>
@@ -52,10 +52,10 @@ export function ProjectList() {
               <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Project</th>
-                  <th className="px-4 py-3 text-left font-medium">Client</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">Client</th>
                   <th className="px-4 py-3 text-left font-medium">Formulations</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Updated</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">Status</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -66,9 +66,9 @@ export function ProjectList() {
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{p.client ?? '—'}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-gray-500">{p.client ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500">{p.formulationCount}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden sm:table-cell px-4 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                         p.status === 'active'
                           ? 'bg-green-100 text-green-700'
@@ -77,7 +77,7 @@ export function ProjectList() {
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 tabular-nums">
+                    <td className="hidden sm:table-cell px-4 py-3 text-gray-400 tabular-nums">
                       {new Date(p.updatedAt).toLocaleDateString()}
                     </td>
                   </tr>
