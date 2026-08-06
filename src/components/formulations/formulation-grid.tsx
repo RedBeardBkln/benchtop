@@ -64,6 +64,7 @@ function fmtRequirement(t: ProjectTarget): string {
 }
 import { AddIngredientDialog } from '@/components/ingredients/add-ingredient-dialog'
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
+import { SwapSourceDialog, LibraryPickerDialog } from '@/components/formulations/swap-source-dialog'
 import { ReverseWizard } from '@/components/formulations/reverse-wizard'
 import { NfpDialog } from '@/components/formulations/nfp-dialog'
 import { CompleteBatchDialog } from '@/components/formulations/complete-batch-dialog'
@@ -216,6 +217,9 @@ export function FormulationGrid({ id }: { id: string }) {
   const [nameEdit, setNameEdit] = useState('')
   const [showNfpDialog, setShowNfpDialog] = useState(false)
   const [showCompleteBatch, setShowCompleteBatch] = useState(false)
+  const [showSwapSourceDialog, setShowSwapSourceDialog] = useState(false)
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false)
+  const [swapIngredientName, setSwapIngredientName] = useState('')
   const initDoneRef = useRef(false)
 
   const { data, isLoading, error } = useQuery<FormulationDetail>({
@@ -1267,7 +1271,14 @@ export function FormulationGrid({ id }: { id: string }) {
         onClose={() => setShowManualDialog(false)}
         onCreated={(id) => {
           setShowManualDialog(false)
-          if (id) addIngredientById(id)
+          if (id) {
+            if (swapTargetKey) {
+              swapLineById(swapTargetKey, id)
+              setSwapTargetKey(null)
+            } else {
+              addIngredientById(id)
+            }
+          }
         }}
       />
       <UsdaSearchDialog
@@ -1283,6 +1294,24 @@ export function FormulationGrid({ id }: { id: string }) {
           setSwapTargetKey(null)
         }}
       />
+      <SwapSourceDialog
+        open={showSwapSourceDialog}
+        ingredientName={swapIngredientName}
+        onClose={() => { setShowSwapSourceDialog(false); setSwapTargetKey(null) }}
+        onLibrary={() => { setShowSwapSourceDialog(false); setShowLibraryPicker(true) }}
+        onUsda={() => { setShowSwapSourceDialog(false); setShowUsdaDialog(true) }}
+        onManual={() => { setShowSwapSourceDialog(false); setShowManualDialog(true) }}
+      />
+      <LibraryPickerDialog
+        open={showLibraryPicker}
+        excludeId={sidebarIngredientId}
+        onClose={() => { setShowLibraryPicker(false); setSwapTargetKey(null) }}
+        onSelect={(id) => {
+          setShowLibraryPicker(false)
+          if (swapTargetKey) swapLineById(swapTargetKey, id)
+          setSwapTargetKey(null)
+        }}
+      />
 
       {sidebarIngredientId && sidebarLineKey && (
         <IngredientSidePanel
@@ -1294,8 +1323,9 @@ export function FormulationGrid({ id }: { id: string }) {
             setSidebarIngredientId(null)
             setSidebarLineKey(null)
             setSwapTargetKey(lk)
+            setSwapIngredientName(name)
             setUsdaInitialQuery(name)
-            setShowUsdaDialog(true)
+            setShowSwapSourceDialog(true)
           }}
         />
       )}

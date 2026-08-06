@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   ArrowLeft, ExternalLink, Check, AlertTriangle,
-  Plus, X, Edit2, Save, Upload, FileText, Trash2, Eye, Sparkles, Truck, Star,
+  Plus, X, Edit2, Save, Upload, FileText, Trash2, Eye, Sparkles, Truck, Star, Package,
 } from 'lucide-react'
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
 
@@ -563,6 +563,12 @@ export function IngredientDetail({ id }: { id: string }) {
             <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 uppercase">
               {data.sourceType}
             </span>
+            {data.stockG != null && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">
+                <Package size={10} />
+                {parseFloat(data.stockG).toFixed(0)} g on hand
+              </span>
+            )}
             {data.isAbSpi && (
               <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
                 AB SPI

@@ -12,12 +12,13 @@ import {
   type SortingState,
 } from '@tanstack/react-table'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Database, Trash2, ArrowUpDown, Camera } from 'lucide-react'
+import { Search, Plus, Database, Trash2, ArrowUpDown, Camera, Edit2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { IngredientListRow } from '@/lib/types'
 import { UsdaSearchDialog } from './usda-search-dialog'
 import { AddIngredientDialog } from './add-ingredient-dialog'
 import { PhotoIngredientDialog } from './photo-ingredient-dialog'
+import { EditIngredientDialog } from './edit-ingredient-dialog'
 
 const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
   usda:         { label: 'USDA', className: 'bg-blue-100 text-blue-700' },
@@ -37,6 +38,7 @@ export function IngredientTable() {
   const [usdaOpen, setUsdaOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [photoOpen, setPhotoOpen] = useState(false)
+  const [editingIngredient, setEditingIngredient] = useState<{ id: string; name: string; stockG: string | null } | null>(null)
 
   const { data: ingredients = [], isLoading } = useQuery<IngredientListRow[]>({
     queryKey: ['ingredients'],
@@ -152,18 +154,34 @@ export function IngredientTable() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <button
-            onClick={e => {
-              e.stopPropagation()
-              if (confirm(`Delete "${row.original.name}"?`)) {
-                deleteMutation.mutate(row.original.id)
-              }
-            }}
-            className="p-1 text-gray-300 hover:text-red-500 transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={14} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                setEditingIngredient({
+                  id: row.original.id,
+                  name: row.original.name,
+                  stockG: row.original.stockG as string | null,
+                })
+              }}
+              className="p-1 text-gray-300 hover:text-blue-500 transition-colors"
+              title="Edit"
+            >
+              <Edit2 size={14} />
+            </button>
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                if (confirm(`Delete "${row.original.name}"?`)) {
+                  deleteMutation.mutate(row.original.id)
+                }
+              }}
+              className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+              title="Delete"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
         ),
       }),
     ],
@@ -307,6 +325,13 @@ export function IngredientTable() {
           queryClient.invalidateQueries({ queryKey: ['ingredients'] })
           setPhotoOpen(false)
         }}
+      />
+      <EditIngredientDialog
+        open={editingIngredient !== null}
+        ingredientId={editingIngredient?.id ?? null}
+        currentName={editingIngredient?.name ?? ''}
+        currentStockG={editingIngredient?.stockG ?? null}
+        onClose={() => setEditingIngredient(null)}
       />
     </>
   )
