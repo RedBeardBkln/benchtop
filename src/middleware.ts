@@ -33,7 +33,12 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = pathname.startsWith('/forgot-password')
     || pathname.startsWith('/reset-password')
     || pathname.startsWith('/auth/confirm')
-  const isPublicAsset = pathname.startsWith('/_next') || pathname.startsWith('/favicon')
+  const isPublicAsset = pathname.startsWith('/_next')
+    || pathname.startsWith('/favicon')
+    || pathname === '/manifest.webmanifest'
+    || pathname.startsWith('/icons/')
+    || pathname === '/apple-icon'
+    || pathname === '/icon'
 
   if (!user && !isLoginRoute && !isPublicRoute && !isPublicAsset) {
     if (pathname.startsWith('/api/')) {
