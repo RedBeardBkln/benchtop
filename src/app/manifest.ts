@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Food Formulation Platform',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0C2B24',
-    theme_color: '#0C2B24',
+    background_color: '#17253A',
+    theme_color: '#17253A',
     icons: [
       {
         src: '/icons/192',

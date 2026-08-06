@@ -32,14 +32,14 @@ export function AppShell({
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar — desktop only */}
       <aside className="hidden sm:flex w-52 shrink-0 bg-gray-900 text-gray-100 flex-col">
-        <div className="px-4 py-4 border-b border-gray-800">
+        <div className="px-4 py-4 border-b border-gray-800 flex items-center gap-3">
           <img
-            src="/LaunchTime logo-transparent.png"
-            alt="LaunchTime Solutions"
-            className="w-full object-contain mb-2"
-            style={{ maxHeight: 56 }}
+            src="/benchtop-mark.svg"
+            alt="benchtop"
+            className="shrink-0"
+            style={{ width: 32, height: 40 }}
           />
-          <div className="text-sm font-semibold tracking-tight text-white">Benchtop</div>
+          <span className="text-sm font-semibold tracking-wide text-white">benchtop</span>
         </div>
 
         <nav className="flex-1 px-2 py-4 space-y-0.5">
