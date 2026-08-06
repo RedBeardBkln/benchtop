@@ -1,0 +1,7 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <rect width="512" height="512" rx="96" fill="#0C2B24"/>
+  <!-- Top ring (teal) -->
+  <circle cx="256" cy="167" r="95" stroke="#3CAF8E" stroke-width="44"/>
+  <!-- Bottom ring (amber) -->
+  <circle cx="256" cy="332" r="108" stroke="#E8A030" stroke-width="44"/>
+</svg>

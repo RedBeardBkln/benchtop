@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { Providers } from '@/lib/providers'
@@ -17,6 +17,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Benchtop — Food Formulation Platform',
   description: 'Internal R&D formulation tool for Alpine Bio',
+  appleWebApp: {
+    capable: true,
+    title: 'benchtop',
+    statusBarStyle: 'black-translucent',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F5F1EC' },
+    { media: '(prefers-color-scheme: dark)', color: '#0C2B24' },
+  ],
 }
 
 export default function RootLayout({
