@@ -13,6 +13,7 @@ import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt, type NutrientResult } from '@/lib/formulation-calc'
 import type { SolverResult } from '@/lib/solver'
 import { IngredientSidePanel } from '@/components/ingredients/ingredient-side-panel'
+import { readErrorMessage } from '@/lib/utils'
 
 type ValidationStatus = 'pass' | 'fail' | 'warn' | 'no-data'
 
@@ -309,7 +310,7 @@ export function FormulationGrid({ id }: { id: string }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
-      }).then(async r => { if (!r.ok) throw new Error((await r.json()).error ?? 'Failed'); return r.json() }),
+      }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() }),
     onSuccess: (_row, status) => {
       queryClient.invalidateQueries({ queryKey: ['formulation', id] })
       setConfirmAction(null)
@@ -324,7 +325,7 @@ export function FormulationGrid({ id }: { id: string }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived: true }),
-      }).then(async r => { if (!r.ok) throw new Error((await r.json()).error ?? 'Failed'); return r.json() }),
+      }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() }),
     onSuccess: () => {
       setConfirmAction(null)
       toast.success('Formulation archived')
@@ -395,7 +396,7 @@ export function FormulationGrid({ id }: { id: string }) {
           })),
         }),
       }).then(async r => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Save failed')
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Save failed'))
       })
 
       // Also save formulation settings
@@ -567,7 +568,7 @@ export function FormulationGrid({ id }: { id: string }) {
       </button>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1 min-w-0">
           {editingName ? (
             <form
@@ -988,34 +989,36 @@ export function FormulationGrid({ id }: { id: string }) {
                 return (
                   <div key={cat}>
                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{cat}</h3>
-                    <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
-                      <thead className="bg-gray-50 text-xs text-gray-500">
-                        <tr>
-                          <th className="px-4 py-2 text-left font-medium">Nutrient</th>
-                          <th className="px-4 py-2 text-right font-medium">Per 100 g</th>
-                          {servingSizeG && parseFloat(servingSizeG) > 0 && (
-                            <th className="px-4 py-2 text-right font-medium">Per serving</th>
-                          )}
-                          <th className="px-4 py-2 text-right font-medium text-gray-400">Unit</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {rows.map(r => (
-                          <tr key={r.nutrientId} className="hover:bg-gray-50">
-                            <td className="px-4 py-1.5 text-gray-800">{r.name}</td>
-                            <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
-                              {formatAmt(r.perFinished100g, r.unit)}
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
+                        <thead className="bg-gray-50 text-xs text-gray-500">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-medium">Nutrient</th>
+                            <th className="px-4 py-2 text-right font-medium">Per 100 g</th>
                             {servingSizeG && parseFloat(servingSizeG) > 0 && (
-                              <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
-                                {r.perServing != null ? formatAmt(r.perServing, r.unit) : '—'}
-                              </td>
+                              <th className="px-4 py-2 text-right font-medium">Per serving</th>
                             )}
-                            <td className="px-4 py-1.5 text-right text-gray-400">{r.unit}</td>
+                            <th className="px-4 py-2 text-right font-medium text-gray-400">Unit</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {rows.map(r => (
+                            <tr key={r.nutrientId} className="hover:bg-gray-50">
+                              <td className="px-4 py-1.5 text-gray-800">{r.name}</td>
+                              <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
+                                {formatAmt(r.perFinished100g, r.unit)}
+                              </td>
+                              {servingSizeG && parseFloat(servingSizeG) > 0 && (
+                                <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
+                                  {r.perServing != null ? formatAmt(r.perServing, r.unit) : '—'}
+                                </td>
+                              )}
+                              <td className="px-4 py-1.5 text-right text-gray-400">{r.unit}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )
               })}
@@ -1057,40 +1060,42 @@ export function FormulationGrid({ id }: { id: string }) {
                 {fails > 0  && <span className="text-red-600">{fails} fail</span>}
               </span>
             </div>
-            <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
-              <thead className="bg-gray-50 text-xs text-gray-500">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">Nutrient</th>
-                  <th className="px-4 py-2 text-left font-medium">Requirement</th>
-                  <th className="px-4 py-2 text-right font-medium">Actual</th>
-                  <th className="px-4 py-2 text-center font-medium w-16">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {validations.map(({ t, status, actual }, i) => (
-                  <tr key={i} className={
-                    status === 'fail' ? 'bg-red-50' :
-                    status === 'warn' ? 'bg-yellow-50' : ''
-                  }>
-                    <td className="px-4 py-2 font-medium text-gray-800">{t.label || t.nutrient}</td>
-                    <td className="px-4 py-2 text-gray-500 text-xs">
-                      {fmtRequirement(t)}
-                      {' '}
-                      <span className="text-gray-400">/ {t.basis === 'per_100g' ? '100 g' : 'serving'}</span>
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-gray-700">
-                      {actual != null
-                        ? `${formatAmt(actual, t.unit)} ${t.unit}`
-                        : <span className="text-gray-300 text-xs">
-                            {t.basis === 'per_serving' && !serving ? 'set serving size' : '—'}
-                          </span>
-                      }
-                    </td>
-                    <td className="px-4 py-2 flex justify-center">{statusIcon(status)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
+                <thead className="bg-gray-50 text-xs text-gray-500">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Nutrient</th>
+                    <th className="px-4 py-2 text-left font-medium">Requirement</th>
+                    <th className="px-4 py-2 text-right font-medium">Actual</th>
+                    <th className="px-4 py-2 text-center font-medium w-16">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {validations.map(({ t, status, actual }, i) => (
+                    <tr key={i} className={
+                      status === 'fail' ? 'bg-red-50' :
+                      status === 'warn' ? 'bg-yellow-50' : ''
+                    }>
+                      <td className="px-4 py-2 font-medium text-gray-800">{t.label || t.nutrient}</td>
+                      <td className="px-4 py-2 text-gray-500 text-xs">
+                        {fmtRequirement(t)}
+                        {' '}
+                        <span className="text-gray-400">/ {t.basis === 'per_100g' ? '100 g' : 'serving'}</span>
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-gray-700">
+                        {actual != null
+                          ? `${formatAmt(actual, t.unit)} ${t.unit}`
+                          : <span className="text-gray-300 text-xs">
+                              {t.basis === 'per_serving' && !serving ? 'set serving size' : '—'}
+                            </span>
+                        }
+                      </td>
+                      <td className="px-4 py-2 flex justify-center">{statusIcon(status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )
       })()}
@@ -1133,50 +1138,52 @@ export function FormulationGrid({ id }: { id: string }) {
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 Suggested Weights
               </h4>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-400">
-                    <th className="text-left font-medium pb-1.5">Ingredient</th>
-                    <th className="text-right font-medium pb-1.5 pr-2">Current %</th>
-                    <th className="text-right font-medium pb-1.5 pr-2">Suggested %</th>
-                    <th className="text-right font-medium pb-1.5 pr-2">New weight (g)</th>
-                    <th className="text-right font-medium pb-1.5">Δ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {lines.map(l => {
-                    const curPct = totalWeightG > 0 ? (l.weightG / totalWeightG) * 100 : 0
-                    const sugPct = solverResult.suggestedPcts[l.key] ?? curPct
-                    const delta = sugPct - curPct
-                    const newW = Math.round(((sugPct / 100) * totalWeightG) * 10) / 10
-                    return (
-                      <tr key={l.key} className={l.locked ? 'opacity-50' : ''}>
-                        <td className="py-1.5 text-gray-800">
-                          {l.ingredientName}
-                          {l.locked && <span className="ml-1 text-xs text-gray-400">(locked)</span>}
-                        </td>
-                        <td className="py-1.5 text-right tabular-nums text-gray-500 pr-2">
-                          {curPct.toFixed(1)}%
-                        </td>
-                        <td className="py-1.5 text-right tabular-nums font-semibold text-gray-900 pr-2">
-                          {sugPct.toFixed(1)}%
-                        </td>
-                        <td className="py-1.5 text-right tabular-nums text-gray-700 pr-2">
-                          {newW.toFixed(1)} g
-                        </td>
-                        <td className={`py-1.5 text-right tabular-nums text-xs ${
-                          Math.abs(delta) < 0.05 ? 'text-gray-300' :
-                          delta > 0 ? 'text-green-600' : 'text-red-500'
-                        }`}>
-                          {Math.abs(delta) < 0.05
-                            ? '—'
-                            : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}%`}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-gray-400">
+                      <th className="text-left font-medium pb-1.5">Ingredient</th>
+                      <th className="text-right font-medium pb-1.5 pr-2">Current %</th>
+                      <th className="text-right font-medium pb-1.5 pr-2">Suggested %</th>
+                      <th className="text-right font-medium pb-1.5 pr-2">New weight (g)</th>
+                      <th className="text-right font-medium pb-1.5">Δ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {lines.map(l => {
+                      const curPct = totalWeightG > 0 ? (l.weightG / totalWeightG) * 100 : 0
+                      const sugPct = solverResult.suggestedPcts[l.key] ?? curPct
+                      const delta = sugPct - curPct
+                      const newW = Math.round(((sugPct / 100) * totalWeightG) * 10) / 10
+                      return (
+                        <tr key={l.key} className={l.locked ? 'opacity-50' : ''}>
+                          <td className="py-1.5 text-gray-800">
+                            {l.ingredientName}
+                            {l.locked && <span className="ml-1 text-xs text-gray-400">(locked)</span>}
+                          </td>
+                          <td className="py-1.5 text-right tabular-nums text-gray-500 pr-2">
+                            {curPct.toFixed(1)}%
+                          </td>
+                          <td className="py-1.5 text-right tabular-nums font-semibold text-gray-900 pr-2">
+                            {sugPct.toFixed(1)}%
+                          </td>
+                          <td className="py-1.5 text-right tabular-nums text-gray-700 pr-2">
+                            {newW.toFixed(1)} g
+                          </td>
+                          <td className={`py-1.5 text-right tabular-nums text-xs ${
+                            Math.abs(delta) < 0.05 ? 'text-gray-300' :
+                            delta > 0 ? 'text-green-600' : 'text-red-500'
+                          }`}>
+                            {Math.abs(delta) < 0.05
+                              ? '—'
+                              : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}%`}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -1186,48 +1193,50 @@ export function FormulationGrid({ id }: { id: string }) {
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 Constraint Audit
               </h4>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-400">
-                    <th className="text-left font-medium pb-1.5">Target</th>
-                    <th className="text-left font-medium pb-1.5">Requirement</th>
-                    <th className="text-right font-medium pb-1.5 pr-2">Achieved</th>
-                    <th className="text-right font-medium pb-1.5 pr-2">Slack</th>
-                    <th className="text-center font-medium pb-1.5 w-14">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {solverResult.auditTrace.map((entry, i) => (
-                    <tr key={i} className={
-                      entry.status === 'violated' ? 'bg-red-50' :
-                      entry.status === 'binding'  ? 'bg-yellow-50/60' : ''
-                    }>
-                      <td className="py-1.5 font-medium text-gray-800">{entry.label}</td>
-                      <td className="py-1.5 text-gray-500 text-xs">{entry.requirement}</td>
-                      <td className="py-1.5 text-right tabular-nums text-gray-700 pr-2">
-                        {entry.achieved != null
-                          ? `${entry.achieved.toFixed(2)} ${entry.unit}`
-                          : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className={`py-1.5 text-right tabular-nums text-xs pr-2 ${
-                        entry.slack == null ? 'text-gray-300' :
-                        entry.slack < 0     ? 'text-red-500' :
-                        entry.slack < 0.05  ? 'text-yellow-600' : 'text-green-600'
-                      }`}>
-                        {entry.slack != null
-                          ? (entry.slack >= 0 ? `+${entry.slack.toFixed(2)}` : entry.slack.toFixed(2))
-                          : '—'}
-                      </td>
-                      <td className="py-1.5 flex justify-center">
-                        {entry.status === 'satisfied' && <CheckCircle2 size={13} className="text-green-500" />}
-                        {entry.status === 'binding'   && <AlertCircle  size={13} className="text-yellow-500" />}
-                        {entry.status === 'violated'  && <XCircle      size={13} className="text-red-500" />}
-                        {entry.status === 'no-data'   && <span className="text-gray-300 text-xs">—</span>}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-gray-400">
+                      <th className="text-left font-medium pb-1.5">Target</th>
+                      <th className="text-left font-medium pb-1.5">Requirement</th>
+                      <th className="text-right font-medium pb-1.5 pr-2">Achieved</th>
+                      <th className="text-right font-medium pb-1.5 pr-2">Slack</th>
+                      <th className="text-center font-medium pb-1.5 w-14">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {solverResult.auditTrace.map((entry, i) => (
+                      <tr key={i} className={
+                        entry.status === 'violated' ? 'bg-red-50' :
+                        entry.status === 'binding'  ? 'bg-yellow-50/60' : ''
+                      }>
+                        <td className="py-1.5 font-medium text-gray-800">{entry.label}</td>
+                        <td className="py-1.5 text-gray-500 text-xs">{entry.requirement}</td>
+                        <td className="py-1.5 text-right tabular-nums text-gray-700 pr-2">
+                          {entry.achieved != null
+                            ? `${entry.achieved.toFixed(2)} ${entry.unit}`
+                            : <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className={`py-1.5 text-right tabular-nums text-xs pr-2 ${
+                          entry.slack == null ? 'text-gray-300' :
+                          entry.slack < 0     ? 'text-red-500' :
+                          entry.slack < 0.05  ? 'text-yellow-600' : 'text-green-600'
+                        }`}>
+                          {entry.slack != null
+                            ? (entry.slack >= 0 ? `+${entry.slack.toFixed(2)}` : entry.slack.toFixed(2))
+                            : '—'}
+                        </td>
+                        <td className="py-1.5 flex justify-center">
+                          {entry.status === 'satisfied' && <CheckCircle2 size={13} className="text-green-500" />}
+                          {entry.status === 'binding'   && <AlertCircle  size={13} className="text-yellow-500" />}
+                          {entry.status === 'violated'  && <XCircle      size={13} className="text-red-500" />}
+                          {entry.status === 'no-data'   && <span className="text-gray-300 text-xs">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

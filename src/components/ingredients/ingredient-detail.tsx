@@ -9,6 +9,7 @@ import {
   Plus, X, Edit2, Save, Upload, FileText, Trash2, Eye, Sparkles, Truck, Star, Package,
 } from 'lucide-react'
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
+import { readErrorMessage } from '@/lib/utils'
 
 const PACK_UNITS = ['kg', 'g', 'lb', 'oz', 'mt', 'case', 'bag', 'drum', 'pail', 'each', 'L', 'gal']
 
@@ -184,7 +185,7 @@ export function IngredientDetail({ id }: { id: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
       }).then(async r => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Save failed')
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Save failed'))
         return r.json()
       }),
     onSuccess: () => { invalidate(); toast.success('Saved') },
@@ -201,7 +202,7 @@ export function IngredientDetail({ id }: { id: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }).then(async r => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Save failed')
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Save failed'))
       }),
     onSuccess: () => {
       invalidate()
@@ -268,9 +269,8 @@ export function IngredientDetail({ id }: { id: string }) {
       fd.append('file', file)
       fd.append('label', label)
       return fetch(`/api/ingredients/${id}/docs`, { method: 'POST', body: fd }).then(async r => {
-        const body = await r.json()
-        if (!r.ok) throw new Error(body.error ?? 'Upload failed')
-        return body
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Upload failed'))
+        return r.json()
       })
     },
     onSuccess: row => {
@@ -299,8 +299,8 @@ export function IngredientDetail({ id }: { id: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: form.newName.trim(), websiteUrl: form.newWebsite.trim() || null }),
         })
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to create supplier'))
         const s = await r.json()
-        if (!r.ok) throw new Error(s.error ?? 'Failed to create supplier')
         supplierId = s.id
       }
       const r = await fetch(`/api/ingredients/${id}/suppliers`, {
@@ -314,7 +314,7 @@ export function IngredientDetail({ id }: { id: string }) {
           isPreferred: form.isPreferred,
         }),
       })
-      if (!r.ok) throw new Error((await r.json()).error ?? 'Failed to link supplier')
+      if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to link supplier'))
       return r.json()
     },
     onSuccess: () => {
@@ -338,7 +338,7 @@ export function IngredientDetail({ id }: { id: string }) {
           costPerUnit: form.costPerUnit ? parseFloat(form.costPerUnit) : null,
           isPreferred: form.isPreferred,
         }),
-      }).then(async r => { if (!r.ok) throw new Error((await r.json()).error ?? 'Failed'); return r.json() }),
+      }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() }),
     onSuccess: () => {
       invalidate()
       setEditingLinkId(null)
@@ -452,7 +452,7 @@ export function IngredientDetail({ id }: { id: string }) {
   const customCerts = data.certs.filter(c => !STANDARD_CERTS.includes(c.cert))
 
   return (
-    <div className="px-8 py-8 max-w-5xl">
+    <div className="px-4 sm:px-8 py-6 sm:py-8 max-w-5xl">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6"
@@ -608,7 +608,8 @@ export function IngredientDetail({ id }: { id: string }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="overflow-x-auto mb-6">
+      <div className="flex border-b border-gray-200 min-w-max">
         {([
           ['nutrients', `Nutrients (${data.nutrients.length})`],
           ['allergens', `Allergens (${data.allergens.length})`],
@@ -631,6 +632,7 @@ export function IngredientDetail({ id }: { id: string }) {
             {label}
           </button>
         ))}
+      </div>
       </div>
 
       {/* ── NUTRIENTS ── */}
@@ -662,37 +664,39 @@ export function IngredientDetail({ id }: { id: string }) {
                       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                         {category}
                       </h3>
-                      <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
-                        <thead className="bg-gray-50 text-xs text-gray-500">
-                          <tr>
-                            <th className="px-4 py-2 text-left font-medium">Nutrient</th>
-                            <th className="px-4 py-2 text-right font-medium">Per 100 g</th>
-                            <th className="px-4 py-2 text-right font-medium">Unit</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-400">Source</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                          {rows.map(n => (
-                            <tr key={n.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-2 font-medium text-gray-800">{n.nutrient.name}</td>
-                              <td className="px-4 py-2 text-right tabular-nums text-gray-700">
-                                {parseFloat(n.amountPer100g).toLocaleString(undefined, {
-                                  maximumFractionDigits: 4,
-                                })}
-                              </td>
-                              <td className="px-4 py-2 text-right text-gray-400">{n.nutrient.unit}</td>
-                              <td className="px-4 py-2 text-xs text-gray-400">
-                                {n.sourceUrl ? (
-                                  <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer"
-                                    className="hover:underline text-blue-400">
-                                    {n.sourceRef}
-                                  </a>
-                                ) : n.sourceRef}
-                              </td>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
+                          <thead className="bg-gray-50 text-xs text-gray-500">
+                            <tr>
+                              <th className="px-4 py-2 text-left font-medium">Nutrient</th>
+                              <th className="px-4 py-2 text-right font-medium">Per 100 g</th>
+                              <th className="px-4 py-2 text-right font-medium">Unit</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-400">Source</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {rows.map(n => (
+                              <tr key={n.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-2 font-medium text-gray-800">{n.nutrient.name}</td>
+                                <td className="px-4 py-2 text-right tabular-nums text-gray-700">
+                                  {parseFloat(n.amountPer100g).toLocaleString(undefined, {
+                                    maximumFractionDigits: 4,
+                                  })}
+                                </td>
+                                <td className="px-4 py-2 text-right text-gray-400">{n.nutrient.unit}</td>
+                                <td className="px-4 py-2 text-xs text-gray-400">
+                                  {n.sourceUrl ? (
+                                    <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer"
+                                      className="hover:underline text-blue-400">
+                                      {n.sourceRef}
+                                    </a>
+                                  ) : n.sourceRef}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -780,6 +784,7 @@ export function IngredientDetail({ id }: { id: string }) {
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
                           {cat}
                         </h3>
+                        <div className="overflow-x-auto">
                         <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
                           <thead className="bg-gray-50 text-xs text-gray-500">
                             <tr>
@@ -853,6 +858,7 @@ export function IngredientDetail({ id }: { id: string }) {
                             })}
                           </tbody>
                         </table>
+                        </div>
                       </div>
                     )
                   })}
@@ -1147,7 +1153,7 @@ export function IngredientDetail({ id }: { id: string }) {
                   {editingLinkId === link.id ? (
                     /* ── inline edit ── */
                     <div className="px-4 py-4 space-y-3">
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-xs text-gray-500 mb-1">Pack size</label>
                           <input
@@ -1297,7 +1303,7 @@ export function IngredientDetail({ id }: { id: string }) {
                 </select>
               </div>
               {linkForm.supplierId === '__new__' && (
-                <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-blue-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-2 border-l-2 border-blue-200">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Company name <span className="text-red-400">*</span></label>
                     <input
@@ -1322,7 +1328,7 @@ export function IngredientDetail({ id }: { id: string }) {
               )}
               {linkForm.supplierId && (
                 <>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Pack size</label>
                       <input

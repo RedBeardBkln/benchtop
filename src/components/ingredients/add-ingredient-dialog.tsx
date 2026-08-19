@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AlertTriangle, X } from 'lucide-react'
+import { readErrorMessage } from '@/lib/utils'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -67,7 +68,7 @@ export function AddIngredientDialog({
           moisturePct: data.moisturePct ? parseFloat(data.moisturePct) : undefined,
         }),
       }).then(async r => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Failed')
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to add ingredient'))
         return r.json()
       }),
     onSuccess: (result) => {

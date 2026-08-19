@@ -87,7 +87,7 @@ export function AppShell({
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-xs transition-colors ${
                 active ? 'text-white' : 'text-gray-400'
               }`}
             >
@@ -98,7 +98,7 @@ export function AppShell({
         })}
         <button
           onClick={signOut}
-          className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs text-gray-400"
+          className="flex-1 flex flex-col items-center gap-0.5 py-3 text-xs text-gray-400"
         >
           <LogOut size={20} />
           Sign out

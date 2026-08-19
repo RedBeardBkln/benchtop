@@ -108,6 +108,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
       style={{
         display: 'block',
         width: '340px',
+        maxWidth: '100%',
         border: '2px solid black',
         padding: '5px 8px 8px',
         fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif',

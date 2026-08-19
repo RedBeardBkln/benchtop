@@ -168,9 +168,9 @@ export function UsdaSearchDialog({
           </div>
         </div>
 
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-col sm:flex-row flex-1 sm:min-h-0 overflow-auto sm:overflow-hidden">
           {/* Results list */}
-          <div className="w-1/2 border-r border-gray-100 flex flex-col">
+          <div className="w-full sm:w-1/2 border-b sm:border-b-0 sm:border-r border-gray-100 flex flex-col max-h-48 sm:max-h-none overflow-hidden">
             <div className="flex-1 overflow-y-auto">
               {isSearching && (
                 <div className="p-4 text-center text-xs text-gray-400">Searching…</div>
@@ -242,7 +242,7 @@ export function UsdaSearchDialog({
           </div>
 
           {/* Selected preview + import */}
-          <div className="w-1/2 flex flex-col">
+          <div className="w-full sm:w-1/2 flex flex-col">
             {selected ? (
               <>
                 <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">

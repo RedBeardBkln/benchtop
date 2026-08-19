@@ -54,7 +54,7 @@ function TargetForm({
 
   return (
     <div className="border border-blue-100 rounded-lg p-3 bg-blue-50/30 space-y-3">
-      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-center">
+      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center">
         {/* Nutrient */}
         <select
           value={draft.nutrient ?? ''}
@@ -65,52 +65,54 @@ function TargetForm({
           {nutrients?.map(n => <option key={n.id} value={n.name}>{n.name}</option>)}
         </select>
 
-        {/* Comparator */}
-        <select
-          value={draft.comparator}
-          onChange={e => setDraft(d => ({ ...d, comparator: e.target.value as ProjectTarget['comparator'] }))}
-          className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-        >
-          {Object.entries(COMPARATOR_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
+        <div className="flex gap-2 items-center sm:contents">
+          {/* Comparator */}
+          <select
+            value={draft.comparator}
+            onChange={e => setDraft(d => ({ ...d, comparator: e.target.value as ProjectTarget['comparator'] }))}
+            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+          >
+            {Object.entries(COMPARATOR_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
 
-        {/* Value */}
-        <input
-          type="number" min="0" step="any"
-          value={draft.value || ''}
-          onChange={e => setDraft(d => ({ ...d, value: parseFloat(e.target.value) || 0 }))}
-          placeholder={draft.comparator === 'range' ? 'min' : 'value'}
-          className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
-        />
-
-        {/* ValueMax or unit label */}
-        {draft.comparator === 'range' ? (
+          {/* Value */}
           <input
             type="number" min="0" step="any"
-            value={draft.valueMax ?? ''}
-            onChange={e => setDraft(d => ({ ...d, valueMax: parseFloat(e.target.value) || undefined }))}
-            placeholder="max"
+            value={draft.value || ''}
+            onChange={e => setDraft(d => ({ ...d, value: parseFloat(e.target.value) || 0 }))}
+            placeholder={draft.comparator === 'range' ? 'min' : 'value'}
             className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
           />
-        ) : (
-          <span className="text-xs text-gray-400 w-20 text-center">{draft.unit}</span>
-        )}
 
-        {/* Basis */}
-        <select
-          value={draft.basis}
-          onChange={e => setDraft(d => ({
-            ...d,
-            basis: e.target.value as ProjectTarget['basis'],
-            servingSizeG: e.target.value === 'per_100g' ? undefined : d.servingSizeG,
-          }))}
-          className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-        >
-          <option value="per_100g">per 100g</option>
-          <option value="per_serving">per serving</option>
-        </select>
+          {/* ValueMax or unit label */}
+          {draft.comparator === 'range' ? (
+            <input
+              type="number" min="0" step="any"
+              value={draft.valueMax ?? ''}
+              onChange={e => setDraft(d => ({ ...d, valueMax: parseFloat(e.target.value) || undefined }))}
+              placeholder="max"
+              className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
+            />
+          ) : (
+            <span className="text-xs text-gray-400 w-20 text-center">{draft.unit}</span>
+          )}
+
+          {/* Basis */}
+          <select
+            value={draft.basis}
+            onChange={e => setDraft(d => ({
+              ...d,
+              basis: e.target.value as ProjectTarget['basis'],
+              servingSizeG: e.target.value === 'per_100g' ? undefined : d.servingSizeG,
+            }))}
+            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+          >
+            <option value="per_100g">per 100g</option>
+            <option value="per_serving">per serving</option>
+          </select>
+        </div>
       </div>
 
       {/* Serving size — only when per_serving selected */}

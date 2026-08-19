@@ -164,7 +164,7 @@ export function IngredientTable() {
                   stockG: row.original.stockG as string | null,
                 })
               }}
-              className="p-1 text-gray-300 hover:text-blue-500 transition-colors"
+              className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
               title="Edit"
             >
               <Edit2 size={14} />
@@ -176,7 +176,7 @@ export function IngredientTable() {
                   deleteMutation.mutate(row.original.id)
                 }
               }}
-              className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+              className="p-2 text-gray-300 hover:text-red-500 transition-colors"
               title="Delete"
             >
               <Trash2 size={14} />

@@ -215,7 +215,7 @@ export function NfpDialog({
           </button>
         </div>
 
-        <div className="flex gap-8 p-6">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 p-4 sm:p-6">
           {/* Left: options — scrollable independently so the preview is never inside an overflow container */}
           <div className="flex-1 space-y-5 min-w-0 overflow-y-auto max-h-[80vh] pr-1">
 

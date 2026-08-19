@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Truck, ExternalLink, Edit2, Trash2, X, Save } from 'lucide-react'
 import type { Supplier } from '@/lib/types'
+import { readErrorMessage } from '@/lib/utils'
 
 type SupplierWithCount = Supplier & { ingredientCount?: number }
 
@@ -36,13 +37,13 @@ function SupplierDialog({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
-        }).then(async r => { if (!r.ok) throw new Error((await r.json()).error ?? 'Failed'); return r.json() })
+        }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() })
       }
       return fetch('/api/suppliers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      }).then(async r => { if (!r.ok) throw new Error((await r.json()).error ?? 'Failed'); return r.json() })
+      }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] })
@@ -131,7 +132,7 @@ export function SupplierList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
       fetch(`/api/suppliers/${id}`, { method: 'DELETE' }).then(async r => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Failed to delete')
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to delete'))
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] })
@@ -170,6 +171,7 @@ export function SupplierList() {
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
               <tr>
@@ -231,6 +233,7 @@ export function SupplierList() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -8,6 +8,7 @@ import {
   ChevronRight, Sparkles,
 } from 'lucide-react'
 import type { IngredientDetail, Nutrient } from '@/lib/types'
+import { readErrorMessage } from '@/lib/utils'
 
 const CATEGORY_ORDER = ['macros', 'vitamins', 'minerals', 'other'] as const
 
@@ -112,7 +113,7 @@ export function IngredientSidePanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }).then(async r => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Save failed')
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Save failed'))
       }),
     onSuccess: () => {
       invalidate()
@@ -214,7 +215,7 @@ export function IngredientSidePanel({
       {/* Panel */}
       <div
         ref={panelRef}
-        className="fixed right-0 top-0 bottom-0 z-50 w-[420px] bg-white shadow-2xl flex flex-col"
+        className="fixed right-0 top-0 bottom-0 z-50 w-full sm:w-[420px] bg-white shadow-2xl flex flex-col"
       >
         {/* Header */}
         <div className="flex items-start gap-3 px-5 py-4 border-b border-gray-100">

@@ -56,13 +56,14 @@ export async function GET(request: NextRequest) {
 }
 
 const createSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255),
+  name: z.string().trim().min(1, 'Name is required').max(255),
   sourceType: z.enum(['manual', 'supplier']).default('manual'),
   isAbSpi: z.boolean().default(false),
   isIsolateOrConcentrate: z.boolean().default(false),
   naturallyDerived: z.boolean().default(true),
   notes: z.string().max(2000).optional(),
-  defaultCostPerKg: z.number().positive().optional(),
+  // 0 is valid for newly added ingredients with unknown/placeholder cost.
+  defaultCostPerKg: z.number().min(0).optional(),
   moisturePct: z.number().min(0).max(100).optional(),
 })
 
@@ -76,7 +77,12 @@ export async function POST(request: NextRequest) {
 
   const parsed = createSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    const fieldErrors = parsed.error.flatten().fieldErrors
+    const firstError =
+      Object.values(fieldErrors).flat().find(Boolean) ??
+      parsed.error.flatten().formErrors[0] ??
+      'Invalid ingredient input'
+    return NextResponse.json({ error: firstError }, { status: 400 })
   }
 
   const d = parsed.data

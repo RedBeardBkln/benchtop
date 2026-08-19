@@ -171,7 +171,7 @@ export function ProjectDetail({ id }: { id: string }) {
 
   return (
     <>
-      <div className="px-8 py-8 max-w-4xl">
+      <div className="px-4 sm:px-8 py-6 sm:py-8 max-w-4xl">
         <button
           onClick={() => router.push('/projects')}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6"
@@ -277,7 +277,8 @@ export function ProjectDetail({ id }: { id: string }) {
                 </div>
               ) : (
                 <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
                     <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium">Name</th>
@@ -341,6 +342,7 @@ export function ProjectDetail({ id }: { id: string }) {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </>
