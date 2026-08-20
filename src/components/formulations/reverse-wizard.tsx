@@ -945,7 +945,7 @@ export function ReverseWizard({
         body: JSON.stringify({
           productName,
           servingSizeG: labelServingG ? parseFloat(labelServingG) : null,
-          nutrients: targets.filter(t => t.nutrientName && parseFloat(t.value) > 0).map(t => ({
+          nutrients: targets.filter(t => t.nutrientName && t.value !== '' && parseFloat(t.value) >= 0).map(t => ({
             name: t.nutrientName, value: parseFloat(t.value), unit: t.unit,
           })),
           deckIngredients: deckIngredients.map(d => ({
@@ -1085,7 +1085,7 @@ export function ReverseWizard({
         nutrients: c.nutrients.map(n => ({ name: n.name, amountPer100g: n.amountPer100g })),
       })),
     ]
-    const activeTargets = targets.filter(t => t.nutrientName && parseFloat(t.value) > 0)
+    const activeTargets = targets.filter(t => t.nutrientName && t.value !== '' && parseFloat(t.value) >= 0)
 
     if (candidates.length === 0) { toast.error('No linked ingredients to solve with'); setIsSolving(false); return }
     if (activeTargets.length === 0) { toast.error('No nutrient targets set'); setIsSolving(false); return }
@@ -1182,7 +1182,7 @@ export function ReverseWizard({
 
   const linkedCount  = deckIngredients.filter(d => d.status !== 'unlinked' && d.status !== 'skipped').length
   const totalDeck    = deckIngredients.length
-  const activeTargets = targets.filter(t => t.nutrientName && parseFloat(t.value) > 0)
+  const activeTargets = targets.filter(t => t.nutrientName && t.value !== '' && parseFloat(t.value) >= 0)
   const allCandidatesForSolve = [
     ...deckIngredients.filter(d => d.linkedIngredientId && d.status !== 'skipped'),
     ...extraCandidates,
@@ -1200,7 +1200,7 @@ export function ReverseWizard({
   return (
     <div className="fixed inset-0 z-50 bg-white overflow-auto">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center">
             <FlaskConical size={14} className="text-white" />
@@ -1216,7 +1216,7 @@ export function ReverseWizard({
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-8 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
 
         {/* ══ STEP: ENTRY ══════════════════════════════════════════════════════ */}
         {step === 'entry' && (
@@ -1227,7 +1227,7 @@ export function ReverseWizard({
                 Upload the competitor product label for AI-assisted extraction, or enter the information manually.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={() => { setMode('image'); setStep('label') }}
                 className="flex flex-col items-center gap-3 p-8 border-2 border-gray-200 rounded-xl
@@ -1326,7 +1326,7 @@ export function ReverseWizard({
             )}
 
             {/* ── Product info ── */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Product name</label>
                 <input
@@ -1896,6 +1896,7 @@ export function ReverseWizard({
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Estimated % ranges (applied to solver bounds)
                     </h4>
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
                       <thead className="bg-gray-50 text-xs text-gray-500">
                         <tr>
@@ -1916,6 +1917,7 @@ export function ReverseWizard({
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
 
@@ -2060,6 +2062,7 @@ export function ReverseWizard({
                   return (
                     <>
                       {/* Suggested blend */}
+                      <div className="overflow-x-auto">
                       <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
                         <thead className="bg-gray-50 text-xs text-gray-500">
                           <tr>
@@ -2083,6 +2086,7 @@ export function ReverseWizard({
                           })}
                         </tbody>
                       </table>
+                      </div>
 
                       {/* Nutrient comparison: label target vs. formulated, per serving */}
                       {solverResult.auditTrace.length > 0 && (() => {
@@ -2098,6 +2102,7 @@ export function ReverseWizard({
                                 {servingG ? `Per ${servingG} g serving` : 'Per 100 g'}
                               </span>
                             </div>
+                            <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead className="border-b border-gray-100">
                                 <tr className="text-xs text-gray-500">
@@ -2155,6 +2160,7 @@ export function ReverseWizard({
                                 })}
                               </tbody>
                             </table>
+                            </div>
                           </div>
                         )
                       })()}

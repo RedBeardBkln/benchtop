@@ -31,7 +31,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar — desktop only */}
-      <aside className="hidden sm:flex w-52 shrink-0 bg-gray-900 text-gray-100 flex-col">
+      <aside className="hidden sm:flex w-52 shrink-0 bg-gray-900 text-gray-100 flex-col print:hidden">
         <div className="px-4 py-4 border-b border-gray-800 flex items-center gap-3">
           <img
             src="/benchtop-mark.svg"
@@ -77,10 +77,10 @@ export function AppShell({
       </aside>
 
       {/* Main content — extra bottom padding on mobile for the nav bar */}
-      <main className="flex-1 min-w-0 pb-16 sm:pb-0">{children}</main>
+      <main className="flex-1 min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0 print:pb-0">{children}</main>
 
       {/* Bottom nav — mobile only */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-gray-900 border-t border-gray-800 flex">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-gray-900 border-t border-gray-800 flex pb-[env(safe-area-inset-bottom)] print:hidden">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (

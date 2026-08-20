@@ -562,7 +562,7 @@ export function FormulationGrid({ id }: { id: string }) {
       {/* Back nav */}
       <button
         onClick={() => router.push(`/projects/${data.projectId}`)}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-4"
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-4 print:hidden"
       >
         <ArrowLeft size={14} /> {data.project?.name ?? 'Project'}
       </button>
@@ -620,7 +620,7 @@ export function FormulationGrid({ id }: { id: string }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           {isDirty && !isLocked && (
             <button
               onClick={() => saveMutation.mutate()}
@@ -715,7 +715,7 @@ export function FormulationGrid({ id }: { id: string }) {
       </div>
 
       {/* Settings bar */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm print:hidden">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-gray-500">Batch</span>
           <span className="font-medium text-gray-700">
@@ -754,7 +754,7 @@ export function FormulationGrid({ id }: { id: string }) {
 
       {/* Sort controls */}
       {lines.length > 1 && !isLocked && (
-        <div className="flex items-center gap-1 mb-2 justify-end">
+        <div className="flex items-center gap-1 mb-2 justify-end print:hidden">
           <span className="text-xs text-gray-400 mr-0.5">Sort:</span>
           <button
             onClick={() => sortLines('weight')}
@@ -776,7 +776,7 @@ export function FormulationGrid({ id }: { id: string }) {
         <table className="w-full text-sm border-collapse">
           <thead className="bg-gray-50 text-xs text-gray-500">
             <tr>
-              <th className="px-2 py-2.5 w-6" />
+              <th className="px-2 py-2.5 w-6 print:hidden" />
               <th className="px-3 py-2.5 text-left font-medium w-6">#</th>
               <th className="px-3 py-2.5 text-left font-medium">Ingredient</th>
               <th className="px-3 py-2.5 text-right font-medium w-28">Weight (g)</th>
@@ -787,7 +787,7 @@ export function FormulationGrid({ id }: { id: string }) {
                   <span className="text-gray-400 font-normal ml-0.5">/{n.unit}</span>
                 </th>
               ))}
-              <th className="px-3 py-2.5 w-8" />
+              <th className="px-3 py-2.5 w-8 print:hidden" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
@@ -809,7 +809,7 @@ export function FormulationGrid({ id }: { id: string }) {
                     'hover:bg-gray-50'
                   }`}
                 >
-                  <td className={`px-2 py-2 ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+                  <td className={`px-2 py-2 print:hidden ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}>
                     {!isLocked && (
                       <GripVertical size={14} className="text-gray-200 group-hover:text-gray-400 transition-colors" />
                     )}
@@ -856,11 +856,11 @@ export function FormulationGrid({ id }: { id: string }) {
                       </td>
                     )
                   })}
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 print:hidden">
                     {!isLocked && (
                       <button
                         onClick={() => removeLine(line.key)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all"
+                        className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all"
                       >
                         <X size={14} />
                       </button>
@@ -939,7 +939,7 @@ export function FormulationGrid({ id }: { id: string }) {
 
       {/* Add ingredient row */}
       {!isLocked && (
-        <div className="mt-3">
+        <div className="mt-3 print:hidden">
           {showAddRow ? (
             <div className="flex items-center gap-2 px-3 py-2">
               <IngredientSearchDropdown

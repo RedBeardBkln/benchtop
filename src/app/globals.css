@@ -36,3 +36,20 @@ textarea::placeholder {
   color: #6b7280;
   opacity: 1;
 }
+
+@media print {
+  @page {
+    margin: 1.2cm;
+  }
+
+  :root {
+    --background: #ffffff !important;
+    --foreground: #171717 !important;
+  }
+
+  /* Tables wrapped for mobile horizontal scroll would otherwise clip content
+     that doesn't fit the on-screen scroll box when printed. */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+}

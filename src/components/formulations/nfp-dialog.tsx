@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { X, Download, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, Download, Printer, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { NfpPanel } from './nfp-panel'
 import type { ExtraNutrient } from './nfp-panel'
@@ -199,10 +199,10 @@ export function NfpDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-8 px-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-8 px-4 print:static print:bg-white print:p-0 print:overflow-visible">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl print:shadow-none print:rounded-none print:max-w-none">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 print:hidden">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Nutrition Facts Panel</h2>
             <p className="text-xs text-gray-400 mt-0.5">FDA 2020 standard format</p>
@@ -217,7 +217,7 @@ export function NfpDialog({
 
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 p-4 sm:p-6">
           {/* Left: options — scrollable independently so the preview is never inside an overflow container */}
-          <div className="flex-1 space-y-5 min-w-0 overflow-y-auto max-h-[80vh] pr-1">
+          <div className="flex-1 space-y-5 min-w-0 overflow-y-auto max-h-[80vh] pr-1 print:hidden">
 
             {/* Format selector */}
             <div>
@@ -407,20 +407,29 @@ export function NfpDialog({
               </div>
             )}
 
-            {/* Download */}
-            <button
-              onClick={handleDownload}
-              disabled={downloading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              <Download size={14} />
-              {downloading ? 'Generating…' : `Download ${format.toUpperCase()}`}
-            </button>
+            {/* Download / Print */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <Download size={14} />
+                {downloading ? 'Generating…' : `Download ${format.toUpperCase()}`}
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
+              >
+                <Printer size={14} />
+                Print
+              </button>
+            </div>
           </div>
 
           {/* Right: live preview */}
-          <div className="shrink-0">
-            <p className="text-xs text-gray-400 mb-3">Preview</p>
+          <div className="shrink-0 print:mx-auto">
+            <p className="text-xs text-gray-400 mb-3 print:hidden">Preview</p>
             <div>
               <NfpPanel
                 servingSizeG={servingSizeG}
