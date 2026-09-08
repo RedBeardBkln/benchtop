@@ -12,15 +12,10 @@ const PT = 5      // padding-top
 const PB = 10     // padding-bottom
 const IW = W - PL - PR
 
-const DV: Record<string, number> = {
-  'Total Fat': 78, 'Saturated Fat': 20, Cholesterol: 300, Sodium: 2300,
-  'Total Carbohydrate': 275, 'Dietary Fiber': 28, 'Added Sugars': 50,
-  'Vitamin D': 20, Calcium: 1300, Iron: 18, Potassium: 4700,
-}
-
-function pct(v: number, key: string): string {
-  const dv = DV[key]
-  if (dv == null) return ''
+// %DV computation. DVs come from the DB (via NutrientResult.dailyValueAmount),
+// not from a hardcoded constant — see formulation-calc.ts and nfp-panel.tsx.
+function pct(v: number, dv: number | null | undefined): string {
+  if (dv == null || dv <= 0) return ''
   return `${Math.round((v / dv) * 100)}%`
 }
 
@@ -30,6 +25,10 @@ function getVal(results: NutrientResult[], name: string, perServing: boolean): n
   const r = results.find(r => r.name === name)
   if (!r) return 0
   return perServing ? (r.perServing ?? 0) : r.perFinished100g
+}
+
+function getDv(results: NutrientResult[], name: string): number | null {
+  return results.find(r => r.name === name)?.dailyValueAmount ?? null
 }
 
 export function drawNfpToCanvas(opts: {
@@ -52,6 +51,7 @@ export function drawNfpToCanvas(opts: {
   const perServing = !!servingSizeG
   const show = (v: number) => !hideZeros || v > 0
   const g = (name: string) => getVal(results, name, perServing)
+  const d = (name: string) => getDv(results, name)
   const visExtras = extraNutrients.filter(n => !hideZeros || n.value > 0)
 
   const calories    = g('Energy')
@@ -71,6 +71,19 @@ export function drawNfpToCanvas(opts: {
   const calcium     = g('Calcium')
   const iron        = g('Iron')
   const potassium   = g('Potassium')
+
+  // Pull DVs from the same DB-backed results array used for the values
+  const totalFatDv    = d('Total Fat')
+  const satFatDv      = d('Saturated Fat')
+  const cholDv        = d('Cholesterol')
+  const sodiumDv      = d('Sodium')
+  const totalCarbDv   = d('Total Carbohydrate')
+  const fiberDv       = d('Dietary Fiber')
+  const addedSugarsDv = d('Added Sugars')
+  const vitaminDDv    = d('Vitamin D')
+  const calciumDv     = d('Calcium')
+  const ironDv        = d('Iron')
+  const potassiumDv   = d('Potassium')
 
   // Draw into an oversized canvas, then crop to actual content height
   const MAX_H = 2000
@@ -221,8 +234,8 @@ export function drawNfpToCanvas(opts: {
   y += 11
 
   // Nutrient rows
-  if (show(totalFat))    nutRow({ boldL: 'Total Fat',          normL: ` ${fmt(totalFat)}g`,             right: pct(totalFat, 'Total Fat') })
-  if (show(satFat))      nutRow({ normL: `Saturated Fat ${fmt(satFat)}g`,                               right: pct(satFat, 'Saturated Fat'),    indent: 16 })
+  if (show(totalFat))    nutRow({ boldL: 'Total Fat',          normL: ` ${fmt(totalFat)}g`,             right: pct(totalFat, totalFatDv) })
+  if (show(satFat))      nutRow({ normL: `Saturated Fat ${fmt(satFat)}g`,                               right: pct(satFat, satFatDv),          indent: 16 })
   if (show(transFat)) {
     // "Trans" in italic
     hline(1, 2, 2)
@@ -238,12 +251,12 @@ export function drawNfpToCanvas(opts: {
   }
   if (polyuFat > 0)      nutRow({ normL: `Polyunsaturated Fat ${fmt(polyuFat)}g`,                                                             indent: 16 })
   if (monouFat > 0)      nutRow({ normL: `Monounsaturated Fat ${fmt(monouFat)}g`,                                                             indent: 16 })
-  if (show(cholesterol)) nutRow({ boldL: 'Cholesterol',        normL: ` ${Math.round(cholesterol)}mg`, right: pct(cholesterol, 'Cholesterol') })
-  if (show(sodium))      nutRow({ boldL: 'Sodium',             normL: ` ${Math.round(sodium)}mg`,      right: pct(sodium, 'Sodium') })
-  if (show(totalCarb))   nutRow({ boldL: 'Total Carbohydrate', normL: ` ${fmt(totalCarb)}g`,            right: pct(totalCarb, 'Total Carbohydrate') })
-  if (show(fiber))       nutRow({ normL: `Dietary Fiber ${fmt(fiber)}g`,                                right: pct(fiber, 'Dietary Fiber'),     indent: 16 })
+  if (show(cholesterol)) nutRow({ boldL: 'Cholesterol',        normL: ` ${Math.round(cholesterol)}mg`, right: pct(cholesterol, cholDv) })
+  if (show(sodium))      nutRow({ boldL: 'Sodium',             normL: ` ${Math.round(sodium)}mg`,      right: pct(sodium, sodiumDv) })
+  if (show(totalCarb))   nutRow({ boldL: 'Total Carbohydrate', normL: ` ${fmt(totalCarb)}g`,            right: pct(totalCarb, totalCarbDv) })
+  if (show(fiber))       nutRow({ normL: `Dietary Fiber ${fmt(fiber)}g`,                                right: pct(fiber, fiberDv),           indent: 16 })
   if (show(totalSugars)) nutRow({ normL: `Total Sugars ${fmt(totalSugars)}g`,                                                                 indent: 16 })
-  if (show(addedSugars)) nutRow({ normL: `Includes ${fmt(addedSugars)}g Added Sugars`,                  right: pct(addedSugars, 'Added Sugars'), indent: 32 })
+  if (show(addedSugars)) nutRow({ normL: `Includes ${fmt(addedSugars)}g Added Sugars`,                  right: pct(addedSugars, addedSugarsDv), indent: 32 })
   if (show(protein))     nutRow({ boldL: 'Protein',            normL: ` ${fmt(protein)}g` })
 
   hline(7, 3, 2)
@@ -252,7 +265,7 @@ export function drawNfpToCanvas(opts: {
   let firstVit = true
   function doVit(label: string, key: string, v: number) {
     if (!show(v)) return
-    vitRow(label, pct(v, key), firstVit)
+    vitRow(label, pct(v, getDv(results, key)), firstVit)
     firstVit = false
   }
   doVit(`Vitamin D ${fmt(vitaminD)}mcg`, 'Vitamin D', vitaminD)

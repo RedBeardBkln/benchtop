@@ -11,6 +11,13 @@ export type CalcNutrient = {
   name: string
   unit: string
   category: string
+  /**
+   * FDA Daily Value for this nutrient (mg, mcg, g, kcal, etc. — same unit as `unit`).
+   * Pulled straight from `nutrients.dailyValueAmount` in the DB so that DV
+   * updates happen via a seed migration rather than a code release. Null when
+   * the nutrient has no established DV (e.g. trans fat, sugar alcohols).
+   */
+  dailyValueAmount?: number | null
 }
 
 export type NutrientResult = {
@@ -20,12 +27,8 @@ export type NutrientResult = {
   category: string
   perFinished100g: number
   perServing?: number
-}
-
-export type CalcResult = {
-  results: NutrientResult[]
-  totalWeightG: number
-  finishedWeightG: number
+  /** Carried through from CalcNutrient so renderers can compute %DV from the DB. */
+  dailyValueAmount: number | null
 }
 
 /**
@@ -73,17 +76,25 @@ export function calcNutrientProfile(opts: {
       category: nutrient.category,
       perFinished100g: per100g,
       perServing: servingSizeG != null ? (per100g * servingSizeG) / 100 : undefined,
+      dailyValueAmount: nutrient.dailyValueAmount ?? null,
     })
   }
 
   return { results, totalWeightG, finishedWeightG }
 }
 
+export type CalcResult = {
+  results: NutrientResult[]
+  totalWeightG: number
+  finishedWeightG: number
+}
+
 export function formatAmt(amount: number, unit: string): string {
-  if (unit === 'kcal') return amount.toFixed(0)
+  if (unit === 'kcal') return Math.round(amount).toString()
   if (amount === 0) return '0'
   if (amount < 0.01) return amount.toFixed(4)
   if (amount < 0.1) return amount.toFixed(3)
   if (amount < 10) return amount.toFixed(2)
-  return amount.toFixed(1)
+  if (amount < 100) return amount.toFixed(1)
+  return Math.round(amount).toString()
 }

@@ -4,15 +4,11 @@ const nextConfig: NextConfig = {
   // Keep heavy server-only packages from being bundled by Next.js
   serverExternalPackages: ['@react-pdf/renderer', 'exceljs'],
 
-  webpack(config, { isServer }) {
-    // Enable async WebAssembly for glpk.js (LP solver) — webpack builds only (not Turbopack dev)
-    config.experiments = { ...config.experiments, asyncWebAssembly: true }
-    return config
-  },
-
-  turbopack: {
-    // Native WASM support — no extra rules needed
-  },
+  // Turbopack-specific options.
+  // The previous webpack `asyncWebAssembly` experiment is no longer needed:
+  // glpk.js loads its own .wasm at runtime, and no .wasm files are imported
+  // directly in app code. Turbopack handles wasm natively when needed.
+  turbopack: {},
 }
 
 export default nextConfig

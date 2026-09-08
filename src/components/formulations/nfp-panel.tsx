@@ -3,20 +3,10 @@
 import { forwardRef } from 'react'
 import type { NutrientResult } from '@/lib/formulation-calc'
 
-// FDA 2020 Daily Values
-const DV = {
-  totalFat: 78,
-  saturatedFat: 20,
-  cholesterol: 300,
-  sodium: 2300,
-  totalCarb: 275,
-  dietaryFiber: 28,
-  addedSugars: 50,
-  vitaminD: 20,
-  calcium: 1300,
-  iron: 18,
-  potassium: 4700,
-}
+// Daily Values are pulled from `nutrients.dailyValueAmount` (via
+// NutrientResult.dailyValueAmount) so they live in the DB and update via
+// seed migration, not a code release. The lookup-by-name helpers below
+// (get, value, dv) are the single source of truth for both value and DV.
 
 export type ExtraNutrient = {
   name: string
@@ -25,14 +15,22 @@ export type ExtraNutrient = {
   dvPct?: string
 }
 
-function dvPct(value: number, dv: number): string {
-  return `${Math.round((value / dv) * 100)}%`
+function get(results: NutrientResult[], name: string, usePerServing: boolean): NutrientResult | undefined {
+  return results.find(r => r.name === name)
 }
 
-function get(results: NutrientResult[], name: string, usePerServing: boolean): number {
-  const r = results.find(r => r.name === name)
+function value(r: NutrientResult | undefined, usePerServing: boolean): number {
   if (!r) return 0
   return usePerServing ? (r.perServing ?? 0) : r.perFinished100g
+}
+
+function dv(r: NutrientResult | undefined): number | null {
+  return r?.dailyValueAmount ?? null
+}
+
+function dvPct(value: number, dv: number | null | undefined): string {
+  if (dv == null || dv <= 0) return ''
+  return `${Math.round((value / dv) * 100)}%`
 }
 
 function fmt(n: number, decimals = 1): string {
@@ -78,25 +76,39 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
 ) {
   const usePerServing = !!servingSizeG
 
-  const show = (value: number) => !hideZeros || value > 0
+  const show = (v: number) => !hideZeros || v > 0
 
-  const calories    = get(results, 'Energy', usePerServing)
-  const totalFat    = get(results, 'Total Fat', usePerServing)
-  const satFat      = get(results, 'Saturated Fat', usePerServing)
-  const transFat    = get(results, 'Trans Fat', usePerServing)
-  const polyuFat    = get(results, 'Polyunsaturated Fat', usePerServing)
-  const monouFat    = get(results, 'Monounsaturated Fat', usePerServing)
-  const cholesterol = get(results, 'Cholesterol', usePerServing)
-  const sodium      = get(results, 'Sodium', usePerServing)
-  const totalCarb   = get(results, 'Total Carbohydrate', usePerServing)
-  const fiber       = get(results, 'Dietary Fiber', usePerServing)
-  const totalSugars = get(results, 'Total Sugars', usePerServing)
-  const addedSugars = get(results, 'Added Sugars', usePerServing)
-  const protein     = get(results, 'Protein', usePerServing)
-  const vitaminD    = get(results, 'Vitamin D', usePerServing)
-  const calcium     = get(results, 'Calcium', usePerServing)
-  const iron        = get(results, 'Iron', usePerServing)
-  const potassium   = get(results, 'Potassium', usePerServing)
+  const totalFat    = value(get(results, 'Total Fat', usePerServing), usePerServing)
+  const satFat      = value(get(results, 'Saturated Fat', usePerServing), usePerServing)
+  const transFat    = value(get(results, 'Trans Fat', usePerServing), usePerServing)
+  const polyuFat    = value(get(results, 'Polyunsaturated Fat', usePerServing), usePerServing)
+  const monouFat    = value(get(results, 'Monounsaturated Fat', usePerServing), usePerServing)
+  const cholesterol = value(get(results, 'Cholesterol', usePerServing), usePerServing)
+  const sodium      = value(get(results, 'Sodium', usePerServing), usePerServing)
+  const totalCarb   = value(get(results, 'Total Carbohydrate', usePerServing), usePerServing)
+  const fiber       = value(get(results, 'Dietary Fiber', usePerServing), usePerServing)
+  const totalSugars = value(get(results, 'Total Sugars', usePerServing), usePerServing)
+  const addedSugars = value(get(results, 'Added Sugars', usePerServing), usePerServing)
+  const protein     = value(get(results, 'Protein', usePerServing), usePerServing)
+  const vitaminD    = value(get(results, 'Vitamin D', usePerServing), usePerServing)
+  const calcium     = value(get(results, 'Calcium', usePerServing), usePerServing)
+  const iron        = value(get(results, 'Iron', usePerServing), usePerServing)
+  const potassium   = value(get(results, 'Potassium', usePerServing), usePerServing)
+
+  // Pull DVs straight from the results array (DB-sourced)
+  const totalFatDv    = dv(get(results, 'Total Fat', usePerServing))
+  const satFatDv      = dv(get(results, 'Saturated Fat', usePerServing))
+  const cholDv        = dv(get(results, 'Cholesterol', usePerServing))
+  const sodiumDv      = dv(get(results, 'Sodium', usePerServing))
+  const totalCarbDv   = dv(get(results, 'Total Carbohydrate', usePerServing))
+  const fiberDv       = dv(get(results, 'Dietary Fiber', usePerServing))
+  const addedSugarsDv = dv(get(results, 'Added Sugars', usePerServing))
+  const vitaminDDv    = dv(get(results, 'Vitamin D', usePerServing))
+  const calciumDv     = dv(get(results, 'Calcium', usePerServing))
+  const ironDv        = dv(get(results, 'Iron', usePerServing))
+  const potassiumDv   = dv(get(results, 'Potassium', usePerServing))
+
+  const calories    = value(get(results, 'Energy', usePerServing), usePerServing)
 
   const basisLabel = usePerServing ? 'Amount per serving' : 'Amount per 100g'
 
@@ -160,7 +172,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           <div style={rule(1, 2)} />
           <div style={rowStyle()}>
             <span><strong>Total Fat</strong> {fmt(totalFat)}g</span>
-            <strong>{dvPct(totalFat, DV.totalFat)}</strong>
+            <strong>{dvPct(totalFat, totalFatDv)}</strong>
           </div>
         </>
       )}
@@ -171,7 +183,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           <div style={rule(1, 2)} />
           <div style={rowStyle(16)}>
             <span>Saturated Fat {fmt(satFat)}g</span>
-            <strong>{dvPct(satFat, DV.saturatedFat)}</strong>
+            <strong>{dvPct(satFat, satFatDv)}</strong>
           </div>
         </>
       )}
@@ -212,7 +224,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           <div style={rule(1, 2)} />
           <div style={rowStyle()}>
             <span><strong>Cholesterol</strong> {Math.round(cholesterol)}mg</span>
-            <strong>{dvPct(cholesterol, DV.cholesterol)}</strong>
+            <strong>{dvPct(cholesterol, cholDv)}</strong>
           </div>
         </>
       )}
@@ -223,7 +235,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           <div style={rule(1, 2)} />
           <div style={rowStyle()}>
             <span><strong>Sodium</strong> {Math.round(sodium)}mg</span>
-            <strong>{dvPct(sodium, DV.sodium)}</strong>
+            <strong>{dvPct(sodium, sodiumDv)}</strong>
           </div>
         </>
       )}
@@ -234,7 +246,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           <div style={rule(1, 2)} />
           <div style={rowStyle()}>
             <span><strong>Total Carbohydrate</strong> {fmt(totalCarb)}g</span>
-            <strong>{dvPct(totalCarb, DV.totalCarb)}</strong>
+            <strong>{dvPct(totalCarb, totalCarbDv)}</strong>
           </div>
         </>
       )}
@@ -245,7 +257,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           <div style={rule(1, 2)} />
           <div style={rowStyle(16)}>
             <span>Dietary Fiber {fmt(fiber)}g</span>
-            <strong>{dvPct(fiber, DV.dietaryFiber)}</strong>
+            <strong>{dvPct(fiber, fiberDv)}</strong>
           </div>
         </>
       )}
@@ -266,7 +278,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           <div style={rule(1, 2)} />
           <div style={rowStyle(32)}>
             <span>Includes {fmt(addedSugars)}g Added Sugars</span>
-            <strong>{dvPct(addedSugars, DV.addedSugars)}</strong>
+            <strong>{dvPct(addedSugars, addedSugarsDv)}</strong>
           </div>
         </>
       )}
@@ -288,7 +300,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
       {show(vitaminD) && (
         <div style={rowStyle()}>
           <span>Vitamin D {fmt(vitaminD)}mcg</span>
-          <span>{dvPct(vitaminD, DV.vitaminD)}</span>
+          <span>{dvPct(vitaminD, vitaminDDv)}</span>
         </div>
       )}
       {show(calcium) && (
@@ -296,7 +308,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           {show(vitaminD) && <div style={rule(1, 2)} />}
           <div style={rowStyle()}>
             <span>Calcium {Math.round(calcium)}mg</span>
-            <span>{dvPct(calcium, DV.calcium)}</span>
+            <span>{dvPct(calcium, calciumDv)}</span>
           </div>
         </>
       )}
@@ -305,7 +317,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           {(show(vitaminD) || show(calcium)) && <div style={rule(1, 2)} />}
           <div style={rowStyle()}>
             <span>Iron {fmt(iron)}mg</span>
-            <span>{dvPct(iron, DV.iron)}</span>
+            <span>{dvPct(iron, ironDv)}</span>
           </div>
         </>
       )}
@@ -314,7 +326,7 @@ export const NfpPanel = forwardRef<HTMLDivElement, NfpPanelProps>(function NfpPa
           {(show(vitaminD) || show(calcium) || show(iron)) && <div style={rule(1, 2)} />}
           <div style={rowStyle()}>
             <span>Potassium {Math.round(potassium)}mg</span>
-            <span>{dvPct(potassium, DV.potassium)}</span>
+            <span>{dvPct(potassium, potassiumDv)}</span>
           </div>
         </>
       )}

@@ -27,9 +27,18 @@ function validateTarget(
   // Use formulation serving size first, then fall back to the target's own reference serving size
   const servingSizeG = formulationServingG ?? t.servingSizeG
   if (t.basis === 'per_serving' && !servingSizeG) return 'no-data'
+
+  // Convert the actual per-100g value into the target's unit before comparing.
+  // Without this, a target specified in g would silently never match a value
+  // stored in mg (or vice-versa). We only handle the common FDA mass/energy
+  // conversions — anything else returns 'no-data' to surface the mismatch.
+  const converted = convertToUnit(r.perFinished100g, r.unit, t.unit)
+  if (converted == null) return 'no-data'
+
   const actual = t.basis === 'per_serving'
-    ? r.perFinished100g * ((servingSizeG ?? 0) / 100)
-    : r.perFinished100g
+    ? converted * (servingSizeG! / 100)
+    : converted
+
   const W = 0.05  // 5% warn margin
   switch (t.comparator) {
     case '>=': return actual >= t.value ? 'pass' : actual >= t.value * (1 - W) ? 'warn' : 'fail'
@@ -46,6 +55,25 @@ function validateTarget(
     }
     default: return 'no-data'
   }
+}
+
+/**
+ * Convert a value expressed in `fromUnit` to `toUnit`. Returns null when the
+ * pair is not a known compatible conversion (e.g. g → IU). Recognizes:
+ *   mass: g ↔ mg ↔ mcg
+ *   energy: kcal ↔ kJ
+ * Identity (same unit) returns the input unchanged.
+ */
+function convertToUnit(value: number, fromUnit: string, toUnit: string): number | null {
+  if (fromUnit === toUnit) return value
+  const mass = (v: number, f: string, t: string): number | null => {
+    const toG: Record<string, number> = { g: 1, mg: 1e-3, mcg: 1e-6 }
+    if (!(f in toG) || !(t in toG)) return null
+    return v * (toG[f] / toG[t])
+  }
+  if (fromUnit === 'kcal' && toUnit === 'kJ') return value * 4.184
+  if (fromUnit === 'kJ'  && toUnit === 'kcal') return value / 4.184
+  return mass(value, fromUnit, toUnit)
 }
 
 function statusIcon(s: ValidationStatus) {
@@ -275,7 +303,10 @@ export function FormulationGrid({ id }: { id: string }) {
     if (!allNutrients || lines.length === 0) return null
     return calcNutrientProfile({
       lines: lines.map(l => ({ ingredientId: l.ingredientId, weightG: l.weightG, nutrients: l.nutrients })),
-      allNutrients: allNutrients.map(n => ({ id: n.id, name: n.name, unit: n.unit, category: n.category })),
+      allNutrients: allNutrients.map(n => ({
+        id: n.id, name: n.name, unit: n.unit, category: n.category,
+        dailyValueAmount: n.dailyValueAmount != null ? Number(n.dailyValueAmount) : null,
+      })),
       servingSizeG: servingSizeG ? parseFloat(servingSizeG) : undefined,
       yieldPct: yieldPct ? parseFloat(yieldPct) : 100,
     })

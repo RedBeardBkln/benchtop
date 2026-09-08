@@ -19,20 +19,26 @@ const STANDARD_NFP_NAMES = new Set([
   'Vitamin D', 'Calcium', 'Iron', 'Potassium',
 ])
 
-// FDA 2020 Daily Values for extended nutrients
+// FDA 2020 Daily Values for the extended nutrient set. The standard NFP block
+// pulls DVs straight from the `nutrients.dailyValueAmount` column (via the
+// NutrientResult passed to the panel/canvas), but the extras picker needs to
+// look up DVs by name from the same results array, so this map is the single
+// source of truth for the extra section. If a row exists in `results` with a
+// non-null `dailyValueAmount`, that value wins; otherwise this fallback is
+// used. Update both the DB seed AND this map if the FDA changes a DV.
 const EXTENDED_DV: Record<string, number> = {
   'Vitamin A': 900,
   'Vitamin C': 90,
   'Vitamin E': 15,
   'Vitamin K': 120,
-  'Thiamin': 1.2,
-  'Riboflavin': 1.3,
-  'Niacin': 16,
+  'Thiamin (B1)': 1.2,
+  'Riboflavin (B2)': 1.3,
+  'Niacin (B3)': 16,
   'Vitamin B6': 1.7,
   'Folate': 400,
   'Vitamin B12': 2.4,
   'Biotin': 30,
-  'Pantothenic Acid': 5,
+  'Pantothenic Acid (B5)': 5,
   'Phosphorus': 1250,
   'Iodine': 150,
   'Magnesium': 420,
@@ -59,6 +65,17 @@ function fmtPreview(value: number, unit: string): string {
   if (value < 0.1) return `${value.toFixed(2)}${unit}`
   if (value < 10) return `${value.toFixed(1)}${unit}`
   return `${Math.round(value)}${unit}`
+}
+
+/**
+ * Resolve the DV for an extras-picker nutrient, preferring the DB-sourced
+ * dailyValueAmount on the result row and falling back to the hardcoded
+ * EXTENDED_DV map for nutrients that don't have one set in the DB.
+ */
+function resolveDv(result: NutrientResult, fallback: number | undefined): number | null {
+  if (result.dailyValueAmount != null && result.dailyValueAmount > 0) return result.dailyValueAmount
+  if (fallback != null && fallback > 0) return fallback
+  return null
 }
 
 type Props = {
@@ -127,7 +144,7 @@ export function NfpDialog({
       .filter(r => selectedExtras.has(r.name))
       .map(r => {
         const value = usePerServing ? (r.perServing ?? 0) : r.perFinished100g
-        const dv = EXTENDED_DV[r.name]
+        const dv = resolveDv(r, EXTENDED_DV[r.name])
         return {
           name: r.name,
           value,
@@ -315,7 +332,7 @@ export function NfpDialog({
                             {/* Individual nutrient rows */}
                             {items.map(r => {
                               const v = usePerServing ? (r.perServing ?? 0) : r.perFinished100g
-                              const dv = EXTENDED_DV[r.name]
+                              const dv = resolveDv(r, EXTENDED_DV[r.name])
                               const dvStr = dv != null ? ` · ${Math.round((v / dv) * 100)}% DV` : ''
                               return (
                                 <label
