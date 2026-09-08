@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/db'
 import {
   formulations, formulationLines, ingredients,
-  ingredientNutrients, nutrients, projects,
+  ingredientNutrients, nutrients, projects, processSteps,
 } from '@/lib/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
@@ -93,7 +93,13 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     })),
   }))
 
-  return NextResponse.json({ ...formulation, lines: linesWithNutrients, project })
+  const steps = await db
+    .select()
+    .from(processSteps)
+    .where(eq(processSteps.formulationId, id))
+    .orderBy(processSteps.stepNo)
+
+  return NextResponse.json({ ...formulation, lines: linesWithNutrients, processSteps: steps, project })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {

@@ -13,6 +13,7 @@ import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt, type NutrientResult } from '@/lib/formulation-calc'
 import type { SolverResult } from '@/lib/solver'
 import { IngredientSidePanel } from '@/components/ingredients/ingredient-side-panel'
+import { ProcessStepsPanel } from '@/components/formulations/process-steps-panel'
 import { readErrorMessage } from '@/lib/utils'
 
 type ValidationStatus = 'pass' | 'fail' | 'warn' | 'no-data'
@@ -997,6 +998,11 @@ export function FormulationGrid({ id }: { id: string }) {
           )}
         </div>
       )}
+
+      {/* Process steps */}
+      <div className="mt-6">
+        <ProcessStepsPanel formulationId={id} steps={data.processSteps ?? []} isLocked={isLocked} />
+      </div>
 
       {/* Full nutrient profile toggle */}
       {calcResult && calcResult.results.length > 0 && (

@@ -10,6 +10,7 @@ import type {
   projects,
   formulations,
   formulationLines,
+  processSteps,
   suppliers,
   ingredientSuppliers,
 } from '@/lib/db/schema'
@@ -46,6 +47,7 @@ export type IngredientSupplierWithName = IngredientSupplier & { supplierName: st
 export type Project = InferSelectModel<typeof projects>
 export type Formulation = InferSelectModel<typeof formulations>
 export type FormulationLine = InferSelectModel<typeof formulationLines>
+export type ProcessStep = InferSelectModel<typeof processSteps>
 
 export type ProjectSummary = Project & { formulationCount: number }
 
@@ -74,6 +76,7 @@ export type ProjectTarget = {
 
 export type FormulationDetail = Formulation & {
   lines: FormulationLineDetail[]
+  processSteps: ProcessStep[]
   project: { id: string; name: string; targets: ProjectTarget[] }
 }
 
