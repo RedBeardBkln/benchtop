@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Save, Plus, X, Trash2, ChevronDown, ChevronUp, Lock,
   Database, ArrowLeftRight, GitBranch, Target, CheckCircle2, XCircle, AlertCircle,
-  GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText,
+  GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer,
 } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt, type NutrientResult } from '@/lib/formulation-calc'
@@ -453,6 +453,13 @@ export function FormulationGrid({ id }: { id: string }) {
 
   function markDirty() { setIsDirty(true) }
 
+  function handlePrint() {
+    if (isDirty) {
+      toast.warning('Showing last saved version — save your changes to include them in the printout')
+    }
+    window.open(`/formulations/${id}/print`, '_blank')
+  }
+
   function updateWeight(key: string, value: string) {
     const w = parseFloat(value)
     setLines(prev => prev.map(l => l.key === key ? { ...l, weightG: isNaN(w) ? 0 : w } : l))
@@ -725,6 +732,14 @@ export function FormulationGrid({ id }: { id: string }) {
               <FileText size={13} /> NFP
             </button>
           )}
+          <button
+            onClick={handlePrint}
+            title="Open a print-friendly view in a new tab"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
+                       text-sm rounded-md hover:bg-gray-50 transition-colors"
+          >
+            <Printer size={13} /> Print
+          </button>
           {lines.length > 0 && (
             <button
               onClick={() => setShowCompleteBatch(true)}

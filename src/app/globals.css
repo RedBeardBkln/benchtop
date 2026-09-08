@@ -52,4 +52,13 @@ textarea::placeholder {
   .overflow-x-auto {
     overflow: visible !important;
   }
+
+  .print-page thead {
+    display: table-header-group;
+  }
+
+  .print-page tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
