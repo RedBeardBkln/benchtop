@@ -10,13 +10,13 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.104.2
-        version: 0.104.2(zod@4.6.2)
+        version: 0.104.2(zod@4.6.5)
       '@hookform/resolvers':
         specifier: ^5.9.1
-        version: 5.9.1(react-hook-form@7.88.0(react@19.1.0))(zod@4.6.2)
+        version: 5.9.1(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)
       '@react-pdf/renderer':
         specifier: ^4.9.0
-        version: 4.9.0(react@19.1.0)
+        version: 4.9.0(react@19.3.0)
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.116.0)
@@ -24,11 +24,11 @@ importers:
         specifier: ^2.116.0
         version: 2.116.0
       '@tanstack/react-query':
-        specifier: ^5.102.8
-        version: 5.102.8(react@19.1.0)
+        specifier: ^5.103.1
+        version: 5.103.1(react@19.3.0)
       '@tanstack/react-table':
         specifier: ^8.21.3
-        version: 8.21.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        version: 8.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -54,32 +54,32 @@ importers:
         specifier: ^4.2.1
         version: 4.2.1
       lucide-react:
-        specifier: ^1.45.0
-        version: 1.45.0(react@19.1.0)
+        specifier: ^1.47.0
+        version: 1.47.0(react@19.3.0)
       next:
         specifier: 15.5.19
-        version: 15.5.19(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        version: 15.5.19(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       postgres:
         specifier: ^3.4.9
         version: 3.4.9
       react:
-        specifier: 19.1.0
-        version: 19.1.0
+        specifier: 19.3.0
+        version: 19.3.0
       react-dom:
-        specifier: 19.1.0
-        version: 19.1.0(react@19.1.0)
+        specifier: 19.3.0
+        version: 19.3.0(react@19.3.0)
       react-hook-form:
         specifier: ^7.88.0
-        version: 7.88.0(react@19.1.0)
+        version: 7.88.0(react@19.3.0)
       sonner:
         specifier: ^2.0.8
-        version: 2.0.8(@types/react@19.3.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
+        specifier: ^3.7.0
+        version: 3.7.0
       zod:
-        specifier: ^4.6.2
-        version: 4.6.2
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.3.3
@@ -1089,11 +1089,11 @@ packages:
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
 
-  '@tanstack/query-core@5.102.8':
-    resolution: {integrity: sha512-ZNjkJ33CqvPNec/6lZBnHqLc3EVGPZ9ySLhYahU9TcuRFdmwXewuj0c4hwSWcGHqEUwcSrKeZ+oGcvPBqXcQcg==}
+  '@tanstack/query-core@5.103.1':
+    resolution: {integrity: sha512-rms8HqTGp6zA00dM+cUQ2eBcgzNJefuu5CAMB37i/6MiGT1zulPOytCFu2a0qjLqVR2n1jENPj9woqFQNuCzWA==}
 
-  '@tanstack/react-query@5.102.8':
-    resolution: {integrity: sha512-TYBea4OuXWD7MhaSHq069TWbFe7rcwWN6kzT7JF0OKi1K6c1gTv2IzD6A6ExJsCMozdkqBWeuIUZmu4KQg0O5A==}
+  '@tanstack/react-query@5.103.1':
+    resolution: {integrity: sha512-rmAPPApNEK17VXRJhtE1rja53n23VV5w30C0saCgJhhX+EpdUnVqMGV/s5nnzV43X75KTHKzuoiuxSzGTBIkag==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -1660,8 +1660,8 @@ packages:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
 
-  lucide-react@1.45.0:
-    resolution: {integrity: sha512-yH1ubCAduho9UR7oJhRXIQXogksRILBiTuZC4/bQIGeB9JOkxMlSuEHyyZpo1Z3S0yWJO2KTSUZbjiNvVxeOUw==}
+  lucide-react@1.47.0:
+    resolution: {integrity: sha512-o8C23aXpNQypRY73W7fW02EyvWJinEMXgKeGjFoKym0zj3Q73hD97A1IQps1g8C14HTGsOpZL0Am+xjfgFZAbg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -1780,10 +1780,10 @@ packages:
   raf@3.4.1:
     resolution: {integrity: sha512-Sq4CW4QhwOHE8ucn6J34MqtZCeWFP2aQSmrlroYgqAV1PjStIhJXxYuTgUIfkEk7zTLjmIjLmU5q+fbD1NnOJA==}
 
-  react-dom@19.1.0:
-    resolution: {integrity: sha512-Xs1hdnE+DyKgeHJeJznQmYMIBG3TKIHJJT95Q58nHLSrElKlGQqDTR2HQ9fx5CN/Gk6Vh/kupBTDLU11/nDk/g==}
+  react-dom@19.3.0:
+    resolution: {integrity: sha512-JDk8dgif51OjFoDE70+OT9ICyYr+69HlmihNwp1+Nsfbna3t5sIiCa9ZJktDmQ4/1b/rn26hIAR2uYXDMr5r0Q==}
     peerDependencies:
-      react: ^19.1.0
+      react: ^19.3.0
 
   react-hook-form@7.88.0:
     resolution: {integrity: sha512-QRaLOWhX93YCnMiRfnOFRSwWXZNt8qhm2JTZwypoDvKpSffTJHmpzMXt8U6PV5UThvL3IiiLDUWe2nHMtz6Mmw==}
@@ -1794,8 +1794,8 @@ packages:
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
 
-  react@19.1.0:
-    resolution: {integrity: sha512-FS+XFBNvn3GTAWq26joslQgWNoFu08F4kl0J4CgdNKADkdSGXQyTCnKteIAJy96Br6YbpEU1LSzV5dYtjMkMDg==}
+  react@19.3.0:
+    resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
     engines: {node: '>=0.10.0'}
 
   readable-stream@2.3.8:
@@ -1843,8 +1843,8 @@ packages:
   scheduler@0.25.0-rc-603e6108-20241029:
     resolution: {integrity: sha512-pFwF6H1XrSdYYNLfOcGlM28/j8CGLu8IvdrxqhjWULe2bPcKiKW4CV+OWqR/9fT52mywx65l7ysNkjLKBda7eA==}
 
-  scheduler@0.26.0:
-    resolution: {integrity: sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA==}
+  scheduler@0.28.0:
+    resolution: {integrity: sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==}
 
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
@@ -1912,8 +1912,8 @@ packages:
     resolution: {integrity: sha512-qsjeeq5YjBZ5eMdFuUa4ZosMLxgr5RZ+F+Y1OrDhuOCEInRMA3x74XdBtggJcj9kOeInz0WE+LgCPDkZFlBYJw==}
     engines: {node: '>=12.0.0'}
 
-  tailwind-merge@3.6.0:
-    resolution: {integrity: sha512-uxL7qAVQriqRQPAyK3pj66VqskWqoZ37PW94jwOTwNfq/z9oyu1V+eqrZqtR2+fCiXdYOZe/Modt8GtvqNzu+w==}
+  tailwind-merge@3.7.0:
+    resolution: {integrity: sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA==}
 
   tailwindcss@4.3.3:
     resolution: {integrity: sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==}
@@ -1991,19 +1991,19 @@ packages:
     resolution: {integrity: sha512-9qv4rlDiopXg4E69k+vMHjNN63YFMe9sZMrdlvKnCjlCRWeCBswPPMPUfx+ipsAWq1LXHe70RcbaHdJJpS6hyQ==}
     engines: {node: '>= 10'}
 
-  zod@4.6.2:
-    resolution: {integrity: sha512-lh5RCAGFa1Cm2hjtNwLQhSs/AsqdWnTQaBER9fEwN/88pSh7KOtJavtBx/0VlkN/uFd61SwYmljLMDAsHlvzBQ==}
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
 snapshots:
 
   '@alloc/quick-lru@5.3.0': {}
 
-  '@anthropic-ai/sdk@0.104.2(zod@4.6.2)':
+  '@anthropic-ai/sdk@0.104.2(zod@4.6.5)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
     optionalDependencies:
-      zod: 4.6.2
+      zod: 4.6.5
 
   '@babel/runtime@7.29.7': {}
 
@@ -2265,12 +2265,12 @@ snapshots:
       lodash.isundefined: 3.0.1
       lodash.uniq: 4.5.0
 
-  '@hookform/resolvers@5.9.1(react-hook-form@7.88.0(react@19.1.0))(zod@4.6.2)':
+  '@hookform/resolvers@5.9.1(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.88.0(react@19.1.0)
+      react-hook-form: 7.88.0(react@19.3.0)
     optionalDependencies:
-      zod: 4.6.2
+      zod: 4.6.5
 
   '@img/colour@1.1.0':
     optional: true
@@ -2454,10 +2454,10 @@ snapshots:
 
   '@react-pdf/primitives@4.4.0': {}
 
-  '@react-pdf/reconciler@2.0.0(react@19.1.0)':
+  '@react-pdf/reconciler@2.0.0(react@19.3.0)':
     dependencies:
       object-assign: 4.1.1
-      react: 19.1.0
+      react: 19.3.0
       scheduler: 0.25.0-rc-603e6108-20241029
 
   '@react-pdf/render@4.7.0':
@@ -2473,14 +2473,14 @@ snapshots:
       parse-svg-path: 0.1.2
       svg-arc-to-cubic-bezier: 3.2.0
 
-  '@react-pdf/renderer@4.9.0(react@19.1.0)':
+  '@react-pdf/renderer@4.9.0(react@19.3.0)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@react-pdf/fns': 3.1.3
       '@react-pdf/font': 4.1.2
       '@react-pdf/layout': 5.2.0
       '@react-pdf/primitives': 4.4.0
-      '@react-pdf/reconciler': 2.0.0(react@19.1.0)
+      '@react-pdf/reconciler': 2.0.0(react@19.3.0)
       '@react-pdf/render': 4.7.0
       '@react-pdf/types': 2.14.0
       events: 3.3.0
@@ -2488,7 +2488,7 @@ snapshots:
       pdfkit: 0.20.1
       prop-types: 15.8.1
       queue: 6.0.2
-      react: 19.1.0
+      react: 19.3.0
 
   '@react-pdf/stylesheet@6.3.2':
     dependencies:
@@ -2634,18 +2634,18 @@ snapshots:
       postcss: 8.5.28
       tailwindcss: 4.3.3
 
-  '@tanstack/query-core@5.102.8': {}
+  '@tanstack/query-core@5.103.1': {}
 
-  '@tanstack/react-query@5.102.8(react@19.1.0)':
+  '@tanstack/react-query@5.103.1(react@19.3.0)':
     dependencies:
-      '@tanstack/query-core': 5.102.8
-      react: 19.1.0
+      '@tanstack/query-core': 5.103.1
+      react: 19.3.0
 
-  '@tanstack/react-table@8.21.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@tanstack/react-table@8.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@tanstack/table-core': 8.21.3
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
 
   '@tanstack/table-core@8.21.3': {}
 
@@ -3182,9 +3182,9 @@ snapshots:
     dependencies:
       js-tokens: 4.0.0
 
-  lucide-react@1.45.0(react@19.1.0):
+  lucide-react@1.47.0(react@19.3.0):
     dependencies:
-      react: 19.1.0
+      react: 19.3.0
 
   magic-string@0.30.21:
     dependencies:
@@ -3208,15 +3208,15 @@ snapshots:
 
   nanoid@3.3.19: {}
 
-  next@15.5.19(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+  next@15.5.19(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       '@next/env': 15.5.19
       '@swc/helpers': 0.5.15
       caniuse-lite: 1.0.30001810
       postcss: 8.4.31
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
-      styled-jsx: 5.1.6(react@19.1.0)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+      styled-jsx: 5.1.6(react@19.3.0)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.5.19
       '@next/swc-darwin-x64': 15.5.19
@@ -3304,18 +3304,18 @@ snapshots:
       performance-now: 2.1.0
     optional: true
 
-  react-dom@19.1.0(react@19.1.0):
+  react-dom@19.3.0(react@19.3.0):
     dependencies:
-      react: 19.1.0
-      scheduler: 0.26.0
+      react: 19.3.0
+      scheduler: 0.28.0
 
-  react-hook-form@7.88.0(react@19.1.0):
+  react-hook-form@7.88.0(react@19.3.0):
     dependencies:
-      react: 19.1.0
+      react: 19.3.0
 
   react-is@16.13.1: {}
 
-  react@19.1.0: {}
+  react@19.3.0: {}
 
   readable-stream@2.3.8:
     dependencies:
@@ -3363,7 +3363,7 @@ snapshots:
 
   scheduler@0.25.0-rc-603e6108-20241029: {}
 
-  scheduler@0.26.0: {}
+  scheduler@0.28.0: {}
 
   semver@7.8.5:
     optional: true
@@ -3402,10 +3402,10 @@ snapshots:
       '@img/sharp-win32-x64': 0.34.5
     optional: true
 
-  sonner@2.0.8(@types/react@19.3.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+  sonner@2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
     optionalDependencies:
       '@types/react': 19.3.0
 
@@ -3434,17 +3434,17 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  styled-jsx@5.1.6(react@19.1.0):
+  styled-jsx@5.1.6(react@19.3.0):
     dependencies:
       client-only: 0.0.1
-      react: 19.1.0
+      react: 19.3.0
 
   svg-arc-to-cubic-bezier@3.2.0: {}
 
   svg-pathdata@6.0.3:
     optional: true
 
-  tailwind-merge@3.6.0: {}
+  tailwind-merge@3.7.0: {}
 
   tailwindcss@4.3.3: {}
 
@@ -3525,4 +3525,4 @@ snapshots:
       compress-commons: 4.1.2
       readable-stream: 3.6.2
 
-  zod@4.6.2: {}
+  zod@4.6.5: {}
