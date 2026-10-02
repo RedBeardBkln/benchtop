@@ -112,6 +112,9 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
 const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   labelName: z.string().max(500).nullable().optional(),
+  brandName: z.string().max(255).nullable().optional(),
+  supplierName: z.string().max(255).nullable().optional(),
+  itemCode: z.string().max(100).nullable().optional(),
   verification: z.enum(['verified', 'unverified']).optional(),
   isAbSpi: z.boolean().optional(),
   isIsolateOrConcentrate: z.boolean().optional(),
@@ -138,6 +141,9 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   const updateValues: Record<string, unknown> = { updatedAt: new Date() }
   if (d.name !== undefined) updateValues.name = d.name
   if (d.labelName !== undefined) updateValues.labelName = d.labelName
+  if (d.brandName !== undefined) updateValues.brandName = d.brandName
+  if (d.supplierName !== undefined) updateValues.supplierName = d.supplierName
+  if (d.itemCode !== undefined) updateValues.itemCode = d.itemCode
   if (d.verification !== undefined) updateValues.verification = d.verification
   if (d.isAbSpi !== undefined) updateValues.isAbSpi = d.isAbSpi
   if (d.isIsolateOrConcentrate !== undefined) updateValues.isIsolateOrConcentrate = d.isIsolateOrConcentrate

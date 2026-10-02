@@ -8,6 +8,27 @@
       "when": 1781115572499,
       "tag": "0000_tiresome_spencer_smythe",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787762968990,
+      "tag": "0001_lazy_thunderbolts",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790872141487,
+      "tag": "0002_tough_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790887658573,
+      "tag": "0003_rapid_zodiak",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
 // Pure calculation functions — no side effects, fully testable
 
+import { computeProcessYield, type LossStep, type ProcessYield } from '@/lib/process-loss'
+
 export type CalcLine = {
   ingredientId: string
   weightG: number
@@ -37,19 +39,25 @@ export type NutrientResult = {
  * Math:
  *   contribution_n from line_i  = amountPer100g_n × weightG_i / 100
  *   total_n in batch            = Σ contributions
- *   per 100g finished           = total_n / finishedWeightG × 100
- *   finishedWeightG             = totalWeightG × yieldPct / 100
+ *   per 100g finished           = total_n / (totalWeightG × concentrationYield) × 100
+ *
+ * Yield comes from the per-step losses (see computeProcessYield): production loss
+ * lowers the finished weight without changing the profile, moisture loss
+ * concentrates it.
  */
 export function calcNutrientProfile(opts: {
   lines: CalcLine[]
   allNutrients: CalcNutrient[]
   servingSizeG?: number
-  yieldPct?: number
+  steps?: LossStep[]
 }): CalcResult {
-  const { lines, allNutrients, servingSizeG, yieldPct = 100 } = opts
+  const { lines, allNutrients, servingSizeG, steps = [] } = opts
 
   const totalWeightG = lines.reduce((s, l) => s + l.weightG, 0)
-  const finishedWeightG = totalWeightG * (yieldPct / 100)
+  const processYield = computeProcessYield(totalWeightG, steps)
+  const { finishedWeightG } = processYield
+  // Weight the batch's nutrients are spread over once moisture has left
+  const concentrationWeightG = totalWeightG * (processYield.concentrationYieldPct / 100)
 
   // Accumulate absolute amounts contributed by each line
   const totals = new Map<string, number>()
@@ -67,7 +75,7 @@ export function calcNutrientProfile(opts: {
     const inBatch = totals.get(nutrient.id)
     if (inBatch === undefined) continue
 
-    const per100g = finishedWeightG > 0 ? (inBatch / finishedWeightG) * 100 : 0
+    const per100g = concentrationWeightG > 0 ? (inBatch / concentrationWeightG) * 100 : 0
 
     results.push({
       nutrientId: nutrient.id,
@@ -80,13 +88,14 @@ export function calcNutrientProfile(opts: {
     })
   }
 
-  return { results, totalWeightG, finishedWeightG }
+  return { results, totalWeightG, finishedWeightG, processYield }
 }
 
 export type CalcResult = {
   results: NutrientResult[]
   totalWeightG: number
   finishedWeightG: number
+  processYield: ProcessYield
 }
 
 export function formatAmt(amount: number, unit: string): string {

@@ -5,7 +5,7 @@ import {
   formulations, formulationLines, ingredients,
   ingredientNutrients, nutrients, projects, processSteps,
 } from '@/lib/db/schema'
-import { eq, inArray } from 'drizzle-orm'
+import { desc, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -14,7 +14,6 @@ const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   servingSizeG: z.number().positive().nullable().optional(),
   batchSizeG: z.number().positive().nullable().optional(),
-  yieldPct: z.number().min(1).max(200).optional(),
   notes: z.string().max(5000).nullable().optional(),
   status: z.enum(['draft', 'locked']).optional(),
   archived: z.boolean().optional(),
@@ -99,7 +98,18 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .where(eq(processSteps.formulationId, id))
     .orderBy(processSteps.stepNo)
 
-  return NextResponse.json({ ...formulation, lines: linesWithNutrients, processSteps: steps, project })
+  const iterations = await db
+    .select({
+      id: formulations.id,
+      version: formulations.version,
+      status: formulations.status,
+      updatedAt: formulations.updatedAt,
+    })
+    .from(formulations)
+    .where(eq(formulations.familyId, formulation.familyId))
+    .orderBy(desc(formulations.version))
+
+  return NextResponse.json({ ...formulation, lines: linesWithNutrients, processSteps: steps, project, iterations })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -116,7 +126,6 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (d.name !== undefined) updates.name = d.name
   if (d.servingSizeG !== undefined) updates.servingSizeG = d.servingSizeG?.toString() ?? null
   if (d.batchSizeG !== undefined) updates.batchSizeG = d.batchSizeG?.toString() ?? null
-  if (d.yieldPct !== undefined) updates.yieldPct = d.yieldPct.toString()
   if (d.notes !== undefined) updates.notes = d.notes
   if (d.status !== undefined) {
     updates.status = d.status
@@ -133,5 +142,14 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     .returning()
 
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // Name and archived state belong to the formulation as a whole, so keep every iteration in sync
+  const familyUpdates: Record<string, unknown> = {}
+  if (d.name !== undefined) familyUpdates.name = d.name
+  if (d.archived !== undefined) familyUpdates.archivedAt = updates.archivedAt
+  if (Object.keys(familyUpdates).length > 0) {
+    await db.update(formulations).set(familyUpdates).where(eq(formulations.familyId, row.familyId))
+  }
+
   return NextResponse.json(row)
 }

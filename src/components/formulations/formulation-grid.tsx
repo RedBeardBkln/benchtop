@@ -10,72 +10,14 @@ import {
   GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer,
 } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
-import { calcNutrientProfile, formatAmt, type NutrientResult } from '@/lib/formulation-calc'
+import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
+import { toLossStep } from '@/lib/process-loss'
+import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
+import { serializePrintSections, type PrintSection } from '@/lib/print-sections'
 import type { SolverResult } from '@/lib/solver'
 import { IngredientSidePanel } from '@/components/ingredients/ingredient-side-panel'
 import { ProcessStepsPanel } from '@/components/formulations/process-steps-panel'
 import { readErrorMessage } from '@/lib/utils'
-
-type ValidationStatus = 'pass' | 'fail' | 'warn' | 'no-data'
-
-function validateTarget(
-  t: ProjectTarget,
-  results: NutrientResult[],
-  formulationServingG: number | undefined,
-): ValidationStatus {
-  const r = results.find(r => r.name === t.nutrient)
-  if (!r) return 'no-data'
-  // Use formulation serving size first, then fall back to the target's own reference serving size
-  const servingSizeG = formulationServingG ?? t.servingSizeG
-  if (t.basis === 'per_serving' && !servingSizeG) return 'no-data'
-
-  // Convert the actual per-100g value into the target's unit before comparing.
-  // Without this, a target specified in g would silently never match a value
-  // stored in mg (or vice-versa). We only handle the common FDA mass/energy
-  // conversions — anything else returns 'no-data' to surface the mismatch.
-  const converted = convertToUnit(r.perFinished100g, r.unit, t.unit)
-  if (converted == null) return 'no-data'
-
-  const actual = t.basis === 'per_serving'
-    ? converted * (servingSizeG! / 100)
-    : converted
-
-  const W = 0.05  // 5% warn margin
-  switch (t.comparator) {
-    case '>=': return actual >= t.value ? 'pass' : actual >= t.value * (1 - W) ? 'warn' : 'fail'
-    case '<=': return actual <= t.value ? 'pass' : actual <= t.value * (1 + W) ? 'warn' : 'fail'
-    case '=': {
-      const d = Math.abs(actual - t.value) / (t.value || 1)
-      return d <= 0.02 ? 'pass' : d <= W ? 'warn' : 'fail'
-    }
-    case 'range': {
-      if (t.valueMax == null) return 'no-data'
-      if (actual >= t.value && actual <= t.valueMax) return 'pass'
-      const lo = actual >= t.value * (1 - W), hi = actual <= t.valueMax * (1 + W)
-      return lo && hi ? 'warn' : 'fail'
-    }
-    default: return 'no-data'
-  }
-}
-
-/**
- * Convert a value expressed in `fromUnit` to `toUnit`. Returns null when the
- * pair is not a known compatible conversion (e.g. g → IU). Recognizes:
- *   mass: g ↔ mg ↔ mcg
- *   energy: kcal ↔ kJ
- * Identity (same unit) returns the input unchanged.
- */
-function convertToUnit(value: number, fromUnit: string, toUnit: string): number | null {
-  if (fromUnit === toUnit) return value
-  const mass = (v: number, f: string, t: string): number | null => {
-    const toG: Record<string, number> = { g: 1, mg: 1e-3, mcg: 1e-6 }
-    if (!(f in toG) || !(t in toG)) return null
-    return v * (toG[f] / toG[t])
-  }
-  if (fromUnit === 'kcal' && toUnit === 'kJ') return value * 4.184
-  if (fromUnit === 'kJ'  && toUnit === 'kcal') return value / 4.184
-  return mass(value, fromUnit, toUnit)
-}
 
 function statusIcon(s: ValidationStatus) {
   if (s === 'pass') return <CheckCircle2 size={14} className="text-green-500" />
@@ -84,24 +26,16 @@ function statusIcon(s: ValidationStatus) {
   return <span className="text-gray-300 text-xs">—</span>
 }
 
-function fmtRequirement(t: ProjectTarget): string {
-  const v = `${t.value} ${t.unit}`
-  if (t.comparator === '>=') return `≥ ${v}`
-  if (t.comparator === '<=') return `≤ ${v}`
-  if (t.comparator === '=') return `= ${v}`
-  if (t.comparator === 'range') return `${t.value} – ${t.valueMax ?? '?'} ${t.unit}`
-  return v
-}
 import { AddIngredientDialog } from '@/components/ingredients/add-ingredient-dialog'
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
 import { SwapSourceDialog, LibraryPickerDialog } from '@/components/formulations/swap-source-dialog'
 import { ReverseWizard } from '@/components/formulations/reverse-wizard'
 import { NfpDialog } from '@/components/formulations/nfp-dialog'
 import { CompleteBatchDialog } from '@/components/formulations/complete-batch-dialog'
+import { PrintOptionsDialog } from '@/components/formulations/print-options-dialog'
 
 // Key nutrients to display as columns in the grid
 const GRID_NUTRIENT_NAMES = ['Energy', 'Protein', 'Total Fat', 'Total Carbohydrate', 'Dietary Fiber']
-const CATEGORY_ORDER = ['macros', 'vitamins', 'minerals', 'other'] as const
 
 type LineState = {
   key: string           // stable React key (uuid or temp)
@@ -226,7 +160,6 @@ export function FormulationGrid({ id }: { id: string }) {
 
   const [lines, setLines] = useState<LineState[]>([])
   const [servingSizeG, setServingSizeG] = useState<string>('')
-  const [yieldPct, setYieldPct] = useState<string>('100')
   const [isDirty, setIsDirty] = useState(false)
   const [showAddRow, setShowAddRow] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
@@ -246,6 +179,10 @@ export function FormulationGrid({ id }: { id: string }) {
   const [editingName, setEditingName] = useState(false)
   const [nameEdit, setNameEdit] = useState('')
   const [showNfpDialog, setShowNfpDialog] = useState(false)
+  const [showPrintDialog, setShowPrintDialog] = useState(false)
+  const [showDuplicateMenu, setShowDuplicateMenu] = useState(false)
+  const [showNewFormulation, setShowNewFormulation] = useState(false)
+  const [newFormulationName, setNewFormulationName] = useState('')
   const [showCompleteBatch, setShowCompleteBatch] = useState(false)
   const [showSwapSourceDialog, setShowSwapSourceDialog] = useState(false)
   const [showLibraryPicker, setShowLibraryPicker] = useState(false)
@@ -290,7 +227,6 @@ export function FormulationGrid({ id }: { id: string }) {
       }))
     )
     setServingSizeG(data.servingSizeG ? String(parseFloat(data.servingSizeG)) : '')
-    setYieldPct(data.yieldPct ? String(parseFloat(data.yieldPct)) : '100')
     // Auto-launch wizard for new reverse-mode formulations with no lines yet
     if (data.mode === 'reverse' && data.lines.length === 0) {
       setShowReverseWizard(true)
@@ -299,6 +235,9 @@ export function FormulationGrid({ id }: { id: string }) {
 
   // Derived values
   const totalWeightG = useMemo(() => lines.reduce((s, l) => s + (l.weightG || 0), 0), [lines])
+
+  // Saved process steps drive yield: each step's loss shifts the finished weight and/or profile
+  const processSteps = useMemo(() => data?.processSteps ?? [], [data?.processSteps])
 
   const calcResult = useMemo(() => {
     if (!allNutrients || lines.length === 0) return null
@@ -309,9 +248,9 @@ export function FormulationGrid({ id }: { id: string }) {
         dailyValueAmount: n.dailyValueAmount != null ? Number(n.dailyValueAmount) : null,
       })),
       servingSizeG: servingSizeG ? parseFloat(servingSizeG) : undefined,
-      yieldPct: yieldPct ? parseFloat(yieldPct) : 100,
+      steps: processSteps.map(toLossStep),
     })
-  }, [lines, allNutrients, servingSizeG, yieldPct])
+  }, [lines, allNutrients, servingSizeG, processSteps])
 
   // Grid nutrient columns
   const gridNutrients = useMemo(() => {
@@ -321,20 +260,54 @@ export function FormulationGrid({ id }: { id: string }) {
       .filter(Boolean) as Nutrient[]
   }, [allNutrients])
 
-  // Fork as new version
-  const forkMutation = useMutation({
+  // New iteration: next version of this same formulation
+  const iterateMutation = useMutation({
     mutationFn: () =>
-      fetch(`/api/formulations/${id}/fork`, { method: 'POST' }).then(async r => {
+      fetch(`/api/formulations/${id}/iterate`, { method: 'POST' }).then(async r => {
         const body = await r.json()
-        if (!r.ok) throw new Error(body.error ?? 'Fork failed')
+        if (!r.ok) throw new Error(body.error ?? 'Could not create iteration')
         return body
       }),
-    onSuccess: (fork) => {
-      toast.success(`v${fork.version} created — opening now`)
-      router.push(`/formulations/${fork.id}`)
+    onSuccess: (iteration) => {
+      // Refresh the iteration list on every version of this family, plus project counts
+      queryClient.invalidateQueries({ queryKey: ['formulation'] })
+      queryClient.invalidateQueries({ queryKey: ['project'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      toast.success(`v${iteration.version} created — opening now`)
+      router.push(`/formulations/${iteration.id}`)
     },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  // New formulation: separate formulation under a new name, starting at v1
+  const forkMutation = useMutation({
+    mutationFn: (name: string) =>
+      fetch(`/api/formulations/${id}/fork`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      }).then(async r => {
+        const body = await r.json()
+        if (!r.ok) throw new Error(body.error ?? 'Could not create formulation')
+        return body
+      }),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ['project'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      setShowNewFormulation(false)
+      toast.success(`"${created.name}" created — opening now`)
+      router.push(`/formulations/${created.id}`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  function requireSavedChanges(): boolean {
+    if (isDirty) {
+      toast.warning('Save your changes first — duplicating copies the last saved version')
+      return false
+    }
+    return true
+  }
 
   const finalizeMutation = useMutation({
     mutationFn: (status: 'locked' | 'draft') =>
@@ -344,7 +317,9 @@ export function FormulationGrid({ id }: { id: string }) {
         body: JSON.stringify({ status }),
       }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() }),
     onSuccess: (_row, status) => {
-      queryClient.invalidateQueries({ queryKey: ['formulation', id] })
+      // status is shown on sibling iterations (version dropdown) and on the project page
+      queryClient.invalidateQueries({ queryKey: ['formulation'] })
+      queryClient.invalidateQueries({ queryKey: ['project'] })
       setConfirmAction(null)
       toast.success(status === 'locked' ? 'Formulation finalized and locked' : 'Formulation unlocked')
     },
@@ -359,6 +334,8 @@ export function FormulationGrid({ id }: { id: string }) {
         body: JSON.stringify({ archived: true }),
       }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() }),
     onSuccess: () => {
+      // archive is family-wide; the project page must show it without waiting for staleTime
+      queryClient.invalidateQueries({ queryKey: ['project'] })
       setConfirmAction(null)
       toast.success('Formulation archived')
       router.push(`/projects/${data?.projectId}`)
@@ -406,7 +383,9 @@ export function FormulationGrid({ id }: { id: string }) {
         body: JSON.stringify({ name }),
       }).then(async r => { if (!r.ok) throw new Error('Failed'); return r.json() }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['formulation', id] })
+      // name is family-wide: sibling iterations and the project page show it too
+      queryClient.invalidateQueries({ queryKey: ['formulation'] })
+      queryClient.invalidateQueries({ queryKey: ['project'] })
       setEditingName(false)
       toast.success('Formulation renamed')
     },
@@ -435,7 +414,6 @@ export function FormulationGrid({ id }: { id: string }) {
       const patchBody: Record<string, unknown> = {}
       if (servingSizeG) patchBody.servingSizeG = parseFloat(servingSizeG)
       else patchBody.servingSizeG = null
-      patchBody.yieldPct = parseFloat(yieldPct) || 100
 
       await fetch(`/api/formulations/${id}`, {
         method: 'PATCH',
@@ -445,6 +423,8 @@ export function FormulationGrid({ id }: { id: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['formulation', id] })
+      // The project page lists each formulation's updatedAt (and sorts by it)
+      queryClient.invalidateQueries({ queryKey: ['project'] })
       setIsDirty(false)
       toast.success('Formulation saved')
     },
@@ -454,10 +434,16 @@ export function FormulationGrid({ id }: { id: string }) {
   function markDirty() { setIsDirty(true) }
 
   function handlePrint() {
+    setShowPrintDialog(true)
+  }
+
+  // window.open must stay synchronous inside this click handler (popup blockers)
+  function handlePrintConfirm(sections: PrintSection[]) {
+    setShowPrintDialog(false)
     if (isDirty) {
       toast.warning('Showing last saved version — save your changes to include them in the printout')
     }
-    window.open(`/formulations/${id}/print`, '_blank')
+    window.open(`/formulations/${id}/print?sections=${serializePrintSections(sections)}`, '_blank')
   }
 
   function updateWeight(key: string, value: string) {
@@ -635,13 +621,12 @@ export function FormulationGrid({ id }: { id: string }) {
             </form>
           ) : (
             <div className="flex items-center gap-2 group/name mb-0.5">
-              <h1 className="text-xl font-semibold text-gray-900">{data.name}</h1>
-              <span className="text-sm text-gray-400">v{data.version}</span>
-              {isLocked && <Lock size={13} className="text-gray-400" />}
+              <h1 className="text-xl font-semibold text-gray-900 truncate min-w-0" title={data.name}>{data.name}</h1>
+              {isLocked && <Lock size={13} className="text-gray-400 shrink-0" />}
               {!isLocked && (
                 <button
                   onClick={() => { setNameEdit(data.name); setEditingName(true) }}
-                  className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded"
+                  className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded shrink-0"
                   title="Rename formulation"
                 >
                   <Edit2 size={13} />
@@ -649,7 +634,24 @@ export function FormulationGrid({ id }: { id: string }) {
               )}
             </div>
           )}
-          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
+            {data.iterations.length > 1 ? (
+              <select
+                value={data.id}
+                onChange={e => { if (e.target.value !== data.id) router.push(`/formulations/${e.target.value}`) }}
+                title="Switch iteration"
+                className="text-sm text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 print:hidden"
+              >
+                {data.iterations.map(it => (
+                  <option key={it.id} value={it.id}>
+                    v{it.version}{it.status === 'locked' ? ' 🔒' : ''}{it.id === data.iterations[0].id ? ' (latest)' : ''}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-sm text-gray-400">v{data.version}</span>
+            )}
             <span className="capitalize">{data.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</span>
             <span className={`px-1.5 py-0.5 rounded font-medium ${
               isLocked ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'
@@ -693,16 +695,52 @@ export function FormulationGrid({ id }: { id: string }) {
               {solveMutation.isPending ? 'Solving…' : 'Solve'}
             </button>
           )}
-          <button
-            onClick={() => forkMutation.mutate()}
-            disabled={forkMutation.isPending}
-            title="Fork this formulation as the next version"
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
-                       text-sm rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
-          >
-            <GitBranch size={13} />
-            {forkMutation.isPending ? 'Forking…' : 'New version'}
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowDuplicateMenu(v => !v)}
+              disabled={iterateMutation.isPending || forkMutation.isPending}
+              title="Duplicate this formulation"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
+                         text-sm rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              <GitBranch size={13} />
+              {iterateMutation.isPending ? 'Creating…' : 'Duplicate'}
+              <ChevronDown size={12} />
+            </button>
+            {showDuplicateMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowDuplicateMenu(false)} />
+                <div className="absolute right-0 z-20 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg py-1">
+                  <button
+                    onClick={() => {
+                      setShowDuplicateMenu(false)
+                      if (requireSavedChanges()) iterateMutation.mutate()
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                  >
+                    <div className="text-sm font-medium text-gray-800">New iteration</div>
+                    <div className="text-xs text-gray-400">
+                      Saves as v{(data.iterations[0]?.version ?? data.version) + 1} of this formulation
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDuplicateMenu(false)
+                      if (!requireSavedChanges()) return
+                      setNewFormulationName('')
+                      setShowNewFormulation(true)
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                  >
+                    <div className="text-sm font-medium text-gray-800">New formulation</div>
+                    <div className="text-xs text-gray-400">
+                      Separate formulation under a new name, starting at v1
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           {isLocked ? (
             <button
               onClick={() => setConfirmAction('unfinalize')}
@@ -783,19 +821,18 @@ export function FormulationGrid({ id }: { id: string }) {
                        focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-500">Yield %</label>
-          <input
-            type="number"
-            min="1"
-            max="200"
-            step="any"
-            value={yieldPct}
-            onChange={e => { setYieldPct(e.target.value); markDirty() }}
-            disabled={isLocked}
-            className="w-16 px-2 py-0.5 text-sm border border-gray-200 rounded focus:outline-none
-                       focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          />
+        <div
+          className="flex items-center gap-2"
+          title={calcResult
+            ? `Production loss ${calcResult.processYield.productionLossG.toFixed(1)} g · moisture loss ${calcResult.processYield.moistureLossG.toFixed(1)} g — set per step in Process steps`
+            : 'Set loss per step in Process steps'}
+        >
+          <span className="text-xs font-medium text-gray-500">Yield</span>
+          <span className="font-medium text-gray-700">
+            {calcResult && calcResult.totalWeightG > 0
+              ? `${calcResult.processYield.yieldPct.toFixed(1)}% · ${calcResult.finishedWeightG.toFixed(1)} g`
+              : '—'}
+          </span>
         </div>
       </div>
 
@@ -1084,19 +1121,7 @@ export function FormulationGrid({ id }: { id: string }) {
         const projectTargets = (data.project?.targets ?? []) as ProjectTarget[]
         if (!calcResult || projectTargets.length === 0) return null
         const serving = servingSizeG ? parseFloat(servingSizeG) : undefined
-        const validations = projectTargets.map(t => ({
-          t,
-          status: validateTarget(t, calcResult.results, serving),
-          actual: (() => {
-            const r = calcResult.results.find(r => r.name === t.nutrient)
-            if (!r) return null
-            if (t.basis === 'per_serving') {
-              const sg = serving ?? t.servingSizeG
-              return sg ? r.perFinished100g * (sg / 100) : null
-            }
-            return r.perFinished100g
-          })(),
-        }))
+        const validations = evaluateTargets(projectTargets, calcResult.results, serving)
         const passes = validations.filter(v => v.status === 'pass').length
         const fails  = validations.filter(v => v.status === 'fail').length
         const warns  = validations.filter(v => v.status === 'warn').length
@@ -1429,6 +1454,61 @@ export function FormulationGrid({ id }: { id: string }) {
         }}
       />
 
+      {showPrintDialog && (
+        <PrintOptionsDialog
+          hasSteps={(data.processSteps?.length ?? 0) > 0}
+          hasTargets={(data.project?.targets?.length ?? 0) > 0}
+          hasLines={data.lines.length > 0}
+          onClose={() => setShowPrintDialog(false)}
+          onConfirm={handlePrintConfirm}
+        />
+      )}
+
+
+      {showNewFormulation && (() => {
+        const trimmed = newFormulationName.trim()
+        const sameName = trimmed.toLowerCase() === data.name.trim().toLowerCase()
+        const canCreate = trimmed.length > 0 && !sameName && !forkMutation.isPending
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <form
+              className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-5 space-y-4"
+              onSubmit={e => { e.preventDefault(); if (canCreate) forkMutation.mutate(trimmed) }}
+            >
+              <h3 className="text-base font-semibold text-gray-900">New formulation</h3>
+              <p className="text-sm text-gray-500">
+                Copies &ldquo;{data.name}&rdquo; into a separate formulation that starts at v1.
+                Give it a new name.
+              </p>
+              <div>
+                <input
+                  autoFocus
+                  value={newFormulationName}
+                  onChange={e => setNewFormulationName(e.target.value)}
+                  placeholder="New formulation name"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
+                             focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {sameName && (
+                  <p className="text-xs text-red-500 mt-1">Name must be different from the current formulation.</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowNewFormulation(false)}
+                  className="px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={!canCreate}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                  {forkMutation.isPending ? 'Creating…' : 'Create formulation'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )
+      })()}
+
+
       {confirmAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-5 space-y-4">
@@ -1436,7 +1516,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <>
                 <h3 className="text-base font-semibold text-gray-900">Finalize formulation?</h3>
                 <p className="text-sm text-gray-500">
-                  Locking this formulation prevents accidental edits. You can still fork it into a new editable version, or unlock it if needed.
+                  Locking this formulation prevents accidental edits. You can still create a new iteration to keep working, or unlock it if needed.
                 </p>
                 <div className="flex justify-end gap-2">
                   <button onClick={() => setConfirmAction(null)} className="px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>

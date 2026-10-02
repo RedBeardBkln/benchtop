@@ -76,6 +76,8 @@ export function IngredientDetail({ id }: { id: string }) {
   const [nameEdit, setNameEdit] = useState('')
   const [editingLabelName, setEditingLabelName] = useState(false)
   const [labelNameEdit, setLabelNameEdit] = useState('')
+  const [editingSource, setEditingSource] = useState(false)
+  const [sourceEdit, setSourceEdit] = useState({ brandName: '', supplierName: '', itemCode: '' })
 
   // ── Allergens ─────────────────────────────────────────────────────────
   const [allergenInput, setAllergenInput] = useState('')
@@ -179,7 +181,14 @@ export function IngredientDetail({ id }: { id: string }) {
   })
 
   const patchIngredientMutation = useMutation({
-    mutationFn: (fields: { name?: string; labelName?: string | null; stockG?: number | null }) =>
+    mutationFn: (fields: {
+      name?: string
+      labelName?: string | null
+      brandName?: string | null
+      supplierName?: string | null
+      itemCode?: string | null
+      stockG?: number | null
+    }) =>
       fetch(`/api/ingredients/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -546,6 +555,78 @@ export function IngredientDetail({ id }: { id: string }) {
                 onClick={() => { setLabelNameEdit(data.labelName ?? ''); setEditingLabelName(true) }}
                 className="opacity-0 group-hover/label:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
                 title="Edit label name"
+              >
+                <Edit2 size={11} />
+              </button>
+            </div>
+          )}
+
+          {/* Editable brand / supplier / item code */}
+          {editingSource ? (
+            <form
+              className="flex items-center gap-2 mb-2 flex-wrap"
+              onSubmit={e => {
+                e.preventDefault()
+                patchIngredientMutation.mutate(
+                  {
+                    brandName: sourceEdit.brandName.trim() || null,
+                    supplierName: sourceEdit.supplierName.trim() || null,
+                    itemCode: sourceEdit.itemCode.trim() || null,
+                  },
+                  { onSuccess: () => setEditingSource(false) },
+                )
+              }}
+            >
+              {([
+                ['brandName', 'Brand'],
+                ['supplierName', 'Supplier'],
+                ['itemCode', 'Item code'],
+              ] as const).map(([key, placeholder]) => (
+                <input
+                  key={key}
+                  value={sourceEdit[key]}
+                  onChange={e => setSourceEdit(s => ({ ...s, [key]: e.target.value }))}
+                  placeholder={placeholder}
+                  className="text-sm text-gray-600 border-b border-blue-400 outline-none bg-transparent w-32"
+                />
+              ))}
+              <button type="submit" disabled={patchIngredientMutation.isPending}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 shrink-0">
+                <Save size={11} /> Save
+              </button>
+              <button type="button" onClick={() => setEditingSource(false)}
+                className="px-2.5 py-1 text-xs border border-gray-200 rounded-md hover:bg-gray-50 shrink-0">
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <div className="flex items-center gap-1.5 group/source mb-2 flex-wrap">
+              {data.brandName || data.supplierName || data.itemCode ? (
+                <span className="text-sm text-gray-500 flex items-center gap-3 flex-wrap">
+                  {data.brandName && (
+                    <span><span className="text-xs text-gray-400 mr-1">Brand:</span>{data.brandName}</span>
+                  )}
+                  {data.supplierName && (
+                    <span><span className="text-xs text-gray-400 mr-1">Supplier:</span>{data.supplierName}</span>
+                  )}
+                  {data.itemCode && (
+                    <span><span className="text-xs text-gray-400 mr-1">Item #:</span>{data.itemCode}</span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-300 italic">No brand / supplier / item code set</span>
+              )}
+              <button
+                onClick={() => {
+                  setSourceEdit({
+                    brandName: data.brandName ?? '',
+                    supplierName: data.supplierName ?? '',
+                    itemCode: data.itemCode ?? '',
+                  })
+                  setEditingSource(true)
+                }}
+                className="opacity-0 group-hover/source:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
+                title="Edit brand, supplier, item code"
               >
                 <Edit2 size={11} />
               </button>

@@ -18,6 +18,10 @@ const schema = z.object({
   notes: z.string().max(2000).optional(),
   defaultCostPerKg: z.string().optional(),
   moisturePct: z.string().optional(),
+  labelName: z.string().max(500).optional(),
+  brandName: z.string().max(255).optional(),
+  supplierName: z.string().max(255).optional(),
+  itemCode: z.string().max(100).optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -196,6 +200,53 @@ export function AddIngredientDialog({
               {errors.name && (
                 <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>
               )}
+            </div>
+
+            {/* Deck name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Preferred name on ingredient deck
+              </label>
+              <input
+                {...register('labelName')}
+                placeholder="e.g. Isolated Soy Protein"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
+                           focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                How this ingredient should read on the label. Leave blank to use the name above.
+              </p>
+            </div>
+
+            {/* Brand / supplier / item code */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Brand name</label>
+                <input
+                  {...register('brandName')}
+                  placeholder="e.g. Supro"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
+                             focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                <input
+                  {...register('supplierName')}
+                  placeholder="e.g. Univar"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
+                             focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Item code</label>
+                <input
+                  {...register('itemCode')}
+                  placeholder="Supplier SKU / item #"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
+                             focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
             {/* Source type */}

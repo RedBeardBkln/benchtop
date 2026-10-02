@@ -611,8 +611,9 @@ export function ReverseWizard({
   const [mode, setMode] = useState<EntryMode | null>(null)
 
   // ── Image state ──────────────────────────────────────────────────────────────
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const MAX_IMAGES = 4
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [isParsing, setIsParsing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -654,26 +655,77 @@ export function ReverseWizard({
 
   // ── Image handlers ───────────────────────────────────────────────────────────
 
-  function onFileSelect(file: File) {
-    setImageFile(file)
-    const url = URL.createObjectURL(file)
-    setImagePreview(url)
+  function onFilesSelect(files: File[]) {
+    const imageOnly = files.filter(f => f.type.startsWith('image/'))
+    if (imageOnly.length === 0) return
+    setImageFiles(prev => {
+      const next = [...prev, ...imageOnly].slice(0, MAX_IMAGES)
+      if (prev.length + imageOnly.length > MAX_IMAGES) toast.error(`Up to ${MAX_IMAGES} images allowed`)
+      return next
+    })
   }
+
+  function removeImage(idx: number) {
+    setImageFiles(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  useEffect(() => {
+    const urls = imageFiles.map(f => URL.createObjectURL(f))
+    setImagePreviews(urls)
+    return () => urls.forEach(u => URL.revokeObjectURL(u))
+  }, [imageFiles])
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file?.type.startsWith('image/')) onFileSelect(file)
+    onFilesSelect(Array.from(e.dataTransfer.files))
+  }
+
+  // Compress photos client-side before upload — phone camera shots can be 8-15 MB each,
+  // and even a couple of them together exceed Vercel's 4.5 MB serverless request body limit.
+  function compressImage(file: File): Promise<File> {
+    return new Promise(resolve => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const MAX = 2048
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round((height * MAX) / width); width = MAX }
+          else { width = Math.round((width * MAX) / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width; canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        let quality = 0.88
+        const tryBlob = () => {
+          canvas.toBlob(blob => {
+            if (!blob) { resolve(file); return }
+            if (blob.size <= 1 * 1024 * 1024 || quality < 0.3) {
+              resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
+            } else { quality -= 0.15; tryBlob() }
+          }, 'image/jpeg', quality)
+        }
+        tryBlob()
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+      img.src = url
+    })
   }
 
   async function parseLabel() {
-    if (!imageFile) return
+    if (imageFiles.length === 0) return
     setIsParsing(true)
     try {
+      const compressed = await Promise.all(imageFiles.map(compressImage))
       const fd = new FormData()
-      fd.append('image', imageFile)
+      compressed.forEach(f => fd.append('images', f))
       const r = await fetch(`/api/formulations/${formulationId}/parse-label`, { method: 'POST', body: fd })
-      const data = await r.json()
+      const text = await r.text()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any
+      try { data = JSON.parse(text) }
+      catch { throw new Error(r.status === 413 ? 'Photos too large — try fewer or smaller images' : `Server error ${r.status}`) }
       if (!r.ok) throw new Error(data.error ?? 'Parse failed')
 
       setProductName(data.productName ?? '')
@@ -1272,54 +1324,68 @@ export function ReverseWizard({
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) onFileSelect(f) }}
+                  onChange={e => { onFilesSelect(Array.from(e.target.files ?? [])); e.target.value = '' }}
                 />
-                {!imagePreview ? (
+                <p className="text-xs text-gray-400">
+                  Upload 1–{MAX_IMAGES} photos — e.g. product label, nutrition panel, ingredient deck.
+                </p>
+
+                {imagePreviews.length > 0 && (
+                  <div className="flex flex-wrap gap-3">
+                    {imagePreviews.map((src, i) => (
+                      <div key={i} className="relative w-28 h-28 shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`Label photo ${i + 1}`} className="w-full h-full object-cover rounded-lg border border-gray-200" />
+                        <button
+                          onClick={() => removeImage(i)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 shadow-sm"
+                        >
+                          <X size={11} />
+                        </button>
+                        <p className="text-[10px] text-gray-400 mt-1 truncate">{imageFiles[i]?.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {imagePreviews.length < MAX_IMAGES && (
                   <div
                     onDrop={onDrop}
                     onDragOver={e => e.preventDefault()}
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center gap-3 p-10 border-2 border-dashed border-gray-200
+                    className="flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-200
                                rounded-xl hover:border-violet-400 hover:bg-violet-50/30 cursor-pointer transition-all"
                   >
-                    <Upload size={28} className="text-gray-300" />
+                    <Upload size={24} className="text-gray-300" />
                     <div className="text-center">
-                      <div className="text-sm font-medium text-gray-600">Drop image here or click to browse</div>
-                      <div className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — up to 12 MB</div>
+                      <div className="text-sm font-medium text-gray-600">
+                        {imagePreviews.length === 0 ? 'Drop images here or click to browse' : 'Add another photo'}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — up to 12 MB each</div>
                     </div>
                   </div>
-                ) : (
-                  <div className="flex gap-4 items-start">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imagePreview} alt="Label preview" className="w-40 h-40 object-contain rounded-lg border border-gray-200" />
-                    <div className="flex-1 space-y-2">
-                      <p className="text-sm text-gray-600 font-medium">{imageFile?.name}</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={parseLabel}
-                          disabled={isParsing}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-sm
-                                     rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
-                        >
-                          {isParsing
-                            ? <><div className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full animate-spin" /> Parsing…</>
-                            : <><Sparkles size={13} /> Parse with AI</>
-                          }
-                        </button>
-                        <button
-                          onClick={() => { setImageFile(null); setImagePreview(null) }}
-                          className="px-3 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600"
-                        >
-                          Change
-                        </button>
-                      </div>
-                      {productName && (
-                        <p className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle2 size={12} /> Parsed: <strong>{productName}</strong>
-                        </p>
-                      )}
-                    </div>
+                )}
+
+                {imagePreviews.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={parseLabel}
+                      disabled={isParsing}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-sm
+                                 rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                    >
+                      {isParsing
+                        ? <><div className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full animate-spin" /> Parsing…</>
+                        : <><Sparkles size={13} /> Parse with AI</>
+                      }
+                    </button>
+                    {productName && (
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <CheckCircle2 size={12} /> Parsed: <strong>{productName}</strong>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

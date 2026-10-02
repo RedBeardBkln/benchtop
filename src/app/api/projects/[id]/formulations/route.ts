@@ -24,9 +24,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const { name, mode, servingSizeG, batchSizeG, notes } = parsed.data
+  const newId = crypto.randomUUID()
   const [row] = await db
     .insert(formulations)
     .values({
+      id: newId,
+      familyId: newId,
       projectId,
       name,
       mode,

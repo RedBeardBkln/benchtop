@@ -24,7 +24,7 @@ export async function GET() {
       status: projects.status,
       createdAt: projects.createdAt,
       updatedAt: projects.updatedAt,
-      formulationCount: sql<number>`count(${formulations.id})`.mapWith(Number),
+      formulationCount: sql<number>`count(distinct ${formulations.familyId})`.mapWith(Number),
     })
     .from(projects)
     .leftJoin(formulations, eq(projects.id, formulations.projectId))

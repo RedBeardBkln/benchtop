@@ -3,7 +3,11 @@
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Printer, ArrowLeft } from 'lucide-react'
-import type { FormulationDetail } from '@/lib/types'
+import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
+import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
+import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
+import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
+import type { PrintSection } from '@/lib/print-sections'
 
 type StepParams = {
   temp_c?: string
@@ -23,7 +27,23 @@ const PARAM_LABELS: Array<[keyof StepParams, string]> = [
   ['pressure', 'Pressure'],
 ]
 
-export function FormulationPrintView({ id }: { id: string }) {
+// Plain-text status so it survives printing without background graphics
+const STATUS_LABEL: Record<ValidationStatus, string> = {
+  pass: 'Pass',
+  warn: 'Warn',
+  fail: 'Fail',
+  'no-data': '—',
+}
+
+const SECTION_HEADING = 'text-sm font-semibold text-gray-900 mb-2 pb-1 border-b border-gray-300 print:break-after-avoid'
+
+export function FormulationPrintView({ id, sections }: { id: string; sections: PrintSection[] }) {
+  const showFormulation = sections.includes('formulation')
+  const showProcess = sections.includes('process')
+  const showNutrients = sections.includes('nutrients')
+  const showValidation = sections.includes('validation')
+  const needsNutrients = showNutrients || showValidation
+
   const { data, isLoading, error } = useQuery<FormulationDetail>({
     queryKey: ['formulation', id],
     queryFn: () =>
@@ -31,6 +51,17 @@ export function FormulationPrintView({ id }: { id: string }) {
         if (!r.ok) throw new Error('Not found')
         return r.json()
       }),
+  })
+
+  const { data: allNutrients, isLoading: nutrientsLoading, error: nutrientsError } = useQuery<Nutrient[]>({
+    queryKey: ['nutrients-all'],
+    queryFn: () =>
+      fetch('/api/nutrients').then(r => {
+        if (!r.ok) throw new Error('Could not load nutrients')
+        return r.json()
+      }),
+    staleTime: Infinity,
+    enabled: needsNutrients,
   })
 
   if (isLoading) return <div className="px-8 py-8 text-sm text-gray-400">Loading…</div>
@@ -46,9 +77,36 @@ export function FormulationPrintView({ id }: { id: string }) {
   const sortedLines = [...data.lines].sort((a, b) => a.position - b.position)
   const totalWeightG = sortedLines.reduce((s, l) => s + parseFloat(l.weightG), 0)
   const servingSizeG = data.servingSizeG ? parseFloat(data.servingSizeG) : undefined
-  const yieldPct = data.yieldPct ? parseFloat(data.yieldPct) : 100
   const notes = data.notes?.trim() ?? ''
   const sortedSteps = [...data.processSteps].sort((a, b) => a.stepNo - b.stepNo)
+  const lossSteps = sortedSteps.map(toLossStep)
+  const processYield = computeProcessYield(totalWeightG, lossSteps)
+
+  // Same inputs as the editor's calcResult, built from the saved formulation
+  const calcResult = needsNutrients && allNutrients && sortedLines.length > 0
+    ? calcNutrientProfile({
+        lines: sortedLines.map(l => ({
+          ingredientId: l.ingredientId,
+          weightG: parseFloat(l.weightG),
+          nutrients: l.nutrients.map(n => ({
+            nutrientId: n.nutrientId,
+            amountPer100g: parseFloat(n.amountPer100g),
+          })),
+        })),
+        allNutrients: allNutrients.map(n => ({
+          id: n.id,
+          name: n.name,
+          unit: n.unit,
+          category: n.category,
+          dailyValueAmount: n.dailyValueAmount != null ? parseFloat(n.dailyValueAmount) : null,
+        })),
+        servingSizeG,
+        steps: lossSteps,
+      })
+    : null
+  const projectTargets = (data.project?.targets ?? []) as ProjectTarget[]
+  const validations = calcResult ? evaluateTargets(projectTargets, calcResult.results, servingSizeG) : []
+  const showPerServing = !!servingSizeG && servingSizeG > 0
 
   return (
     <div className="print-page min-h-screen bg-white">
@@ -101,68 +159,75 @@ export function FormulationPrintView({ id }: { id: string }) {
           </div>
           <div>
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide block">Yield</span>
-            <span className="font-medium text-gray-900">{yieldPct.toFixed(1)}%</span>
+            <span className="font-medium text-gray-900">
+              {totalWeightG > 0 ? `${processYield.yieldPct.toFixed(1)}% · ${processYield.finishedWeightG.toFixed(1)} g` : '—'}
+            </span>
           </div>
         </div>
 
-        {/* Ingredient table */}
-        <table className="w-full text-sm border-collapse mb-6">
-          <thead>
-            <tr className="border-b-2 border-gray-800 text-xs text-gray-600 uppercase tracking-wide">
-              <th className="text-left font-medium py-2 pr-2">Ingredient</th>
-              <th className="text-right font-medium py-2 px-2 w-28">Weight (g)</th>
-              <th className="text-right font-medium py-2 pl-2 w-20">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedLines.map(line => {
-              const weightG = parseFloat(line.weightG)
-              const pct = totalWeightG > 0 ? (weightG / totalWeightG) * 100 : 0
-              return (
-                <tr key={line.id} className="border-b border-gray-200">
-                  <td className="py-1.5 pr-2 text-gray-900">{line.ingredientName}</td>
-                  <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">{weightG.toFixed(1)}</td>
-                  <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(1)}%</td>
-                </tr>
-              )
-            })}
-            <tr className="border-t-2 border-gray-800 font-medium text-gray-900">
-              <td className="py-2 pr-2">Total ({sortedLines.length} ingredient{sortedLines.length !== 1 ? 's' : ''})</td>
-              <td className="py-2 px-2 text-right tabular-nums">{totalWeightG.toFixed(1)}</td>
-              <td className="py-2 pl-2 text-right tabular-nums">
-                {totalWeightG > 0 ? '100.0%' : '—'}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {showFormulation && (
+          <>
+          {/* Ingredient table */}
+          <table className="w-full text-sm border-collapse mb-6">
+            <thead>
+              <tr className="border-b-2 border-gray-800 text-xs text-gray-600 uppercase tracking-wide">
+                <th className="text-left font-medium py-2 pr-2">Ingredient</th>
+                <th className="text-right font-medium py-2 px-2 w-28">Weight (g)</th>
+                <th className="text-right font-medium py-2 pl-2 w-20">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedLines.map(line => {
+                const weightG = parseFloat(line.weightG)
+                const pct = totalWeightG > 0 ? (weightG / totalWeightG) * 100 : 0
+                return (
+                  <tr key={line.id} className="border-b border-gray-200">
+                    <td className="py-1.5 pr-2 text-gray-900">{line.ingredientName}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">{weightG.toFixed(1)}</td>
+                    <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(1)}%</td>
+                  </tr>
+                )
+              })}
+              <tr className="border-t-2 border-gray-800 font-medium text-gray-900">
+                <td className="py-2 pr-2">Total ({sortedLines.length} ingredient{sortedLines.length !== 1 ? 's' : ''})</td>
+                <td className="py-2 px-2 text-right tabular-nums">{totalWeightG.toFixed(1)}</td>
+                <td className="py-2 pl-2 text-right tabular-nums">
+                  {totalWeightG > 0 ? '100.0%' : '—'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-        {/* Notes */}
-        {notes && (
-          <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-2 pb-1 border-b border-gray-300">Notes</h2>
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{notes}</p>
-          </div>
+          {/* Notes */}
+          {notes && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-gray-900 mb-2 pb-1 border-b border-gray-300">Notes</h2>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">{notes}</p>
+            </div>
+          )}
+          </>
         )}
 
         {/* Process steps */}
-        {sortedSteps.length > 0 && (
+        {showProcess && sortedSteps.length > 0 && (
           <div className="mb-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-2 pb-1 border-b border-gray-300">Process steps</h2>
             <ol className="space-y-3">
               {sortedSteps.map((step, i) => {
                 const p = (step.params ?? {}) as StepParams
                 const populatedParams = PARAM_LABELS.filter(([key]) => p[key])
+                const lossLabel = describeStepLoss(step)
                 return (
                   <li key={step.id} className="text-sm text-gray-800 print:break-inside-avoid">
                     <div className="flex gap-2">
                       <span className="font-medium text-gray-500 tabular-nums">{i + 1}.</span>
                       <div className="flex-1">
                         <p>{step.instruction}</p>
-                        {(populatedParams.length > 0 || step.lossPct != null) && (
+                        {(populatedParams.length > 0 || lossLabel) && (
                           <p className="mt-0.5 text-xs text-gray-500">
                             {populatedParams.map(([key, label]) => `${label}: ${p[key]}`).join(' · ')}
-                            {populatedParams.length > 0 && step.lossPct != null && ' · '}
-                            {step.lossPct != null && `Yield loss (%): ${parseFloat(step.lossPct).toFixed(1)}`}
+                            {populatedParams.length > 0 && lossLabel && ' · '}
+                            {lossLabel}
                           </p>
                         )}
                       </div>
@@ -171,6 +236,116 @@ export function FormulationPrintView({ id }: { id: string }) {
                 )
               })}
             </ol>
+          </div>
+        )}
+
+        {/* Full nutrient profile */}
+        {showNutrients && (
+          <div className="mb-6">
+            <h2 className={SECTION_HEADING}>Full nutrient profile</h2>
+            {nutrientsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : nutrientsError ? (
+              <p className="text-sm text-gray-500">Could not load nutrient data.</p>
+            ) : !calcResult || calcResult.results.length === 0 ? (
+              <p className="text-sm text-gray-500">No nutrient data available.</p>
+            ) : (
+              <div className="space-y-4">
+                {CATEGORY_ORDER.map(cat => {
+                  const rows = calcResult.results.filter(r => r.category === cat)
+                  if (rows.length === 0) return null
+                  return (
+                    <div key={cat}>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 print:break-after-avoid">{cat}</h3>
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="border-b-2 border-gray-800 text-xs text-gray-600 uppercase tracking-wide">
+                            <th className="text-left font-medium py-2 pr-2">Nutrient</th>
+                            <th className="text-right font-medium py-2 px-2">Per 100 g</th>
+                            {showPerServing && (
+                              <th className="text-right font-medium py-2 px-2">Per serving</th>
+                            )}
+                            <th className="text-right font-medium py-2 pl-2 w-16">Unit</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map(r => (
+                            <tr key={r.nutrientId} className="border-b border-gray-200">
+                              <td className="py-1.5 pr-2 text-gray-900">{r.name}</td>
+                              <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">
+                                {formatAmt(r.perFinished100g, r.unit)}
+                              </td>
+                              {showPerServing && (
+                                <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">
+                                  {r.perServing != null ? formatAmt(r.perServing, r.unit) : '—'}
+                                </td>
+                              )}
+                              <td className="py-1.5 pl-2 text-right text-gray-600">{r.unit}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Validation vs project targets */}
+        {showValidation && (
+          <div className="mb-6">
+            <h2 className={SECTION_HEADING}>Validation vs project targets</h2>
+            {projectTargets.length === 0 ? (
+              <p className="text-sm text-gray-500">No targets defined for this project.</p>
+            ) : nutrientsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : nutrientsError ? (
+              <p className="text-sm text-gray-500">Could not load nutrient data.</p>
+            ) : !calcResult ? (
+              <p className="text-sm text-gray-500">No ingredients to validate.</p>
+            ) : (
+              <>
+                <p className="mb-2 text-xs text-gray-600">
+                  {validations.filter(v => v.status === 'pass').length} pass
+                  {' · '}{validations.filter(v => v.status === 'warn').length} warn
+                  {' · '}{validations.filter(v => v.status === 'fail').length} fail
+                </p>
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-gray-800 text-xs text-gray-600 uppercase tracking-wide">
+                      <th className="text-left font-medium py-2 pr-2">Nutrient</th>
+                      <th className="text-left font-medium py-2 px-2">Requirement</th>
+                      <th className="text-right font-medium py-2 px-2">Actual</th>
+                      <th className="text-center font-medium py-2 pl-2 w-16">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {validations.map(({ t, status, actual }, i) => (
+                      <tr key={i} className="border-b border-gray-200">
+                        <td className="py-1.5 pr-2 text-gray-900">{t.label || t.nutrient}</td>
+                        <td className="py-1.5 px-2 text-gray-700">
+                          {fmtRequirement(t)}{' '}
+                          <span className="text-gray-500">/ {t.basis === 'per_100g' ? '100 g' : 'serving'}</span>
+                        </td>
+                        <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">
+                          {actual != null
+                            ? `${formatAmt(actual, t.unit)} ${t.unit}`
+                            : <span className="text-gray-500 text-xs">
+                                {t.basis === 'per_serving' && !servingSizeG ? 'set serving size' : '—'}
+                              </span>
+                          }
+                        </td>
+                        <td className={`py-1.5 pl-2 text-center text-gray-900 ${status === 'fail' ? 'font-semibold' : ''}`}>
+                          {STATUS_LABEL[status]}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
           </div>
         )}
 

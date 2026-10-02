@@ -65,6 +65,10 @@ const createSchema = z.object({
   // 0 is valid for newly added ingredients with unknown/placeholder cost.
   defaultCostPerKg: z.number().min(0).optional(),
   moisturePct: z.number().min(0).max(100).optional(),
+  labelName: z.string().trim().max(500).optional(),
+  brandName: z.string().trim().max(255).optional(),
+  supplierName: z.string().trim().max(255).optional(),
+  itemCode: z.string().trim().max(100).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -96,6 +100,10 @@ export async function POST(request: NextRequest) {
         isIsolateOrConcentrate: d.isIsolateOrConcentrate,
         naturallyDerived: d.naturallyDerived,
         notes: d.notes,
+        labelName: d.labelName || null,
+        brandName: d.brandName || null,
+        supplierName: d.supplierName || null,
+        itemCode: d.itemCode || null,
         verification: 'unverified',
         defaultCostPerKg: d.defaultCostPerKg?.toString(),
         moisturePct: d.moisturePct?.toString(),

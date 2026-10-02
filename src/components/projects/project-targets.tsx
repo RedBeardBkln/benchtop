@@ -185,6 +185,9 @@ export function ProjectTargets({
     onSuccess: (_data, newTargets) => {
       setTargets(newTargets)
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      // Formulation detail embeds project.targets; the Projects list shows project updatedAt
+      queryClient.invalidateQueries({ queryKey: ['formulation'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       toast.success('Target saved')
     },
     onError: (err: Error) => toast.error(err.message),

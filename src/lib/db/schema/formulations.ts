@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, text, integer, numeric, boolean,
-  timestamp, jsonb, index, foreignKey,
+  timestamp, jsonb, index, uniqueIndex, foreignKey,
 } from 'drizzle-orm/pg-core'
 import { formulationModeEnum, formulationStatusEnum, targetBasisEnum } from './enums'
 import { projects } from './projects'
@@ -12,13 +12,16 @@ export const formulations = pgTable('formulations', {
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   version: integer('version').notNull().default(1),
-  // Self-reference: tracks lineage when duplicating as new iteration
+  // Groups all iterations (versions) of one formulation; equals the id of its v1 row.
+  // Set explicitly on insert (id and familyId are generated together).
+  familyId: uuid('family_id').notNull(),
+  // Self-reference: the iteration this one was duplicated from
   parentFormulationId: uuid('parent_formulation_id'),
   mode: formulationModeEnum('mode').notNull().default('ground_up'),
   status: formulationStatusEnum('status').notNull().default('draft'),
   servingSizeG: numeric('serving_size_g', { precision: 10, scale: 4 }),
   batchSizeG: numeric('batch_size_g', { precision: 12, scale: 4 }),
-  // yield = output / input × 100; used to compute as-served nutrient concentrations
+  // Legacy: yield is now derived from the process steps' loss (see lib/process-loss.ts); no longer read or written
   yieldPct: numeric('yield_pct', { precision: 8, scale: 5 }).notNull().default('100.00000'),
   notes: text('notes'),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
@@ -28,6 +31,7 @@ export const formulations = pgTable('formulations', {
 }, (t) => [
   index('formulations_project_idx').on(t.projectId),
   index('formulations_parent_idx').on(t.parentFormulationId),
+  uniqueIndex('formulations_family_version_uq').on(t.familyId, t.version),
   // Self-referential FK — safe to define here since Postgres allows forward-references in ALTER TABLE
   foreignKey({
     columns: [t.parentFormulationId],
@@ -59,8 +63,14 @@ export const processSteps = pgTable('process_steps', {
   instruction: text('instruction').notNull(),
   // Structured params: temp_c, time_min, ph, solids_pct, shear, pressure, custom k/v
   params: jsonb('params').notNull().default('{}'),
-  // Per-step yield loss %; cumulative loss feeds final yield_pct unless user overrides
+  // Legacy per-step loss %, superseded by loss_type / loss_amount / loss_unit; no longer read or written
   lossPct: numeric('loss_pct', { precision: 6, scale: 4 }),
+  // 'production' = product left on equipment (yield drops, profile unchanged);
+  // 'moisture' = water driven off (yield drops, profile concentrates). null = no loss at this step.
+  lossType: text('loss_type'),
+  lossAmount: numeric('loss_amount', { precision: 12, scale: 4 }),
+  // 'g' = grams, 'pct' = % of the batch weight entering this step
+  lossUnit: text('loss_unit').notNull().default('g'),
 }, (t) => [
   index('process_steps_formulation_idx').on(t.formulationId),
 ])

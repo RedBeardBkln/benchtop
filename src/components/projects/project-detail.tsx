@@ -8,7 +8,11 @@ import { ArrowLeft, Plus, FlaskConical, Lock, FileEdit, Target, Archive, RotateC
 import type { Project, Formulation, ProjectTarget } from '@/lib/types'
 import { ProjectTargets } from './project-targets'
 
-type ProjectWithFormulations = Project & { formulations: Formulation[]; targets: ProjectTarget[] }
+// formulations holds the latest iteration of each formulation
+type ProjectWithFormulations = Project & {
+  formulations: Array<Formulation & { iterationCount: number }>
+  targets: ProjectTarget[]
+}
 
 function NewFormulationDialog({
   projectId,
@@ -23,6 +27,7 @@ function NewFormulationDialog({
 }) {
   const [name, setName] = useState('')
   const [mode, setMode] = useState<'ground_up' | 'reverse'>('ground_up')
+  const queryClient = useQueryClient()
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -36,6 +41,8 @@ function NewFormulationDialog({
         return body
       }),
     onSuccess: (f) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       toast.success(`Formulation "${f.name}" created`)
       setName('')
       setMode('ground_up')
@@ -125,6 +132,8 @@ export function ProjectDetail({ id }: { id: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      // Formulation detail embeds project.name (back link, print view)
+      queryClient.invalidateQueries({ queryKey: ['formulation'] })
       setEditingName(false)
       toast.success('Project renamed')
     },
@@ -306,7 +315,12 @@ export function ProjectDetail({ id }: { id: string }) {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-gray-500">{f.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</td>
-                          <td className="px-4 py-3 text-gray-500">v{f.version}</td>
+                          <td className="px-4 py-3 text-gray-500">
+                            v{f.version}
+                            {f.iterationCount > 1 && (
+                              <span className="ml-1.5 text-xs text-gray-400">({f.iterationCount} iterations)</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                               f.status === 'locked' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'

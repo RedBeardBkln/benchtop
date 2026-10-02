@@ -16,7 +16,7 @@ export default async function FormulationPage({
 
   return (
     <AppShell userEmail={user.email}>
-      <FormulationGrid id={id} />
+      <FormulationGrid key={id} id={id} />
     </AppShell>
   )
 }

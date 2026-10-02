@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/db'
 import { projects, formulations } from '@/lib/db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -36,11 +36,19 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const [project] = await db.select().from(projects).where(eq(projects.id, id)).limit(1)
   if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const formList = await db
-    .select()
+  // One row per formulation: its latest iteration, plus how many iterations exist
+  const latestPerFamily = await db
+    .selectDistinctOn([formulations.familyId], {
+      formulation: formulations,
+      iterationCount: sql<number>`count(*) over (partition by ${formulations.familyId})::int`,
+    })
     .from(formulations)
     .where(eq(formulations.projectId, id))
-    .orderBy(desc(formulations.updatedAt))
+    .orderBy(formulations.familyId, desc(formulations.version))
+
+  const formList = latestPerFamily
+    .map(r => ({ ...r.formulation, iterationCount: r.iterationCount }))
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
   return NextResponse.json({ ...project, formulations: formList })
 }

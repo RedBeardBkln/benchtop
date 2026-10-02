@@ -5,6 +5,7 @@ import { formulations, formulationLines, ingredientNutrients, nutrients, project
 import { eq } from 'drizzle-orm'
 import { solve } from '@/lib/solver'
 import type { SolverInput, SolverLine } from '@/lib/solver'
+import { loadConcentrationYieldPct } from '@/lib/formulation-yield'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const input: SolverInput = {
     lines: solverLines,
     targets: (project?.targets ?? []) as SolverInput['targets'],
-    yieldPct: parseFloat(formulation.yieldPct ?? '100'),
+    yieldPct: await loadConcentrationYieldPct(id, solverLines.reduce((s, l) => s + l.weightG, 0)),
     servingSizeG: formulation.servingSizeG ? parseFloat(formulation.servingSizeG) : null,
   }
 

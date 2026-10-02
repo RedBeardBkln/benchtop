@@ -19,7 +19,11 @@ export const ingredients = pgTable('ingredients', {
   defaultCostPerKg: numeric('default_cost_per_kg', { precision: 10, scale: 4 }),
   moisturePct: numeric('moisture_pct', { precision: 6, scale: 4 }),
   stockG: numeric('stock_g', { precision: 14, scale: 4 }),
+  // Preferred name as it should appear on the ingredient deck
   labelName: text('label_name'),
+  brandName: text('brand_name'),
+  supplierName: text('supplier_name'),
+  itemCode: text('item_code'),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -34,8 +38,9 @@ export const ingredientNutrients = pgTable('ingredient_nutrients', {
   id: uuid('id').primaryKey().defaultRandom(),
   ingredientId: uuid('ingredient_id').notNull().references(() => ingredients.id, { onDelete: 'cascade' }),
   nutrientId: uuid('nutrient_id').notNull().references(() => nutrients.id, { onDelete: 'restrict' }),
-  // Amount per 100 g of ingredient as-purchased; full precision stored, display rounds
-  amountPer100g: numeric('amount_per_100g', { precision: 12, scale: 6 }).notNull(),
+  // Amount per 100 g of ingredient as-purchased; full precision stored, display rounds.
+  // Precision 18 allows trace vitamins/minerals measured in mcg to reach into the billions.
+  amountPer100g: numeric('amount_per_100g', { precision: 18, scale: 6 }).notNull(),
   // Human-readable source: USDA FDC ID, supplier doc filename, "user-entered", etc.
   sourceRef: text('source_ref').notNull(),
   sourceUrl: text('source_url'),

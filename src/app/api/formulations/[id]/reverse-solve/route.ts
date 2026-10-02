@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { formulations } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { reverseSolve } from '@/lib/solver'
+import { loadConcentrationYieldPct } from '@/lib/formulation-yield'
 import type { ReverseInput, SolverLine, NutrientTarget } from '@/lib/solver'
 import { z } from 'zod'
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params
 
   const [formulation] = await db
-    .select({ yieldPct: formulations.yieldPct, servingSizeG: formulations.servingSizeG })
+    .select({ batchSizeG: formulations.batchSizeG, servingSizeG: formulations.servingSizeG })
     .from(formulations)
     .where(eq(formulations.id, id))
     .limit(1)
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const input: ReverseInput = {
     candidates: solverLines,
     targetNutrients: targetNutrients as NutrientTarget[],
-    yieldPct: parseFloat(formulation.yieldPct ?? '100'),
+    yieldPct: await loadConcentrationYieldPct(id, parseFloat(formulation.batchSizeG ?? '0')),
     servingSizeG,
   }
 

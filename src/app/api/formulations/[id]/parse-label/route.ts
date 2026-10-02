@@ -4,7 +4,13 @@ import Anthropic from '@anthropic-ai/sdk'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-const PROMPT = `Analyze this product label image and extract every piece of information visible. Return ONLY a valid JSON object — no markdown, no explanation — with this exact structure:
+const MAX_IMAGES = 4
+
+function buildPrompt(count: number) {
+  const intro = count > 1
+    ? `Analyze these ${count} product label images (e.g. front label, nutrition panel, ingredient deck) and extract every piece of information visible across all of them. Synthesize the information into ONE result. Return ONLY a valid JSON object — no markdown, no explanation — with this exact structure:`
+    : `Analyze this product label image and extract every piece of information visible. Return ONLY a valid JSON object — no markdown, no explanation — with this exact structure:`
+  return `${intro}
 
 {
   "productName": "string",
@@ -34,6 +40,7 @@ Rules:
   "Kosher" → "No pork or shellfish; no mixing of dairy and meat"
   "Halal" → "No pork or alcohol-derived ingredients"
   Other claims should generate sensible constraints.`
+}
 
 export async function POST(req: NextRequest, { params: _params }: Ctx) {
   const supabase = await createClient()
@@ -47,20 +54,31 @@ export async function POST(req: NextRequest, { params: _params }: Ctx) {
   const formData = await req.formData().catch(() => null)
   if (!formData) return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
 
-  const file = formData.get('image') as File | null
-  if (!file || !file.type.startsWith('image/'))
-    return NextResponse.json({ error: 'An image file is required' }, { status: 400 })
+  const files = formData.getAll('images').filter((f): f is File => f instanceof File && f.type.startsWith('image/'))
+  if (files.length === 0)
+    return NextResponse.json({ error: 'At least one image file is required' }, { status: 400 })
+  if (files.length > MAX_IMAGES)
+    return NextResponse.json({ error: `At most ${MAX_IMAGES} images are allowed` }, { status: 400 })
 
-  if (file.size > 12 * 1024 * 1024)
-    return NextResponse.json({ error: 'Image must be under 12 MB' }, { status: 400 })
+  for (const file of files) {
+    if (file.size > 12 * 1024 * 1024)
+      return NextResponse.json({ error: `${file.name} must be under 12 MB` }, { status: 400 })
+  }
 
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const base64 = buffer.toString('base64')
-  const mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' =
-    file.type === 'image/png'  ? 'image/png'
-    : file.type === 'image/webp' ? 'image/webp'
-    : file.type === 'image/gif'  ? 'image/gif'
+  type MediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+  const toMediaType = (mime: string): MediaType =>
+    mime === 'image/png'  ? 'image/png'
+    : mime === 'image/webp' ? 'image/webp'
+    : mime === 'image/gif'  ? 'image/gif'
     : 'image/jpeg'
+
+  const imageBlocks = await Promise.all(files.map(async file => {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    return {
+      type: 'image' as const,
+      source: { type: 'base64' as const, media_type: toMediaType(file.type), data: buffer.toString('base64') },
+    }
+  }))
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -71,8 +89,8 @@ export async function POST(req: NextRequest, { params: _params }: Ctx) {
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-          { type: 'text', text: PROMPT },
+          ...imageBlocks,
+          { type: 'text', text: buildPrompt(files.length) },
         ],
       }],
     })

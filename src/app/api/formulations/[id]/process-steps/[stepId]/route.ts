@@ -4,13 +4,17 @@ import { db } from '@/lib/db'
 import { processSteps } from '@/lib/db/schema'
 import { and, eq, gt, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { lossFields, lossFieldsError } from '@/lib/process-loss-fields'
 
 type Ctx = { params: Promise<{ id: string; stepId: string }> }
 
 const patchSchema = z.object({
   instruction: z.string().min(1).max(2000).optional(),
   params: z.record(z.string(), z.unknown()).optional(),
-  lossPct: z.number().min(0).max(100).nullable().optional(),
+  // Loss is sent as a unit: type + amount + unit together, or lossType null to clear it
+  lossType: z.enum(['production', 'moisture']).nullable().optional(),
+  lossAmount: z.number().positive().nullable().optional(),
+  lossUnit: z.enum(['g', 'pct']).optional(),
 })
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -26,7 +30,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const d = parsed.data
   if (d.instruction !== undefined) updates.instruction = d.instruction
   if (d.params !== undefined) updates.params = d.params
-  if (d.lossPct !== undefined) updates.lossPct = d.lossPct != null ? d.lossPct.toString() : null
+  if (d.lossType !== undefined) {
+    const lossError = lossFieldsError(d)
+    if (lossError) return NextResponse.json({ error: lossError }, { status: 400 })
+    Object.assign(updates, lossFields(d))
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })

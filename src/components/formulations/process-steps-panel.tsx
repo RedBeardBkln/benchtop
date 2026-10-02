@@ -5,6 +5,132 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { GripVertical, Plus, X, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ProcessStep } from '@/lib/types'
+import type { LossType, LossUnit } from '@/lib/process-loss'
+
+type LossDraft = { type: LossType | ''; amount: string; unit: LossUnit }
+
+const NO_LOSS: LossDraft = { type: '', amount: '', unit: 'g' }
+
+const LOSS_HINT: Record<LossType, string> = {
+  production: 'Product left behind (paddle, bowl, pan) — yield drops, nutrient profile unchanged',
+  moisture: 'Water driven off (baking, boiling, drying) — yield drops, nutrient profile concentrates',
+}
+
+function stepLossDraft(step: ProcessStep): LossDraft {
+  if (step.lossType !== 'production' && step.lossType !== 'moisture') return NO_LOSS
+  return {
+    type: step.lossType,
+    amount: step.lossAmount != null ? String(parseFloat(step.lossAmount)) : '',
+    unit: step.lossUnit === 'pct' ? 'pct' : 'g',
+  }
+}
+
+/** Why a draft can't be saved yet, or null when it is a valid loss (or no loss). */
+function lossDraftError(d: LossDraft): string | null {
+  if (!d.type) return null
+  const n = parseFloat(d.amount)
+  if (!(n > 0)) return 'Enter an amount'
+  if (d.unit === 'pct' && n > 100) return 'Max 100%'
+  return null
+}
+
+function lossBody(d: LossDraft) {
+  return d.type
+    ? { lossType: d.type, lossAmount: parseFloat(d.amount), lossUnit: d.unit }
+    : { lossType: null }
+}
+
+function LossFields({
+  draft, onChange, onCommit, disabled,
+}: {
+  draft: LossDraft
+  onChange: (d: LossDraft) => void
+  /** Called with the draft to persist, whenever a change leaves it valid. */
+  onCommit?: (d: LossDraft) => void
+  disabled: boolean
+}) {
+  const error = lossDraftError(draft)
+
+  function update(next: LossDraft, commit: boolean) {
+    onChange(next)
+    if (commit && !lossDraftError(next)) onCommit?.(next)
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={draft.type}
+          disabled={disabled}
+          onChange={(e) => {
+            const type = e.target.value as LossDraft['type']
+            update(type ? { ...draft, type } : NO_LOSS, true)
+          }}
+          aria-label="Loss type"
+          className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+        >
+          <option value="">No loss</option>
+          <option value="production">Production loss</option>
+          <option value="moisture">Moisture loss</option>
+        </select>
+        {draft.type && (
+          <>
+            <input
+              type="number"
+              min="0"
+              max={draft.unit === 'pct' ? 100 : undefined}
+              step="any"
+              value={draft.amount}
+              disabled={disabled}
+              onChange={(e) => onChange({ ...draft, amount: e.target.value })}
+              onBlur={() => update(draft, true)}
+              aria-label="Loss amount"
+              placeholder="Amount"
+              className="w-20 px-1.5 py-1 text-xs border border-gray-200 rounded tabular-nums
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <select
+              value={draft.unit}
+              disabled={disabled}
+              onChange={(e) => update({ ...draft, unit: e.target.value as LossUnit }, true)}
+              aria-label="Loss unit"
+              className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <option value="g">g</option>
+              <option value="pct">% of batch</option>
+            </select>
+            {error && <span className="text-[10px] text-amber-600">{error}</span>}
+          </>
+        )}
+      </div>
+      {draft.type && <p className="text-[10px] text-gray-400">{LOSS_HINT[draft.type]}</p>}
+    </div>
+  )
+}
+
+function StepLoss({
+  step, disabled, onCommit,
+}: {
+  step: ProcessStep
+  disabled: boolean
+  onCommit: (d: LossDraft) => void
+}) {
+  const [draft, setDraft] = useState(() => stepLossDraft(step))
+  // Pick up saved values (e.g. after a refetch)
+  const saved = JSON.stringify(stepLossDraft(step))
+  useEffect(() => { setDraft(JSON.parse(saved)) }, [saved])
+
+  return (
+    <LossFields
+      draft={draft}
+      onChange={setDraft}
+      disabled={disabled}
+      onCommit={(d) => { if (JSON.stringify(d) !== saved) onCommit(d) }}
+    />
+  )
+}
 
 type StepParams = {
   temp_c?: string
@@ -36,6 +162,7 @@ export function ProcessStepsPanel({
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [newInstruction, setNewInstruction] = useState('')
+  const [newLoss, setNewLoss] = useState<LossDraft>(NO_LOSS)
 
   useEffect(() => {
     setOrdered(steps)
@@ -46,14 +173,15 @@ export function ProcessStepsPanel({
   }
 
   const addMutation = useMutation({
-    mutationFn: (instruction: string) =>
+    mutationFn: ({ instruction, loss }: { instruction: string; loss: LossDraft }) =>
       fetch(`/api/formulations/${formulationId}/process-steps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instruction }),
+        body: JSON.stringify({ instruction, ...(loss.type ? lossBody(loss) : {}) }),
       }).then(jsonOrThrow),
     onSuccess: () => {
       setNewInstruction('')
+      setNewLoss(NO_LOSS)
       invalidate()
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to add step'),
@@ -117,7 +245,11 @@ export function ProcessStepsPanel({
   function handleAdd() {
     const instruction = newInstruction.trim()
     if (!instruction) return
-    addMutation.mutate(instruction)
+    if (lossDraftError(newLoss)) {
+      toast.error('Enter a loss amount, or set the loss to "No loss"')
+      return
+    }
+    addMutation.mutate({ instruction, loss: newLoss })
   }
 
   function updateParam(step: ProcessStep, key: keyof StepParams, value: string) {
@@ -187,6 +319,12 @@ export function ProcessStepsPanel({
                                  disabled:bg-transparent"
                     />
 
+                    <StepLoss
+                      step={step}
+                      disabled={isLocked}
+                      onCommit={(d) => patchMutation.mutate({ stepId: step.id, body: lossBody(d) })}
+                    />
+
                     {isExpanded && (
                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1 pb-1">
                         {([
@@ -208,27 +346,6 @@ export function ProcessStepsPanel({
                             />
                           </div>
                         ))}
-                        <div className="col-span-3 sm:col-span-6 space-y-0.5">
-                          <label className="text-[10px] text-gray-400">Yield loss (%)</label>
-                          <input
-                            defaultValue={step.lossPct ?? ''}
-                            disabled={isLocked}
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="any"
-                            onBlur={(e) => {
-                              const raw = e.target.value.trim()
-                              const value = raw ? parseFloat(raw) : null
-                              const current = step.lossPct != null ? parseFloat(step.lossPct) : null
-                              if (value !== current) {
-                                patchMutation.mutate({ stepId: step.id, body: { lossPct: value } })
-                              }
-                            }}
-                            className="w-24 px-1.5 py-1 text-xs border border-gray-200 rounded
-                                       focus:outline-none focus:ring-2 focus:ring-blue-500 tabular-nums"
-                          />
-                        </div>
                       </div>
                     )}
                   </div>
@@ -249,24 +366,27 @@ export function ProcessStepsPanel({
       )}
 
       {!isLocked && (
-        <div className="flex items-center gap-2">
-          <input
-            value={newInstruction}
-            onChange={(e) => setNewInstruction(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
-            placeholder="Add a process step, e.g. Heat to 85°C for 10 minutes"
-            className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-md
-                       focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={addMutation.isPending || !newInstruction.trim()}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white
-                       rounded-md hover:bg-gray-800 disabled:opacity-40 transition-colors"
-          >
-            {addMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-            Add step
-          </button>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              value={newInstruction}
+              onChange={(e) => setNewInstruction(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
+              placeholder="Add a process step, e.g. Bake at 175°C for 25 minutes"
+              className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-md
+                         focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={addMutation.isPending || !newInstruction.trim()}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white
+                         rounded-md hover:bg-gray-800 disabled:opacity-40 transition-colors"
+            >
+              {addMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              Add step
+            </button>
+          </div>
+          <LossFields draft={newLoss} onChange={setNewLoss} disabled={false} />
         </div>
       )}
     </div>
