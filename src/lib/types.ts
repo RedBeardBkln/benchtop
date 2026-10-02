@@ -11,6 +11,7 @@ import type {
   formulations,
   formulationLines,
   processSteps,
+  equipment,
   suppliers,
   ingredientSuppliers,
 } from '@/lib/db/schema'
@@ -48,6 +49,8 @@ export type Project = InferSelectModel<typeof projects>
 export type Formulation = InferSelectModel<typeof formulations>
 export type FormulationLine = InferSelectModel<typeof formulationLines>
 export type ProcessStep = InferSelectModel<typeof processSteps>
+export type Equipment = InferSelectModel<typeof equipment>
+export type ProcessStepDetail = ProcessStep & { equipmentName: string | null }
 
 export type ProjectSummary = Project & { formulationCount: number }
 
@@ -76,7 +79,7 @@ export type ProjectTarget = {
 
 export type FormulationDetail = Formulation & {
   lines: FormulationLineDetail[]
-  processSteps: ProcessStep[]
+  processSteps: ProcessStepDetail[]
   project: { id: string; name: string; targets: ProjectTarget[] }
   // Every iteration of this formulation, newest first
   iterations: Array<{

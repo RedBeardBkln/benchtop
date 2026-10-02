@@ -6,26 +6,9 @@ import { Printer, ArrowLeft } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
+import { describeStepMeasurements, type StepParams } from '@/lib/step-measurements'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
-
-type StepParams = {
-  temp_c?: string
-  time_min?: string
-  ph?: string
-  solids_pct?: string
-  shear?: string
-  pressure?: string
-}
-
-const PARAM_LABELS: Array<[keyof StepParams, string]> = [
-  ['temp_c', 'Temp (°C)'],
-  ['time_min', 'Time (min)'],
-  ['ph', 'pH'],
-  ['solids_pct', 'Solids (%)'],
-  ['shear', 'Shear'],
-  ['pressure', 'Pressure'],
-]
 
 // Plain-text status so it survives printing without background graphics
 const STATUS_LABEL: Record<ValidationStatus, string> = {
@@ -218,7 +201,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
             <ol className="space-y-3">
               {sortedSteps.map((step, i) => {
                 const p = (step.params ?? {}) as StepParams
-                const populatedParams = PARAM_LABELS.filter(([key]) => p[key])
+                const measurements = describeStepMeasurements(p, step.equipmentName)
                 const lossLabel = describeStepLoss(step)
                 return (
                   <li key={step.id} className="text-sm text-gray-800 print:break-inside-avoid">
@@ -226,10 +209,10 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                       <span className="font-medium text-gray-500 tabular-nums">{i + 1}.</span>
                       <div className="flex-1">
                         <p>{step.instruction}</p>
-                        {(populatedParams.length > 0 || lossLabel) && (
+                        {(measurements.length > 0 || lossLabel) && (
                           <p className="mt-0.5 text-xs text-gray-500">
-                            {populatedParams.map(([key, label]) => `${label}: ${p[key]}`).join(' · ')}
-                            {populatedParams.length > 0 && lossLabel && ' · '}
+                            {measurements.map(([label, value]) => `${label}: ${value}`).join(' · ')}
+                            {measurements.length > 0 && lossLabel && ' · '}
                             {lossLabel}
                           </p>
                         )}

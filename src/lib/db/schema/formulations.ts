@@ -6,6 +6,7 @@ import { formulationModeEnum, formulationStatusEnum, targetBasisEnum } from './e
 import { projects } from './projects'
 import { ingredients } from './ingredients'
 import { nutrients } from './nutrients'
+import { equipment } from './equipment'
 
 export const formulations = pgTable('formulations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -73,6 +74,8 @@ export const processSteps = pgTable('process_steps', {
   lossAmount: numeric('loss_amount', { precision: 12, scale: 4 }),
   // 'g' = grams, 'pct' = % of the batch weight entering this step
   lossUnit: text('loss_unit').notNull().default('g'),
+  // Equipment used for this step; cleared (not cascaded) if the equipment is ever removed
+  equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'set null' }),
 }, (t) => [
   index('process_steps_formulation_idx').on(t.formulationId),
 ])

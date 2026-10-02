@@ -3,9 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/db'
 import {
   formulations, formulationLines, ingredients,
-  ingredientNutrients, nutrients, projects, processSteps,
+  ingredientNutrients, nutrients, projects, processSteps, equipment,
 } from '@/lib/db/schema'
-import { desc, eq, inArray } from 'drizzle-orm'
+import { desc, eq, getTableColumns, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -94,8 +94,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   }))
 
   const steps = await db
-    .select()
+    .select({ ...getTableColumns(processSteps), equipmentName: equipment.name })
     .from(processSteps)
+    .leftJoin(equipment, eq(processSteps.equipmentId, equipment.id))
     .where(eq(processSteps.formulationId, id))
     .orderBy(processSteps.stepNo)
 

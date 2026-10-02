@@ -5,12 +5,15 @@ import { processSteps } from '@/lib/db/schema'
 import { and, eq, gt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { lossFields, lossFieldsError } from '@/lib/process-loss-fields'
+import { paramPatchError } from '@/lib/step-measurements'
 
 type Ctx = { params: Promise<{ id: string; stepId: string }> }
 
 const patchSchema = z.object({
   instruction: z.string().min(1).max(2000).optional(),
-  params: z.record(z.string(), z.unknown()).optional(),
+  // Keys are merged into the step's existing params; null/'' clears a key
+  params: z.record(z.string().regex(/^[a-z_]{1,40}$/), z.string().max(2000).nullable()).optional(),
+  equipmentId: z.string().uuid().nullable().optional(),
   // Loss is sent as a unit: type + amount + unit together, or lossType null to clear it
   lossType: z.enum(['production', 'moisture']).nullable().optional(),
   lossAmount: z.number().positive().nullable().optional(),
@@ -29,7 +32,19 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const updates: Record<string, unknown> = {}
   const d = parsed.data
   if (d.instruction !== undefined) updates.instruction = d.instruction
-  if (d.params !== undefined) updates.params = d.params
+  if (d.params !== undefined) {
+    const paramError = paramPatchError(d.params)
+    if (paramError) return NextResponse.json({ error: paramError }, { status: 400 })
+    // Merge in SQL so two quick edits to different fields can't overwrite each other
+    let merged = sql`coalesce(${processSteps.params}, '{}'::jsonb) || ${JSON.stringify(
+      Object.fromEntries(Object.entries(d.params).filter(([, v]) => v)),
+    )}::jsonb`
+    for (const [key, value] of Object.entries(d.params)) {
+      if (!value) merged = sql`${merged} - ${key}::text`
+    }
+    updates.params = merged
+  }
+  if (d.equipmentId !== undefined) updates.equipmentId = d.equipmentId
   if (d.lossType !== undefined) {
     const lossError = lossFieldsError(d)
     if (lossError) return NextResponse.json({ error: lossError }, { status: 400 })

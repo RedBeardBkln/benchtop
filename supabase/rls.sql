@@ -29,6 +29,7 @@ ALTER TABLE formulations           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE formulation_lines      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE formulation_targets    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE process_steps          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipment              ENABLE ROW LEVEL SECURITY;
 
 -- ── Reverse-engineering data ──────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ CREATE POLICY "authenticated_all" ON formulations         FOR ALL TO authenticat
 CREATE POLICY "authenticated_all" ON formulation_lines    FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "authenticated_all" ON formulation_targets  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "authenticated_all" ON process_steps        FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "authenticated_all" ON equipment            FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "authenticated_all" ON reverse_targets      FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "authenticated_all" ON reverse_candidates   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "authenticated_all" ON audit_log            FOR ALL TO authenticated USING (true) WITH CHECK (true);

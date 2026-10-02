@@ -85,6 +85,7 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
           lossType: s.lossType,
           lossAmount: s.lossAmount,
           lossUnit: s.lossUnit,
+          equipmentId: s.equipmentId,
         }))
       )
     }

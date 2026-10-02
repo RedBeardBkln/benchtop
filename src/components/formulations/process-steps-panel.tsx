@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { GripVertical, Plus, X, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
-import type { ProcessStep } from '@/lib/types'
+import type { Equipment, ProcessStepDetail } from '@/lib/types'
 import type { LossType, LossUnit } from '@/lib/process-loss'
+import type { StepParams } from '@/lib/step-measurements'
+import { StepMeasurements } from '@/components/formulations/step-measurements'
 
 type LossDraft = { type: LossType | ''; amount: string; unit: LossUnit }
 
@@ -16,7 +18,7 @@ const LOSS_HINT: Record<LossType, string> = {
   moisture: 'Water driven off (baking, boiling, drying) — yield drops, nutrient profile concentrates',
 }
 
-function stepLossDraft(step: ProcessStep): LossDraft {
+function stepLossDraft(step: ProcessStepDetail): LossDraft {
   if (step.lossType !== 'production' && step.lossType !== 'moisture') return NO_LOSS
   return {
     type: step.lossType,
@@ -113,7 +115,7 @@ function LossFields({
 function StepLoss({
   step, disabled, onCommit,
 }: {
-  step: ProcessStep
+  step: ProcessStepDetail
   disabled: boolean
   onCommit: (d: LossDraft) => void
 }) {
@@ -132,15 +134,6 @@ function StepLoss({
   )
 }
 
-type StepParams = {
-  temp_c?: string
-  time_min?: string
-  ph?: string
-  solids_pct?: string
-  shear?: string
-  pressure?: string
-}
-
 async function jsonOrThrow(r: Response) {
   const body = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(body.error ?? 'Request failed')
@@ -153,7 +146,7 @@ export function ProcessStepsPanel({
   isLocked,
 }: {
   formulationId: string
-  steps: ProcessStep[]
+  steps: ProcessStepDetail[]
   isLocked: boolean
 }) {
   const queryClient = useQueryClient()
@@ -167,6 +160,13 @@ export function ProcessStepsPanel({
   useEffect(() => {
     setOrdered(steps)
   }, [steps])
+
+  // Shared list of equipment any step can pick from
+  const { data: equipment = [] } = useQuery<Equipment[]>({
+    queryKey: ['equipment'],
+    queryFn: () => fetch('/api/equipment').then(jsonOrThrow),
+    staleTime: 60_000,
+  })
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['formulation', formulationId] })
@@ -252,12 +252,25 @@ export function ProcessStepsPanel({
     addMutation.mutate({ instruction, loss: newLoss })
   }
 
-  function updateParam(step: ProcessStep, key: keyof StepParams, value: string) {
-    const currentParams = (step.params ?? {}) as StepParams
-    const nextParams = { ...currentParams }
-    if (value.trim()) nextParams[key] = value.trim()
-    else delete nextParams[key]
-    patchMutation.mutate({ stepId: step.id, body: { params: nextParams } })
+  // The server merges these keys into the step's params; null clears one
+  function patchParams(stepId: string, params: Record<string, string | null>) {
+    patchMutation.mutate({ stepId, body: { params } })
+  }
+
+  // Adds (or reuses, ignoring case) a piece of equipment, then assigns it to the step
+  async function createEquipment(stepId: string, name: string) {
+    try {
+      const created: Equipment = await fetch('/api/equipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      }).then(jsonOrThrow)
+      await queryClient.invalidateQueries({ queryKey: ['equipment'] })
+      patchMutation.mutate({ stepId, body: { equipmentId: created.id } })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add equipment')
+      throw err
+    }
   }
 
   return (
@@ -328,18 +341,28 @@ export function ProcessStepsPanel({
                                  disabled:bg-transparent"
                     />
 
-                    <StepLoss
-                      step={step}
-                      disabled={isLocked}
-                      onCommit={(d) => patchMutation.mutate({ stepId: step.id, body: lossBody(d) })}
-                    />
+                    <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+                      <div className="space-y-0.5">
+                        <span className="block text-[10px] text-gray-400">Loss</span>
+                        <StepLoss
+                          step={step}
+                          disabled={isLocked}
+                          onCommit={(d) => patchMutation.mutate({ stepId: step.id, body: lossBody(d) })}
+                        />
+                      </div>
+                      <StepMeasurements
+                        step={step}
+                        disabled={isLocked}
+                        equipment={equipment}
+                        onPatch={(params) => patchParams(step.id, params)}
+                        onSelectEquipment={(id) => patchMutation.mutate({ stepId: step.id, body: { equipmentId: id } })}
+                        onCreateEquipment={(name) => createEquipment(step.id, name)}
+                      />
+                    </div>
 
                     {isExpanded && (
-                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1 pb-1">
+                      <div className="grid grid-cols-3 gap-2 pt-1 pb-1 max-w-md">
                         {([
-                          ['temp_c', 'Temp (°C)'],
-                          ['time_min', 'Time (min)'],
-                          ['ph', 'pH'],
                           ['solids_pct', 'Solids (%)'],
                           ['shear', 'Shear'],
                           ['pressure', 'Pressure'],
@@ -349,7 +372,10 @@ export function ProcessStepsPanel({
                             <input
                               defaultValue={p[key] ?? ''}
                               disabled={isLocked}
-                              onBlur={(e) => updateParam(step, key, e.target.value)}
+                              onBlur={(e) => {
+                                const next = e.target.value.trim()
+                                if (next !== (p[key] ?? '')) patchParams(step.id, { [key]: next || null })
+                              }}
                               className="w-full px-1.5 py-1 text-xs border border-gray-200 rounded
                                          focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
