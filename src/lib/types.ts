@@ -79,7 +79,13 @@ export type FormulationDetail = Formulation & {
   processSteps: ProcessStep[]
   project: { id: string; name: string; targets: ProjectTarget[] }
   // Every iteration of this formulation, newest first
-  iterations: Array<{ id: string; version: number; status: Formulation['status']; updatedAt: string }>
+  iterations: Array<{
+    id: string
+    version: number
+    status: Formulation['status']
+    iterationNote: string | null
+    updatedAt: string
+  }>
 }
 
 // USDA FoodData Central types

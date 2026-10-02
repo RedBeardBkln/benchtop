@@ -24,6 +24,8 @@ export const formulations = pgTable('formulations', {
   // Legacy: yield is now derived from the process steps' loss (see lib/process-loss.ts); no longer read or written
   yieldPct: numeric('yield_pct', { precision: 8, scale: 5 }).notNull().default('100.00000'),
   notes: text('notes'),
+  // What distinguishes this iteration from its siblings; per-row and never copied, so a new iteration starts blank
+  iterationNote: text('iteration_note'),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

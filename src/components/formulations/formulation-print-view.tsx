@@ -141,6 +141,9 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
             <span className="capitalize">{data.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</span>
             {data.project?.name && <span> · {data.project.name}</span>}
           </div>
+          {data.iterationNote?.trim() && (
+            <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{data.iterationNote.trim()}</p>
+          )}
         </div>
 
         {/* Metadata row */}

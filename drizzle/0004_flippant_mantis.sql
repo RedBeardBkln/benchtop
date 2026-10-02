@@ -1,0 +1,1 @@
+ALTER TABLE "formulations" ADD COLUMN "iteration_note" text;

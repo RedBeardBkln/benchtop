@@ -275,11 +275,10 @@ export function ProcessStepsPanel({
             return (
               <div
                 key={step.id}
-                draggable={!isLocked}
-                onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragKey(step.id) }}
                 onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverKey(step.id) }}
                 onDrop={(e) => { e.preventDefault(); if (dragKey) reorder(dragKey, step.id); setDragOverKey(null) }}
                 onDragEnd={() => { setDragKey(null); setDragOverKey(null) }}
+                data-step-row
                 className={`transition-colors ${
                   isBeingDragged ? 'opacity-40 bg-blue-50' :
                   isDropTarget ? 'border-t-2 border-blue-400 bg-blue-50/40' :
@@ -287,7 +286,17 @@ export function ProcessStepsPanel({
                 }`}
               >
                 <div className="flex items-start gap-2 px-3 py-2.5">
-                  <div className={`pt-1 ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+                  <div
+                    // Only the handle drags: a draggable row would hijack click-drag text selection in the inputs
+                    draggable={!isLocked}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move'
+                      const row = e.currentTarget.closest('[data-step-row]')
+                      if (row) e.dataTransfer.setDragImage(row, 16, 16)
+                      setDragKey(step.id)
+                    }}
+                    className={`pt-1 ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                  >
                     {!isLocked && <GripVertical size={14} className="text-gray-300 hover:text-gray-500 transition-colors" />}
                   </div>
 

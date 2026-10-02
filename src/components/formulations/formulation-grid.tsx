@@ -17,6 +17,7 @@ import { serializePrintSections, type PrintSection } from '@/lib/print-sections'
 import type { SolverResult } from '@/lib/solver'
 import { IngredientSidePanel } from '@/components/ingredients/ingredient-side-panel'
 import { ProcessStepsPanel } from '@/components/formulations/process-steps-panel'
+import { IterationNote } from '@/components/formulations/iteration-note'
 import { readErrorMessage } from '@/lib/utils'
 
 function statusIcon(s: ValidationStatus) {
@@ -152,6 +153,13 @@ function IngredientSearchDropdown({
       )}
     </div>
   )
+}
+
+/** " (note…)" suffix for the version dropdown; empty when the iteration has no note. */
+function iterationLabel(note: string | null): string {
+  const flat = note?.replace(/\s+/g, ' ').trim()
+  if (!flat) return ''
+  return ` (${flat.length > 40 ? `${flat.slice(0, 40).trimEnd()}…` : flat})`
 }
 
 export function FormulationGrid({ id }: { id: string }) {
@@ -645,13 +653,14 @@ export function FormulationGrid({ id }: { id: string }) {
               >
                 {data.iterations.map(it => (
                   <option key={it.id} value={it.id}>
-                    v{it.version}{it.status === 'locked' ? ' 🔒' : ''}{it.id === data.iterations[0].id ? ' (latest)' : ''}
+                    v{it.version}{iterationLabel(it.iterationNote)}{it.status === 'locked' ? ' 🔒' : ''}{it.id === data.iterations[0].id ? ' (latest)' : ''}
                   </option>
                 ))}
               </select>
             ) : (
               <span className="text-sm text-gray-400">v{data.version}</span>
             )}
+            <IterationNote formulationId={id} note={data.iterationNote} />
             <span className="capitalize">{data.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</span>
             <span className={`px-1.5 py-0.5 rounded font-medium ${
               isLocked ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'
