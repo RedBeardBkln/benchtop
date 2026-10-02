@@ -7,6 +7,7 @@ import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
+import { formatWeightG } from '@/lib/weight'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
 
@@ -139,7 +140,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
           <div>
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide block">Batch weight</span>
             <span className="font-medium text-gray-900">
-              {totalWeightG > 0 ? `${totalWeightG.toFixed(1)} g` : '—'}
+              {totalWeightG > 0 ? `${formatWeightG(totalWeightG)} g` : '—'}
             </span>
           </div>
           <div>
@@ -174,14 +175,14 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                 return (
                   <tr key={line.id} className="border-b border-gray-200">
                     <td className="py-1.5 pr-2 text-gray-900">{line.ingredientName}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">{weightG.toFixed(1)}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">{formatWeightG(weightG)}</td>
                     <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(1)}%</td>
                   </tr>
                 )
               })}
               <tr className="border-t-2 border-gray-800 font-medium text-gray-900">
                 <td className="py-2 pr-2">Total ({sortedLines.length} ingredient{sortedLines.length !== 1 ? 's' : ''})</td>
-                <td className="py-2 px-2 text-right tabular-nums">{totalWeightG.toFixed(1)}</td>
+                <td className="py-2 px-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
                 <td className="py-2 pl-2 text-right tabular-nums">
                   {totalWeightG > 0 ? '100.0%' : '—'}
                 </td>

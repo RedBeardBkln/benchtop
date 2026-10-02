@@ -12,6 +12,8 @@ import {
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
+import { formatWeightG } from '@/lib/weight'
+import { WeightInput } from '@/components/formulations/weight-input'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import { serializePrintSections, type PrintSection } from '@/lib/print-sections'
 import type { SolverResult } from '@/lib/solver'
@@ -813,7 +815,7 @@ export function FormulationGrid({ id }: { id: string }) {
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-gray-500">Batch</span>
           <span className="font-medium text-gray-700">
-            {totalWeightG > 0 ? `${totalWeightG.toFixed(1)} g` : '—'}
+            {totalWeightG > 0 ? `${formatWeightG(totalWeightG)} g` : '—'}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -925,17 +927,10 @@ export function FormulationGrid({ id }: { id: string }) {
                     </button>
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={line.weightG || ''}
-                      onChange={e => updateWeight(line.key, e.target.value)}
+                    <WeightInput
+                      value={line.weightG}
+                      onChange={g => updateWeight(line.key, String(g))}
                       disabled={isLocked || line.locked}
-                      placeholder="0"
-                      className="w-24 px-2 py-0.5 text-right text-sm border border-gray-200 rounded
-                                 focus:outline-none focus:ring-1 focus:ring-blue-500
-                                 disabled:opacity-50 tabular-nums"
                     />
                   </td>
                   <td className="px-3 py-2 text-right text-gray-500 tabular-nums">
@@ -969,7 +964,7 @@ export function FormulationGrid({ id }: { id: string }) {
                 <td className="px-2 py-2" />
                 <td className="px-3 py-2" />
                 <td className="px-3 py-2">Total ({lines.length} ingredient{lines.length !== 1 ? 's' : ''})</td>
-                <td className="px-3 py-2 text-right tabular-nums">{totalWeightG.toFixed(1)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   <span className={Math.abs(100 - (totalWeightG > 0 ? 100 : 0)) < 0.01 ? 'text-green-600' : 'text-gray-500'}>
                     {totalWeightG > 0 ? '100.0%' : '—'}

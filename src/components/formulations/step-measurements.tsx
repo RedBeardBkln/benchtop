@@ -225,8 +225,8 @@ export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectE
 
   return (
     <>
-      <MeasureField label="Start" type="datetime-local" className="w-44" saved={p.start_time ?? ''} disabled={disabled} onCommit={one('start_time')} />
-      <MeasureField label="End" type="datetime-local" className="w-44" saved={p.end_time ?? ''} disabled={disabled} onCommit={one('end_time')} />
+      <MeasureField label="Start" type="time" className="w-28" saved={p.start_time ?? ''} disabled={disabled} onCommit={one('start_time')} />
+      <MeasureField label="End" type="time" className="w-28" saved={p.end_time ?? ''} disabled={disabled} onCommit={one('end_time')} />
       <MeasureField label="pH" type="number" step="0.01" min="0" max="14" className="w-16" saved={p.ph ?? ''} disabled={disabled} normalize={phNormalize} onCommit={one('ph')} />
       <TempFields savedC={p.temp_c ?? ''} disabled={disabled} onCommit={one('temp_c')} />
       <MeasureField

@@ -2,7 +2,7 @@
 // Everything lives in the step's `params` JSON as strings, except equipment (a real FK on the step).
 
 export type StepParams = {
-  start_time?: string   // "YYYY-MM-DDTHH:mm" (datetime-local)
+  start_time?: string   // time of day, "HH:mm"
   end_time?: string
   ph?: string
   temp_c?: string       // canonical temperature; °F is always derived from it
@@ -51,7 +51,7 @@ export function stepTime(p: StepParams): string | null {
   return p.time_min ? minutesToTime(p.time_min) : null
 }
 
-const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/
+const TIME_OF_DAY_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/
 
 /** Why a params patch can't be saved, or null when every value is acceptable. null/'' values mean "clear". */
 export function paramPatchError(patch: Record<string, string | null | undefined>): string | null {
@@ -75,7 +75,7 @@ export function paramPatchError(patch: Record<string, string | null | undefined>
         break
       case 'start_time':
       case 'end_time':
-        if (!DATETIME_RE.test(value)) return 'Invalid date/time'
+        if (!TIME_OF_DAY_RE.test(value)) return 'Start/end must be a time like 14:05'
         break
     }
   }
@@ -98,10 +98,9 @@ export type MeasurementBox = {
  */
 export function stepMeasurementBoxes(p: StepParams, equipmentName: string | null): MeasurementBox[] {
   const c = p.temp_c != null && p.temp_c !== '' ? parseFloat(p.temp_c) : NaN
-  const when = (v?: string) => (v ? v.replace('T', ' ') : '')
   const boxes: MeasurementBox[] = [
-    { label: 'Start', value: when(p.start_time), span: 3 },
-    { label: 'End', value: when(p.end_time), span: 3 },
+    { label: 'Start', value: p.start_time ?? '', span: 3 },
+    { label: 'End', value: p.end_time ?? '', span: 3 },
     { label: 'pH', value: p.ph ?? '', span: 2 },
     { label: 'Temp (°C)', value: Number.isFinite(c) ? trimNumber(c, 2) : '', span: 2 },
     { label: 'Temp (°F)', value: Number.isFinite(c) ? trimNumber(cToF(c), 1) : '', span: 2 },

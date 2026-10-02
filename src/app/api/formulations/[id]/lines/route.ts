@@ -4,13 +4,14 @@ import { db } from '@/lib/db'
 import { formulationLines, formulations } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { hasValidWeightPrecision } from '@/lib/weight'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 const lineSchema = z.object({
   ingredientId: z.string().uuid(),
   position: z.number().int().min(1),
-  weightG: z.number().min(0),
+  weightG: z.number().min(0).refine(hasValidWeightPrecision, 'Weights can have at most 4 decimal places'),
   locked: z.boolean().default(false),
   minPct: z.number().min(0).max(100).nullable().optional(),
   maxPct: z.number().min(0).max(100).nullable().optional(),
