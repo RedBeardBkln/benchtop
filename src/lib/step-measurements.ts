@@ -82,14 +82,37 @@ export function paramPatchError(patch: Record<string, string | null | undefined>
   return null
 }
 
-/** Labelled values worth printing for a step, in display order (empty ones omitted). */
-export function describeStepMeasurements(p: StepParams, equipmentName: string | null): Array<[string, string]> {
-  const out: Array<[string, string | null | undefined]> = []
-  const when = (v?: string) => (v ? v.replace('T', ' ') : null)
-  out.push(['Start', when(p.start_time)], ['End', when(p.end_time)])
+export type MeasurementBox = {
+  label: string
+  /** Empty string = leave the box blank so it can be filled in by hand. */
+  value: string
+  /** Width in a 12-column row. */
+  span: number
+  /** Tall box for free text. */
+  tall?: boolean
+}
+
+/**
+ * The boxes to print for a step. The tracked measurements always appear — blank when there is
+ * no value, so they can be written in at the bench. Solids/shear/pressure only appear when set.
+ */
+export function stepMeasurementBoxes(p: StepParams, equipmentName: string | null): MeasurementBox[] {
   const c = p.temp_c != null && p.temp_c !== '' ? parseFloat(p.temp_c) : NaN
-  out.push(['Temp', Number.isFinite(c) ? `${trimNumber(c, 2)} °C / ${trimNumber(cToF(c), 1)} °F` : null])
-  out.push(['pH', p.ph], ['Time', stepTime(p)], ['Speed', p.speed], ['Equipment', equipmentName])
-  out.push(['Solids (%)', p.solids_pct], ['Shear', p.shear], ['Pressure', p.pressure], ['Notes', p.notes])
-  return out.filter((e): e is [string, string] => !!e[1])
+  const when = (v?: string) => (v ? v.replace('T', ' ') : '')
+  const boxes: MeasurementBox[] = [
+    { label: 'Start', value: when(p.start_time), span: 3 },
+    { label: 'End', value: when(p.end_time), span: 3 },
+    { label: 'pH', value: p.ph ?? '', span: 2 },
+    { label: 'Temp (°C)', value: Number.isFinite(c) ? trimNumber(c, 2) : '', span: 2 },
+    { label: 'Temp (°F)', value: Number.isFinite(c) ? trimNumber(cToF(c), 1) : '', span: 2 },
+    { label: 'Time (hh:mm:ss)', value: stepTime(p) ?? '', span: 3 },
+    { label: 'Speed', value: p.speed ?? '', span: 2 },
+    { label: 'Equipment', value: equipmentName ?? '', span: 7 },
+  ]
+  const extras: Array<[string, string | undefined]> = [
+    ['Solids (%)', p.solids_pct], ['Shear', p.shear], ['Pressure', p.pressure],
+  ]
+  for (const [label, value] of extras) if (value) boxes.push({ label, value, span: 4 })
+  boxes.push({ label: 'Notes', value: p.notes ?? '', span: 12, tall: true })
+  return boxes
 }

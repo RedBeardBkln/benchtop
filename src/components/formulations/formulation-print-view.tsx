@@ -6,9 +6,14 @@ import { Printer, ArrowLeft } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
-import { describeStepMeasurements, type StepParams } from '@/lib/step-measurements'
+import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
+
+// Literal class names so Tailwind includes them
+const COL_SPAN: Record<number, string> = {
+  2: 'col-span-2', 3: 'col-span-3', 4: 'col-span-4', 7: 'col-span-7', 12: 'col-span-12',
+}
 
 // Plain-text status so it survives printing without background graphics
 const STATUS_LABEL: Record<ValidationStatus, string> = {
@@ -201,7 +206,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
             <ol className="space-y-3">
               {sortedSteps.map((step, i) => {
                 const p = (step.params ?? {}) as StepParams
-                const measurements = describeStepMeasurements(p, step.equipmentName)
+                const boxes = stepMeasurementBoxes(p, step.equipmentName)
                 const lossLabel = describeStepLoss(step)
                 return (
                   <li key={step.id} className="text-sm text-gray-800 print:break-inside-avoid">
@@ -209,13 +214,20 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                       <span className="font-medium text-gray-500 tabular-nums">{i + 1}.</span>
                       <div className="flex-1">
                         <p>{step.instruction}</p>
-                        {(measurements.length > 0 || lossLabel) && (
-                          <p className="mt-0.5 text-xs text-gray-500">
-                            {measurements.map(([label, value]) => `${label}: ${value}`).join(' · ')}
-                            {measurements.length > 0 && lossLabel && ' · '}
-                            {lossLabel}
-                          </p>
-                        )}
+                        {lossLabel && <p className="mt-0.5 text-xs text-gray-500">{lossLabel}</p>}
+                        {/* Always printed; empty boxes are for writing in measurements at the bench */}
+                        <div className="mt-1.5 grid grid-cols-12 gap-x-2 gap-y-1.5">
+                          {boxes.map(box => (
+                            <div key={box.label} className={COL_SPAN[box.span]}>
+                              <div className="text-[10px] uppercase tracking-wide text-gray-500">{box.label}</div>
+                              <div className={`border border-gray-400 rounded-sm px-1.5 py-1 text-xs text-gray-900 whitespace-pre-wrap ${
+                                box.tall ? 'min-h-14' : 'min-h-7'
+                              }`}>
+                                {box.value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </li>
