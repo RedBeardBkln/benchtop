@@ -161,11 +161,12 @@ export function ProcessStepsPanel({
     setOrdered(steps)
   }, [steps])
 
-  // Shared list of equipment any step can pick from
+  // Shared list of equipment any step can pick from. Always treated as stale so it is re-fetched on
+  // page load and tab focus: equipment added in another tab/formulation shows up here too.
   const { data: equipment = [] } = useQuery<Equipment[]>({
     queryKey: ['equipment'],
     queryFn: () => fetch('/api/equipment').then(jsonOrThrow),
-    staleTime: 60_000,
+    staleTime: 0,
   })
 
   function invalidate() {
@@ -265,7 +266,13 @@ export function ProcessStepsPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       }).then(jsonOrThrow)
-      await queryClient.invalidateQueries({ queryKey: ['equipment'] })
+      // Available everywhere in this session straight away; the re-fetch then confirms it
+      queryClient.setQueryData<Equipment[]>(['equipment'], (list = []) =>
+        list.some((eq) => eq.id === created.id)
+          ? list
+          : [...list, created].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+      )
+      queryClient.invalidateQueries({ queryKey: ['equipment'] })
       patchMutation.mutate({ stepId, body: { equipmentId: created.id } })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add equipment')
@@ -357,6 +364,7 @@ export function ProcessStepsPanel({
                         onPatch={(params) => patchParams(step.id, params)}
                         onSelectEquipment={(id) => patchMutation.mutate({ stepId: step.id, body: { equipmentId: id } })}
                         onCreateEquipment={(name) => createEquipment(step.id, name)}
+                        onRefreshEquipment={() => queryClient.invalidateQueries({ queryKey: ['equipment'] })}
                       />
                     </div>
 

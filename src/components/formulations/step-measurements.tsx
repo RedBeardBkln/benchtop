@@ -122,12 +122,15 @@ function TempFields({ savedC, disabled, onCommit }: {
 const NEW_EQUIPMENT = '__new__'
 
 /** Equipment dropdown with an "Add new equipment…" option that swaps in a name box. */
-function EquipmentField({ equipmentId, options, disabled, onSelect, onCreate }: {
+function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelect, onCreate, onRefresh }: {
   equipmentId: string | null
+  equipmentName: string | null
   options: Equipment[]
   disabled: boolean
   onSelect: (id: string | null) => void
   onCreate: (name: string) => Promise<void>
+  /** Re-fetch the shared list (it may have grown in another tab or formulation). */
+  onRefresh: () => void
 }) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -175,11 +178,18 @@ function EquipmentField({ equipmentId, options, disabled, onSelect, onCreate }: 
     )
   }
 
+  // A step's own equipment always stays selectable, even if this page's cached list predates it
+  const choices: Array<{ id: string; name: string }> = [...options]
+  if (equipmentId && equipmentName && !choices.some((eq) => eq.id === equipmentId)) {
+    choices.push({ id: equipmentId, name: equipmentName })
+  }
+
   return (
     <Field label="Equipment" className="w-44">
       <select
         value={equipmentId ?? ''}
         disabled={disabled}
+        onFocus={onRefresh}
         onChange={(e) => {
           if (e.target.value === NEW_EQUIPMENT) setAdding(true)
           else onSelect(e.target.value || null)
@@ -187,7 +197,7 @@ function EquipmentField({ equipmentId, options, disabled, onSelect, onCreate }: 
         className={INPUT}
       >
         <option value="">—</option>
-        {options.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
+        {choices.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
         {!disabled && <option value={NEW_EQUIPMENT}>+ Add new equipment…</option>}
       </select>
     </Field>
@@ -211,7 +221,7 @@ const timeNormalize = (raw: string): Normalized => {
  * The measurement fields for one step, rendered as flex items so they sit on the same
  * row as the loss controls (the parent is a wrapping flex container).
  */
-export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectEquipment, onCreateEquipment }: {
+export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectEquipment, onCreateEquipment, onRefreshEquipment }: {
   step: ProcessStepDetail
   disabled: boolean
   equipment: Equipment[]
@@ -219,6 +229,7 @@ export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectE
   onPatch: (params: Record<string, string | null>) => void
   onSelectEquipment: (id: string | null) => void
   onCreateEquipment: (name: string) => Promise<void>
+  onRefreshEquipment: () => void
 }) {
   const p = (step.params ?? {}) as StepParams
   const one = (key: keyof StepParams) => (v: string | null) => onPatch({ [key]: v })
@@ -234,7 +245,10 @@ export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectE
         normalize={timeNormalize} onCommit={(v) => onPatch({ time: v, time_min: null })}
       />
       <MeasureField label="Speed" type="number" step="0.01" min="0" placeholder="0.00" className="w-20" saved={p.speed ?? ''} disabled={disabled} normalize={speedNormalize} onCommit={one('speed')} />
-      <EquipmentField equipmentId={step.equipmentId} options={equipment} disabled={disabled} onSelect={onSelectEquipment} onCreate={onCreateEquipment} />
+      <EquipmentField
+        equipmentId={step.equipmentId} equipmentName={step.equipmentName} options={equipment} disabled={disabled}
+        onSelect={onSelectEquipment} onCreate={onCreateEquipment} onRefresh={onRefreshEquipment}
+      />
       <MeasureField label="Notes" maxLength={2000} className="basis-full" saved={p.notes ?? ''} disabled={disabled} onCommit={one('notes')} />
     </>
   )
