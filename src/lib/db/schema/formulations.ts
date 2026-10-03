@@ -22,6 +22,8 @@ export const formulations = pgTable('formulations', {
   status: formulationStatusEnum('status').notNull().default('draft'),
   servingSizeG: numeric('serving_size_g', { precision: 10, scale: 4 }),
   batchSizeG: numeric('batch_size_g', { precision: 12, scale: 4 }),
+  // When true, batch_size_g is a fixed target: ingredient quantities rebalance to always total it
+  batchLocked: boolean('batch_locked').notNull().default(false),
   // Legacy: yield is now derived from the process steps' loss (see lib/process-loss.ts); no longer read or written
   yieldPct: numeric('yield_pct', { precision: 8, scale: 5 }).notNull().default('100.00000'),
   notes: text('notes'),
@@ -53,7 +55,9 @@ export const formulationLines = pgTable('formulation_lines', {
   pct: numeric('pct', { precision: 8, scale: 5 }).notNull(), // % of total batch input
   minPct: numeric('min_pct', { precision: 8, scale: 5 }),     // solver lower bound
   maxPct: numeric('max_pct', { precision: 8, scale: 5 }),     // solver upper bound
-  locked: boolean('locked').notNull().default(false),          // fixed line excluded from solver
+  locked: boolean('locked').notNull().default(false),          // quantity lock: fixed grams, excluded from solver
+  // Usage-% lock: the line is always `pct` % of the batch (pct then holds the locked value)
+  pctLocked: boolean('pct_locked').notNull().default(false),
 }, (t) => [
   index('formulation_lines_formulation_idx').on(t.formulationId),
   index('formulation_lines_ingredient_idx').on(t.ingredientId),

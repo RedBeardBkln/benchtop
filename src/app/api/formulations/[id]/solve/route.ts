@@ -38,6 +38,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       ingredientId: formulationLines.ingredientId,
       weightG: formulationLines.weightG,
       locked: formulationLines.locked,
+      pctLocked: formulationLines.pctLocked,
       minPct: formulationLines.minPct,
       maxPct: formulationLines.maxPct,
       position: formulationLines.position,
@@ -62,7 +63,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       key: line.id,
       ingredientName: line.ingredientId,
       weightG: parseFloat(line.weightG ?? '0'),
-      locked: line.locked ?? false,
+      // A %-locked line is as fixed for the solver as a quantity-locked one
+      locked: (line.locked || line.pctLocked) ?? false,
       minPct: line.minPct != null ? parseFloat(line.minPct) : 0,
       maxPct: line.maxPct != null ? parseFloat(line.maxPct) : 100,
       nutrients: lineNutrients.map(n => ({

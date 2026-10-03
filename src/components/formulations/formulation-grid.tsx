@@ -14,6 +14,10 @@ import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
 import { WeightInput } from '@/components/formulations/weight-input'
+import { PctInput } from '@/components/formulations/pct-input'
+import { LockToggle } from '@/components/formulations/lock-toggle'
+import { resolveLines, type Anchor } from '@/lib/formula-lock'
+import { PCT_DECIMALS_MIN, PCT_DECIMALS_MAX, readPctDecimals, writePctDecimals } from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import { serializePrintSections, type PrintSection } from '@/lib/print-sections'
 import type { SolverResult } from '@/lib/solver'
@@ -47,7 +51,9 @@ type LineState = {
   ingredientVerification: string
   position: number
   weightG: number
-  locked: boolean
+  locked: boolean          // quantity lock: keeps its grams
+  pctLocked: boolean       // %-lock: always `lockedPct` % of the batch
+  lockedPct: number | null
   nutrients: Array<{ nutrientId: string; amountPer100g: number; name: string; unit: string; category: string }>
 }
 
@@ -169,6 +175,10 @@ export function FormulationGrid({ id }: { id: string }) {
   const queryClient = useQueryClient()
 
   const [lines, setLines] = useState<LineState[]>([])
+  const [batchLocked, setBatchLocked] = useState(false)
+  const [batchTargetG, setBatchTargetG] = useState<number | null>(null)   // the locked batch size
+  const [pctDecimals, setPctDecimals] = useState(PCT_DECIMALS_MIN)
+  useEffect(() => { setPctDecimals(readPctDecimals()) }, [])
   const [servingSizeG, setServingSizeG] = useState<string>('')
   const [isDirty, setIsDirty] = useState(false)
   const [showAddRow, setShowAddRow] = useState(false)
@@ -227,6 +237,8 @@ export function FormulationGrid({ id }: { id: string }) {
         position: l.position,
         weightG: parseFloat(l.weightG),
         locked: l.locked,
+        pctLocked: l.pctLocked,
+        lockedPct: l.pctLocked ? parseFloat(l.pct) : null,
         nutrients: l.nutrients.map(n => ({
           nutrientId: n.nutrientId,
           amountPer100g: parseFloat(n.amountPer100g),
@@ -237,6 +249,8 @@ export function FormulationGrid({ id }: { id: string }) {
       }))
     )
     setServingSizeG(data.servingSizeG ? String(parseFloat(data.servingSizeG)) : '')
+    setBatchLocked(data.batchLocked)
+    setBatchTargetG(data.batchLocked && data.batchSizeG ? parseFloat(data.batchSizeG) : null)
     // Auto-launch wizard for new reverse-mode formulations with no lines yet
     if (data.mode === 'reverse' && data.lines.length === 0) {
       setShowReverseWizard(true)
@@ -245,6 +259,12 @@ export function FormulationGrid({ id }: { id: string }) {
 
   // Derived values
   const totalWeightG = useMemo(() => lines.reduce((s, l) => s + (l.weightG || 0), 0), [lines])
+
+  // Why the current locks can't all be honoured (null when they can, or when nothing is locked)
+  const lockProblem = useMemo(() => {
+    if (!batchLocked && !lines.some(l => l.pctLocked)) return null
+    return resolveLines({ lines, batchLocked, batchG: batchTargetG }).problem
+  }, [lines, batchLocked, batchTargetG])
 
   // Saved process steps drive yield: each step's loss shifts the finished weight and/or profile
   const processSteps = useMemo(() => data?.processSteps ?? [], [data?.processSteps])
@@ -372,7 +392,7 @@ export function FormulationGrid({ id }: { id: string }) {
   })
 
   function applySolution(result: SolverResult) {
-    setLines(prev => prev.map(l => {
+    applyLines(lines.map(l => {
       const sugPct = result.suggestedPcts[l.key]
       if (sugPct == null) return l
       const newWeightG = Math.round(((sugPct / 100) * totalWeightG) * 10) / 10
@@ -414,6 +434,8 @@ export function FormulationGrid({ id }: { id: string }) {
             position: i + 1,
             weightG: l.weightG,
             locked: l.locked,
+            pctLocked: l.pctLocked,
+            lockedPct: l.pctLocked ? l.lockedPct : null,
           })),
         }),
       }).then(async r => {
@@ -424,6 +446,8 @@ export function FormulationGrid({ id }: { id: string }) {
       const patchBody: Record<string, unknown> = {}
       if (servingSizeG) patchBody.servingSizeG = parseFloat(servingSizeG)
       else patchBody.servingSizeG = null
+      patchBody.batchLocked = batchLocked
+      patchBody.batchSizeG = batchLocked ? batchTargetG : null
 
       await fetch(`/api/formulations/${id}`, {
         method: 'PATCH',
@@ -456,14 +480,99 @@ export function FormulationGrid({ id }: { id: string }) {
     window.open(`/formulations/${id}/print?sections=${serializePrintSections(sections)}`, '_blank')
   }
 
+  /**
+   * Set the formula's lines, first rebalancing for any locked quantities / % / batch size.
+   * `anchor` is the value the user just typed (it wins); `batch` overrides the batch lock for this
+   * one pass (used to rescale to a typed batch size without locking it).
+   */
+  function applyLines(next: LineState[], anchor?: Anchor, batch?: { locked: boolean; g: number | null }) {
+    const bl = batch ? batch.locked : batchLocked
+    const bg = batch ? batch.g : batchTargetG
+    if (!bl && !next.some(l => l.pctLocked) && anchor?.kind !== 'pct') {
+      setLines(next)
+      return
+    }
+    const res = resolveLines({ lines: next, batchLocked: bl, batchG: bg, anchor })
+    setLines(next.map(l => ({ ...l, weightG: res.weights[l.key] ?? l.weightG })))
+    if (res.clamped) {
+      toast.info('The batch size is locked, so that value was adjusted to fit the other locked values', { id: 'lock-clamped' })
+    }
+  }
+
   function updateWeight(key: string, value: string) {
     const w = parseFloat(value)
-    setLines(prev => prev.map(l => l.key === key ? { ...l, weightG: isNaN(w) ? 0 : w } : l))
+    const g = isNaN(w) ? 0 : w
+    applyLines(lines.map(l => l.key === key ? { ...l, weightG: g } : l), { key, kind: 'qty', value: g })
     markDirty()
   }
 
+  // Typing a usage %: the line's quantity follows. A %-locked line changes its locked value instead.
+  function updatePct(key: string, pct: number) {
+    const line = lines.find(l => l.key === key)
+    if (!line) return
+    if (line.pctLocked) {
+      applyLines(lines.map(l => l.key === key ? { ...l, lockedPct: pct } : l))
+    } else {
+      applyLines(lines, { key, kind: 'pct', value: pct })
+    }
+    markDirty()
+  }
+
+  function toggleQtyLock(key: string) {
+    applyLines(lines.map(l => l.key === key
+      ? { ...l, locked: !l.locked, pctLocked: false, lockedPct: null }
+      : l))
+    markDirty()
+  }
+
+  function togglePctLock(key: string) {
+    const line = lines.find(l => l.key === key)
+    if (!line) return
+    if (!line.pctLocked && !(totalWeightG > 0 && line.weightG > 0)) {
+      toast.error('Enter a quantity or a usage % first, then lock it')
+      return
+    }
+    applyLines(lines.map(l => {
+      if (l.key !== key) return l
+      if (l.pctLocked) return { ...l, pctLocked: false, lockedPct: null }
+      return { ...l, pctLocked: true, locked: false, lockedPct: Math.round((l.weightG / totalWeightG) * 100 * 1e4) / 1e4 }
+    }))
+    markDirty()
+  }
+
+  function toggleBatchLock() {
+    if (batchLocked) {
+      setBatchLocked(false)
+      setBatchTargetG(null)
+    } else {
+      const g = batchTargetG ?? Math.round(totalWeightG * 1e4) / 1e4
+      if (!(g > 0)) {
+        toast.error('Add ingredients first, then lock the batch size')
+        return
+      }
+      setBatchLocked(true)
+      setBatchTargetG(g)
+      applyLines(lines, undefined, { locked: true, g })
+    }
+    markDirty()
+  }
+
+  // A typed batch size rescales the formula once (and becomes the target if the batch is locked)
+  function commitBatchSize(g: number) {
+    if (!(g > 0)) return
+    if (batchLocked) setBatchTargetG(g)
+    applyLines(lines, undefined, { locked: true, g })
+    markDirty()
+  }
+
+  function changePctDecimals(delta: number) {
+    const next = Math.min(PCT_DECIMALS_MAX, Math.max(PCT_DECIMALS_MIN, pctDecimals + delta))
+    setPctDecimals(next)
+    writePctDecimals(next)
+  }
+
   function removeLine(key: string) {
-    setLines(prev => prev.filter(l => l.key !== key).map((l, i) => ({ ...l, position: i + 1 })))
+    applyLines(lines.filter(l => l.key !== key).map((l, i) => ({ ...l, position: i + 1 })))
     markDirty()
   }
 
@@ -481,9 +590,11 @@ export function FormulationGrid({ id }: { id: string }) {
       position: lines.length + 1,
       weightG: 0,
       locked: false,
+      pctLocked: false,
+      lockedPct: null,
       nutrients: ing.nutrients,
     }
-    setLines(prev => [...prev, newLine])
+    applyLines([...lines, newLine])
     setShowAddRow(false)
     markDirty()
   }
@@ -812,11 +923,25 @@ export function FormulationGrid({ id }: { id: string }) {
 
       {/* Settings bar */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm print:hidden">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-500">Batch</span>
-          <span className="font-medium text-gray-700">
-            {totalWeightG > 0 ? `${formatWeightG(totalWeightG)} g` : '—'}
-          </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-gray-500">Batch (g)</span>
+          <WeightInput
+            value={batchLocked && batchTargetG != null ? batchTargetG : totalWeightG}
+            onChange={commitBatchSize}
+            commitOn="blur"
+            disabled={isLocked}
+            ariaLabel="Batch size (g)"
+            title={batchLocked ? 'Locked batch size — quantities rebalance to always total this' : 'Type a batch size to scale the formula to it'}
+            className="w-28 px-2 py-0.5 text-right text-sm border border-gray-200 rounded focus:outline-none
+                       focus:ring-1 focus:ring-blue-500 disabled:opacity-60 disabled:bg-gray-50 tabular-nums"
+          />
+          <LockToggle
+            active={batchLocked}
+            disabled={isLocked}
+            onClick={toggleBatchLock}
+            lockedTitle="Batch size locked — click to unlock"
+            unlockedTitle="Lock the batch size so quantities and usage % always rebalance to it"
+          />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-gray-500">Serving (g)</label>
@@ -847,6 +972,12 @@ export function FormulationGrid({ id }: { id: string }) {
         </div>
       </div>
 
+      {lockProblem && (
+        <div role="alert" className="mb-4 px-3 py-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md">
+          {lockProblem}
+        </div>
+      )}
+
       {/* Sort controls */}
       {lines.length > 1 && !isLocked && (
         <div className="flex items-center gap-1 mb-2 justify-end print:hidden">
@@ -874,8 +1005,27 @@ export function FormulationGrid({ id }: { id: string }) {
               <th className="px-2 py-2.5 w-6 print:hidden" />
               <th className="px-3 py-2.5 text-left font-medium w-6">#</th>
               <th className="px-3 py-2.5 text-left font-medium">Ingredient</th>
-              <th className="px-3 py-2.5 text-right font-medium w-28">Weight (g)</th>
-              <th className="px-3 py-2.5 text-right font-medium w-16">%</th>
+              <th className="px-3 py-2.5 text-right font-medium w-36">Weight (g)</th>
+              <th className="px-3 py-2.5 text-right font-medium w-40">
+                <span className="inline-flex items-center gap-1">
+                  %
+                  <button
+                    type="button"
+                    onClick={() => changePctDecimals(-1)}
+                    disabled={pctDecimals <= PCT_DECIMALS_MIN}
+                    title="Show fewer decimal places"
+                    className="px-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 print:hidden"
+                  >−</button>
+                  <span className="text-gray-400 font-normal tabular-nums">{pctDecimals} dp</span>
+                  <button
+                    type="button"
+                    onClick={() => changePctDecimals(1)}
+                    disabled={pctDecimals >= PCT_DECIMALS_MAX}
+                    title="Show more decimal places (up to 4)"
+                    className="px-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 print:hidden"
+                  >+</button>
+                </span>
+              </th>
               {gridNutrients.map(n => (
                 <th key={n.id} className="px-3 py-2.5 text-right font-medium w-24">
                   {n.name === 'Total Carbohydrate' ? 'Carbs' : n.name}
@@ -927,14 +1077,39 @@ export function FormulationGrid({ id }: { id: string }) {
                     </button>
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <WeightInput
-                      value={line.weightG}
-                      onChange={g => updateWeight(line.key, String(g))}
-                      disabled={isLocked || line.locked}
-                    />
+                    <div className="flex items-center justify-end gap-1">
+                      <WeightInput
+                        value={line.weightG}
+                        onChange={g => updateWeight(line.key, String(g))}
+                        disabled={isLocked || line.locked || line.pctLocked}
+                        title={line.pctLocked ? 'Set by the locked usage % — unlock the % to edit' : undefined}
+                      />
+                      <LockToggle
+                        active={line.locked}
+                        disabled={isLocked}
+                        onClick={() => toggleQtyLock(line.key)}
+                        lockedTitle="Quantity locked — click to unlock"
+                        unlockedTitle="Lock this quantity"
+                      />
+                    </div>
                   </td>
-                  <td className="px-3 py-2 text-right text-gray-500 tabular-nums">
-                    {linePct.toFixed(1)}%
+                  <td className="px-3 py-2 text-right text-gray-500">
+                    <div className="flex items-center justify-end gap-1">
+                      <PctInput
+                        value={line.pctLocked && line.lockedPct != null ? line.lockedPct : linePct}
+                        decimals={pctDecimals}
+                        onChange={p => updatePct(line.key, p)}
+                        disabled={isLocked || line.locked}
+                        title={line.locked ? 'Set by the locked quantity — unlock the quantity to edit' : undefined}
+                      />
+                      <LockToggle
+                        active={line.pctLocked}
+                        disabled={isLocked}
+                        onClick={() => togglePctLock(line.key)}
+                        lockedTitle="Usage % locked — click to unlock"
+                        unlockedTitle="Lock this usage % so it is always this share of the batch"
+                      />
+                    </div>
                   </td>
                   {gridNutrients.map(n => {
                     const contrib = getNutrientContrib(line, n.id)
@@ -967,7 +1142,7 @@ export function FormulationGrid({ id }: { id: string }) {
                 <td className="px-3 py-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   <span className={Math.abs(100 - (totalWeightG > 0 ? 100 : 0)) < 0.01 ? 'text-green-600' : 'text-gray-500'}>
-                    {totalWeightG > 0 ? '100.0%' : '—'}
+                    {totalWeightG > 0 ? `${(100).toFixed(pctDecimals)}%` : '—'}
                   </span>
                 </td>
                 {gridNutrients.map(n => {
@@ -1424,7 +1599,7 @@ export function FormulationGrid({ id }: { id: string }) {
         <ReverseWizard
           formulationId={id}
           onApply={(newLines) => {
-            setLines(newLines)
+            setLines(newLines.map(l => ({ ...l, pctLocked: false, lockedPct: null })))
             setIsDirty(true)
             setShowReverseWizard(false)
             toast.success('Formula loaded — review and save when ready')

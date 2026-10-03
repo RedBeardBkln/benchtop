@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Printer, ArrowLeft } from 'lucide-react'
@@ -8,6 +9,7 @@ import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
 import { formatWeightG } from '@/lib/weight'
+import { PCT_DECIMALS_MIN, readPctDecimals } from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
 
@@ -32,6 +34,10 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const showNutrients = sections.includes('nutrients')
   const showValidation = sections.includes('validation')
   const needsNutrients = showNutrients || showValidation
+
+  // Same % precision as chosen in the editor
+  const [pctDecimals, setPctDecimals] = useState(PCT_DECIMALS_MIN)
+  useEffect(() => { setPctDecimals(readPctDecimals()) }, [])
 
   const { data, isLoading, error } = useQuery<FormulationDetail>({
     queryKey: ['formulation', id],
@@ -176,7 +182,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                   <tr key={line.id} className="border-b border-gray-200">
                     <td className="py-1.5 pr-2 text-gray-900">{line.ingredientName}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">{formatWeightG(weightG)}</td>
-                    <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(1)}%</td>
+                    <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(pctDecimals)}%</td>
                   </tr>
                 )
               })}
@@ -184,7 +190,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                 <td className="py-2 pr-2">Total ({sortedLines.length} ingredient{sortedLines.length !== 1 ? 's' : ''})</td>
                 <td className="py-2 px-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
                 <td className="py-2 pl-2 text-right tabular-nums">
-                  {totalWeightG > 0 ? '100.0%' : '—'}
+                  {totalWeightG > 0 ? `${(100).toFixed(pctDecimals)}%` : '—'}
                 </td>
               </tr>
             </tbody>

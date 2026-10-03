@@ -14,6 +14,7 @@ const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   servingSizeG: z.number().positive().nullable().optional(),
   batchSizeG: z.number().positive().nullable().optional(),
+  batchLocked: z.boolean().optional(),
   notes: z.string().max(5000).nullable().optional(),
   iterationNote: z.string().max(2000).nullable().optional(),
   status: z.enum(['draft', 'locked']).optional(),
@@ -51,6 +52,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       weightG: formulationLines.weightG,
       pct: formulationLines.pct,
       locked: formulationLines.locked,
+      pctLocked: formulationLines.pctLocked,
       minPct: formulationLines.minPct,
       maxPct: formulationLines.maxPct,
     })
@@ -129,6 +131,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (d.name !== undefined) updates.name = d.name
   if (d.servingSizeG !== undefined) updates.servingSizeG = d.servingSizeG?.toString() ?? null
   if (d.batchSizeG !== undefined) updates.batchSizeG = d.batchSizeG?.toString() ?? null
+  if (d.batchLocked !== undefined) updates.batchLocked = d.batchLocked
   if (d.notes !== undefined) updates.notes = d.notes
   if (d.iterationNote !== undefined) updates.iterationNote = d.iterationNote?.trim() || null
   if (d.status !== undefined) {

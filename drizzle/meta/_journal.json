@@ -43,6 +43,13 @@
       "when": 1790953067011,
       "tag": "0005_pink_blur",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791043121324,
+      "tag": "0006_daily_phantom_reporter",
+      "breakpoints": true
     }
   ]
 }

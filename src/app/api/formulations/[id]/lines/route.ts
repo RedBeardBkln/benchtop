@@ -13,6 +13,8 @@ const lineSchema = z.object({
   position: z.number().int().min(1),
   weightG: z.number().min(0).refine(hasValidWeightPrecision, 'Weights can have at most 4 decimal places'),
   locked: z.boolean().default(false),
+  pctLocked: z.boolean().default(false),
+  lockedPct: z.number().min(0).max(100).nullable().optional(),
   minPct: z.number().min(0).max(100).nullable().optional(),
   maxPct: z.number().min(0).max(100).nullable().optional(),
 })
@@ -43,10 +45,14 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
           ingredientId: l.ingredientId,
           position: l.position,
           weightG: l.weightG.toString(),
-          pct: totalWeightG > 0
-            ? ((l.weightG / totalWeightG) * 100).toString()
-            : '0',
+          // A %-locked line stores the exact locked value rather than a recomputed (rounded) one
+          pct: l.pctLocked && l.lockedPct != null
+            ? l.lockedPct.toString()
+            : totalWeightG > 0
+              ? ((l.weightG / totalWeightG) * 100).toString()
+              : '0',
           locked: l.locked,
+          pctLocked: l.pctLocked,
           minPct: l.minPct?.toString() ?? null,
           maxPct: l.maxPct?.toString() ?? null,
         }))

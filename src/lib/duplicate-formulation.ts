@@ -46,6 +46,7 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
         status: 'draft',
         servingSizeG: source.servingSizeG,
         batchSizeG: source.batchSizeG,
+        batchLocked: source.batchLocked,
         notes: source.notes,
       })
       .returning()
@@ -66,6 +67,7 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
           minPct: l.minPct,
           maxPct: l.maxPct,
           locked: l.locked,
+          pctLocked: l.pctLocked,
         }))
       )
     }
