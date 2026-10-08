@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredientDocs, nutrients } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
+import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
+import { AdminNotConfiguredError, DOCS_BUCKET, getSupabaseAdmin } from '@/lib/supabase/admin'
 
 type Ctx = { params: Promise<{ id: string }> }
-
-const BUCKET = 'ingredient-docs'
 
 const IMAGE_TYPES: Record<string, 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'> = {
   jpg: 'image/jpeg',
@@ -21,11 +21,12 @@ const IMAGE_TYPES: Record<string, 'image/jpeg' | 'image/png' | 'image/gif' | 'im
 const bodySchema = z.object({ docId: z.string().uuid() })
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
+  if (!(await getOwnedIngredient(ctx, id))) return notFoundResponse()
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
@@ -48,7 +49,16 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     )
   }
 
-  const { data: blob, error: dlErr } = await supabase.storage.from(BUCKET).download(doc.filePath)
+  let dl: { data: Blob | null; error: unknown }
+  try {
+    dl = await getSupabaseAdmin().storage.from(DOCS_BUCKET).download(doc.filePath)
+  } catch (err) {
+    if (err instanceof AdminNotConfiguredError) {
+      return NextResponse.json({ error: 'Document storage is not configured', code: 'storage_not_configured' }, { status: 503 })
+    }
+    throw err
+  }
+  const { data: blob, error: dlErr } = dl
   if (dlErr || !blob) {
     return NextResponse.json({ error: 'Failed to download document from storage' }, { status: 500 })
   }

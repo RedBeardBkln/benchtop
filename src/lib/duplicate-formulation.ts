@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { formulations, formulationLines, processSteps } from '@/lib/db/schema'
-import { eq, max } from 'drizzle-orm'
+import { and, eq, max } from 'drizzle-orm'
 import type { Formulation } from '@/lib/types'
 
 type Target =
@@ -25,7 +25,7 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
       const [{ maxVer }] = await tx
         .select({ maxVer: max(formulations.version) })
         .from(formulations)
-        .where(eq(formulations.familyId, source.familyId))
+        .where(and(eq(formulations.familyId, source.familyId), eq(formulations.accountId, source.accountId)))
       familyId = source.familyId
       version = (maxVer ?? 0) + 1
       parentFormulationId = source.id
@@ -37,6 +37,8 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
       .insert(formulations)
       .values({
         id: newId,
+        // Copies stay in the source's account (the caller has already proven ownership of source)
+        accountId: source.accountId,
         familyId,
         projectId: source.projectId,
         name,

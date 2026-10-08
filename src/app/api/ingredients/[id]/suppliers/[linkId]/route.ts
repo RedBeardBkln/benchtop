@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredientSuppliers } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string; linkId: string }> }
@@ -16,11 +17,12 @@ const patchSchema = z.object({
 })
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id, linkId } = await params
+  if (!(await getOwnedIngredient(ctx, id))) return notFoundResponse()
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
@@ -46,11 +48,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id, linkId } = await params
+  if (!(await getOwnedIngredient(ctx, id))) return notFoundResponse()
   await db
     .delete(ingredientSuppliers)
     .where(and(eq(ingredientSuppliers.id, linkId), eq(ingredientSuppliers.ingredientId, id)))

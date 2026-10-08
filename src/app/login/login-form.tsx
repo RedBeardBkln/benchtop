@@ -42,6 +42,7 @@ export default function LoginForm() {
         />
         <h1 className="text-2xl font-semibold text-gray-900">Benchtop</h1>
         <p className="text-sm text-gray-500 mt-1">Launchtime Solutions</p>
+        <p className="text-xs text-gray-500 mt-2">Access is by invitation only.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,7 +59,7 @@ export default function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm
                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="you@alpbio.com"
+            placeholder="you@example.com"
           />
         </div>
 
@@ -93,6 +94,13 @@ export default function LoginForm() {
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+
+      <p className="mt-6 text-xs text-gray-500 text-center">
+        By signing in you agree to the{' '}
+        <Link href="/legal/terms" className="text-blue-600 hover:underline">Terms</Link>{' '}
+        and{' '}
+        <Link href="/legal/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>.
+      </p>
     </div>
   )
 }

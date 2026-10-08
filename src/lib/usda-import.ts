@@ -4,7 +4,7 @@
 
 import { db as defaultDb } from '@/lib/db'
 import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 
 export const FDC_BASE = 'https://api.nal.usda.gov/fdc/v1'
@@ -67,12 +67,14 @@ export type ImportResult = {
 export async function importUsdaIngredient(
   fdcId: number,
   opts: {
+    // Owner of the imported ingredient; the fdc_id dedupe lookup is scoped to this account
+    accountId: string
     nameOverride?: string
     sourceType?: 'usda' | 'ai_extracted'
     notes?: string
     fallbackFood?: { description: string; foodNutrients?: unknown[] }
     database?: PostgresJsDatabase<Record<string, never>>
-  } = {},
+  },
 ): Promise<ImportResult> {
   const database = opts.database ?? defaultDb
   const sourceType = opts.sourceType ?? 'usda'
@@ -82,7 +84,7 @@ export async function importUsdaIngredient(
   const existing = await database
     .select({ id: ingredients.id, name: ingredients.name })
     .from(ingredients)
-    .where(eq(ingredients.fdcId, fdcId))
+    .where(and(eq(ingredients.accountId, opts.accountId), eq(ingredients.fdcId, fdcId)))
     .limit(1)
 
   if (existing.length > 0) {
@@ -96,7 +98,7 @@ export async function importUsdaIngredient(
       const [row] = await database
         .select()
         .from(ingredients)
-        .where(eq(ingredients.id, existing[0].id))
+        .where(and(eq(ingredients.id, existing[0].id), eq(ingredients.accountId, opts.accountId)))
         .limit(1)
       return {
         ingredient: { id: row.id, name: row.name, fdcId, sourceType: row.sourceType, notes: row.notes },
@@ -161,6 +163,7 @@ export async function importUsdaIngredient(
     const [row] = await database
       .insert(ingredients)
       .values({
+        accountId: opts.accountId,
         name: ingredientName,
         sourceType,
         fdcId,

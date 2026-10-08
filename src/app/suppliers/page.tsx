@@ -1,15 +1,12 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requirePage } from '@/lib/auth/context'
 import { AppShell } from '@/components/app-shell'
 import { SupplierList } from '@/components/suppliers/supplier-list'
 
 export default async function SuppliersPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const ctx = await requirePage()
 
   return (
-    <AppShell userEmail={user.email}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <SupplierList />
     </AppShell>
   )

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 const FDC_BASE = 'https://api.nal.usda.gov/fdc/v1'
@@ -32,9 +32,9 @@ const importSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const body = await request.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
   const existing = await db
     .select({ id: ingredients.id, name: ingredients.name })
     .from(ingredients)
-    .where(eq(ingredients.fdcId, fdcId))
+    // Scoped to the caller's account: another account's import of the same USDA food is never reused
+    .where(and(eq(ingredients.accountId, ctx.account.id), eq(ingredients.fdcId, fdcId)))
     .limit(1)
 
   let repairIngredientId: string | null = null
@@ -207,7 +208,7 @@ export async function POST(request: NextRequest) {
     const [repaired] = await db
       .select()
       .from(ingredients)
-      .where(eq(ingredients.id, repairIngredientId))
+      .where(and(eq(ingredients.id, repairIngredientId), eq(ingredients.accountId, ctx.account.id)))
       .limit(1)
     return NextResponse.json(
       { ...repaired, nutrientCount: rows.length, repaired: true },
@@ -220,6 +221,7 @@ export async function POST(request: NextRequest) {
   const [ingredient] = await db
     .insert(ingredients)
     .values({
+      accountId: ctx.account.id,
       name: ingredientName,
       sourceType: 'usda',
       fdcId,

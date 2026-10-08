@@ -1,5 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { requirePage } from '@/lib/auth/context'
+import { getOwnedFormulation } from '@/lib/tenancy'
 import { FormulationPrintView } from '@/components/formulations/formulation-print-view'
 import { parsePrintSections } from '@/lib/print-sections'
 
@@ -10,11 +11,10 @@ export default async function FormulationPrintPage({
   params: Promise<{ id: string }>
   searchParams: Promise<{ sections?: string | string[] }>
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const ctx = await requirePage()
 
   const { id } = await params
+  if (!(await getOwnedFormulation(ctx, id))) notFound()
   const { sections } = await searchParams
 
   return <FormulationPrintView id={id} sections={parsePrintSections(sections)} />

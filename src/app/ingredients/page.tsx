@@ -1,15 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { requirePage } from '@/lib/auth/context'
 import { AppShell } from '@/components/app-shell'
 import { IngredientTable } from '@/components/ingredients/ingredient-table'
 
 export default async function IngredientsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const ctx = await requirePage()
 
   return (
-    <AppShell userEmail={user.email}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <div className="px-4 py-5 sm:px-8 sm:py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Ingredient Directory</h1>

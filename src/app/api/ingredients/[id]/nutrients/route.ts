@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredientNutrients } from '@/lib/db/schema'
-import { eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
+import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -20,13 +21,15 @@ const bodySchema = z.object({
 })
 
 export async function PUT(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+  if (!(await getOwnedIngredient(ctx, id))) return notFoundResponse()
 
   const { values, deleteIds } = parsed.data
 
@@ -34,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     if (deleteIds.length > 0) {
       await tx
         .delete(ingredientNutrients)
-        .where(inArray(ingredientNutrients.id, deleteIds))
+        .where(and(inArray(ingredientNutrients.id, deleteIds), eq(ingredientNutrients.ingredientId, id)))
     }
 
     if (values.length > 0) {

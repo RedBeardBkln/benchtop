@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
   formulations, formulationLines, ingredients, batchRuns,
 } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -15,18 +16,14 @@ const bodySchema = z.object({
 })
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
 
-  const [formulation] = await db
-    .select({ id: formulations.id, name: formulations.name })
-    .from(formulations)
-    .where(eq(formulations.id, id))
-    .limit(1)
-  if (!formulation) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const formulation = await getOwnedFormulation(ctx, id)
+  if (!formulation) return notFoundResponse()
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
@@ -43,7 +40,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     })
     .from(formulationLines)
     .innerJoin(ingredients, eq(formulationLines.ingredientId, ingredients.id))
-    .where(eq(formulationLines.formulationId, id))
+    .where(and(eq(formulationLines.formulationId, id), eq(ingredients.accountId, ctx.account.id)))
 
   if (lines.length === 0)
     return NextResponse.json({ error: 'Formulation has no ingredient lines' }, { status: 422 })
@@ -69,7 +66,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       await tx
         .update(ingredients)
         .set({ stockG: sql`${ingredients.stockG} - ${depletedG.toString()}::numeric` })
-        .where(and(eq(ingredients.id, l.ingredientId)))
+        .where(and(eq(ingredients.id, l.ingredientId), eq(ingredients.accountId, ctx.account.id)))
     }
 
     const [run] = await tx
@@ -88,11 +85,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 }
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
   const runs = await db
     .select({

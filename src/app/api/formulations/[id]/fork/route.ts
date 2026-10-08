@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { db } from '@/lib/db'
-import { formulations } from '@/lib/db/schema'
+import { requireApi } from '@/lib/auth/context'
+import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 import { duplicateFormulation } from '@/lib/duplicate-formulation'
-import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -15,9 +13,9 @@ const bodySchema = z.object({
 // "New Formulation": copies this formulation into a separate formulation (own family) at v1.
 // For a new iteration of the same formulation, see ../iterate.
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
@@ -25,8 +23,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   }
 
   const { id } = await params
-  const [source] = await db.select().from(formulations).where(eq(formulations.id, id)).limit(1)
-  if (!source) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const source = await getOwnedFormulation(ctx, id)
+  if (!source) return notFoundResponse()
 
   const { name } = parsed.data
   if (name.toLowerCase() === source.name.trim().toLowerCase()) {

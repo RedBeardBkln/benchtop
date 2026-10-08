@@ -1,15 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { requirePage } from '@/lib/auth/context'
 import { AppShell } from '@/components/app-shell'
 import { ProjectList } from '@/components/projects/project-list'
 
 export default async function ProjectsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const ctx = await requirePage()
 
   return (
-    <AppShell userEmail={user.email}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <ProjectList />
     </AppShell>
   )

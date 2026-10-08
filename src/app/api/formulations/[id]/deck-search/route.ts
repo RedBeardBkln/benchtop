@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { FDC_BASE } from '@/lib/usda-import'
 import { z } from 'zod'
+import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -28,10 +29,12 @@ const PREVIEW_IDS: Record<number, { name: string; unit: string }> = {
   1005: { name: 'Carbs',    unit: 'g'    },
 }
 
-export async function POST(req: NextRequest, { params: _params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(req: NextRequest, { params }: Ctx) {
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
+  const { id } = await params
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
   const apiKey = process.env.USDA_FDC_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'USDA_FDC_API_KEY not configured' }, { status: 500 })

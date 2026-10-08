@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
   formulations, formulationLines, ingredients,
   ingredientNutrients, nutrients, projects, processSteps, equipment,
 } from '@/lib/db/schema'
-import { desc, eq, getTableColumns, inArray } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
 import { z } from 'zod'
+import { getOwnedFormulation, notFoundResponse, isUuid } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -22,24 +23,19 @@ const patchSchema = z.object({
 })
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
 
-  const [formulation] = await db
-    .select()
-    .from(formulations)
-    .where(eq(formulations.id, id))
-    .limit(1)
-
-  if (!formulation) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const formulation = await getOwnedFormulation(ctx, id)
+  if (!formulation) return notFoundResponse()
 
   const [project] = await db
     .select({ id: projects.id, name: projects.name, targets: projects.targets })
     .from(projects)
-    .where(eq(projects.id, formulation.projectId))
+    .where(and(eq(projects.id, formulation.projectId), eq(projects.accountId, ctx.account.id)))
     .limit(1)
 
   const lines = await db
@@ -98,7 +94,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const steps = await db
     .select({ ...getTableColumns(processSteps), equipmentName: equipment.name })
     .from(processSteps)
-    .leftJoin(equipment, eq(processSteps.equipmentId, equipment.id))
+    .leftJoin(
+      equipment,
+      and(eq(processSteps.equipmentId, equipment.id), eq(equipment.accountId, ctx.account.id)),
+    )
     .where(eq(processSteps.formulationId, id))
     .orderBy(processSteps.stepNo)
 
@@ -111,18 +110,19 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       updatedAt: formulations.updatedAt,
     })
     .from(formulations)
-    .where(eq(formulations.familyId, formulation.familyId))
+    .where(and(eq(formulations.familyId, formulation.familyId), eq(formulations.accountId, ctx.account.id)))
     .orderBy(desc(formulations.version))
 
   return NextResponse.json({ ...formulation, lines: linesWithNutrients, processSteps: steps, project, iterations })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
+  if (!isUuid(id)) return notFoundResponse()
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
@@ -145,17 +145,20 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const [row] = await db
     .update(formulations)
     .set(updates)
-    .where(eq(formulations.id, id))
+    .where(and(eq(formulations.id, id), eq(formulations.accountId, ctx.account.id)))
     .returning()
 
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!row) return notFoundResponse()
 
   // Name and archived state belong to the formulation as a whole, so keep every iteration in sync
   const familyUpdates: Record<string, unknown> = {}
   if (d.name !== undefined) familyUpdates.name = d.name
   if (d.archived !== undefined) familyUpdates.archivedAt = updates.archivedAt
   if (Object.keys(familyUpdates).length > 0) {
-    await db.update(formulations).set(familyUpdates).where(eq(formulations.familyId, row.familyId))
+    await db
+      .update(formulations)
+      .set(familyUpdates)
+      .where(and(eq(formulations.familyId, row.familyId), eq(formulations.accountId, ctx.account.id)))
   }
 
   return NextResponse.json(row)

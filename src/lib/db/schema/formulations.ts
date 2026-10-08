@@ -7,9 +7,12 @@ import { projects } from './projects'
 import { ingredients } from './ingredients'
 import { nutrients } from './nutrients'
 import { equipment } from './equipment'
+import { accounts } from './accounts'
 
 export const formulations = pgTable('formulations', {
   id: uuid('id').primaryKey().defaultRandom(),
+  // Denormalized from the project; must always equal the project's account_id
+  accountId: uuid('account_id').notNull().references(() => accounts.id),
   projectId: uuid('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   version: integer('version').notNull().default(1),
@@ -35,6 +38,7 @@ export const formulations = pgTable('formulations', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('formulations_project_idx').on(t.projectId),
+  index('formulations_account_idx').on(t.accountId),
   index('formulations_parent_idx').on(t.parentFormulationId),
   uniqueIndex('formulations_family_version_uq').on(t.familyId, t.version),
   // Self-referential FK — safe to define here since Postgres allows forward-references in ALTER TABLE

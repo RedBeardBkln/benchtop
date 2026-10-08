@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { batchRuns, formulationLines, formulations, ingredients } from '@/lib/db/schema'
-import { eq, desc, sql } from 'drizzle-orm'
+import { and, eq, desc } from 'drizzle-orm'
+import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
 
-  const [ingredient] = await db
-    .select({ id: ingredients.id, name: ingredients.name, stockG: ingredients.stockG })
-    .from(ingredients)
-    .where(eq(ingredients.id, id))
-    .limit(1)
-  if (!ingredient) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const ingredient = await getOwnedIngredient(ctx, id)
+  if (!ingredient) return notFoundResponse()
 
   // Find all batch runs that involved this ingredient
   const runs = await db
@@ -34,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .from(batchRuns)
     .innerJoin(formulations, eq(batchRuns.formulationId, formulations.id))
     .innerJoin(formulationLines, eq(formulationLines.formulationId, formulations.id))
-    .where(eq(formulationLines.ingredientId, id))
+    .where(and(eq(formulationLines.ingredientId, id), eq(formulations.accountId, ctx.account.id)))
     .orderBy(desc(batchRuns.runAt))
     .limit(100)
 

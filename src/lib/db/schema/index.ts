@@ -4,6 +4,7 @@ import { relations } from 'drizzle-orm'
 export * from './enums'
 
 // ---- Tables ----
+export * from './accounts'
 export * from './nutrients'
 export * from './ingredients'
 export * from './suppliers'

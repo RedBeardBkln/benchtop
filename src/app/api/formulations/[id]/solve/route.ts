@@ -1,34 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { formulations, formulationLines, ingredientNutrients, nutrients, projects } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { solve } from '@/lib/solver'
 import type { SolverInput, SolverLine } from '@/lib/solver'
 import { loadConcentrationYieldPct } from '@/lib/formulation-yield'
+import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
 
   // Load formulation + project targets
-  const [formulation] = await db
-    .select()
-    .from(formulations)
-    .where(eq(formulations.id, id))
-    .limit(1)
-
-  if (!formulation) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const formulation = await getOwnedFormulation(ctx, id)
+  if (!formulation) return notFoundResponse()
 
   const [project] = await db
     .select({ targets: projects.targets })
     .from(projects)
-    .where(eq(projects.id, formulation.projectId))
+    .where(and(eq(projects.id, formulation.projectId), eq(projects.accountId, ctx.account.id)))
     .limit(1)
 
   // Load formulation lines with nutrients
@@ -77,7 +73,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const input: SolverInput = {
     lines: solverLines,
     targets: (project?.targets ?? []) as SolverInput['targets'],
-    yieldPct: await loadConcentrationYieldPct(id, solverLines.reduce((s, l) => s + l.weightG, 0)),
+    yieldPct: await loadConcentrationYieldPct(id, solverLines.reduce((s, l) => s + l.weightG, 0), ctx.account.id),
     servingSizeG: formulation.servingSizeG ? parseFloat(formulation.servingSizeG) : null,
   }
 

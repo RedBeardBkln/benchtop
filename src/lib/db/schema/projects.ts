@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, numeric, timestamp, jsonb, index } from 'drizzle-orm/pg-core'
 import { projectStatusEnum } from './enums'
+import { accounts } from './accounts'
 
 // targets jsonb shape: Array<{
 //   nutrient: string | null,   // nutrient name or null for custom
@@ -12,6 +13,7 @@ import { projectStatusEnum } from './enums'
 // }>
 export const projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
+  accountId: uuid('account_id').notNull().references(() => accounts.id),
   name: text('name').notNull(),
   client: text('client'),
   objectiveText: text('objective_text'),
@@ -23,6 +25,7 @@ export const projects = pgTable('projects', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
+  index('projects_account_idx').on(t.accountId),
   index('projects_status_idx').on(t.status),
   index('projects_created_at_idx').on(t.createdAt),
 ])

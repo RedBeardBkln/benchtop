@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { suppliers } from '@/lib/db/schema'
-import { asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -12,18 +12,22 @@ const createSchema = z.object({
 })
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
-  const rows = await db.select().from(suppliers).orderBy(asc(suppliers.name))
+  const rows = await db
+    .select()
+    .from(suppliers)
+    .where(eq(suppliers.accountId, ctx.account.id))
+    .orderBy(asc(suppliers.name))
   return NextResponse.json(rows)
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -34,7 +38,7 @@ export async function POST(req: NextRequest) {
   const { name, websiteUrl, notes } = parsed.data
   const [row] = await db
     .insert(suppliers)
-    .values({ name, websiteUrl: websiteUrl ?? null, notes: notes ?? null })
+    .values({ accountId: ctx.account.id, name, websiteUrl: websiteUrl ?? null, notes: notes ?? null })
     .returning()
 
   return NextResponse.json(row, { status: 201 })

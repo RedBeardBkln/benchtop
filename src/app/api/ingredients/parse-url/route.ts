@@ -1,45 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
+import { safeFetch, readTextCapped, UnsafeUrlError } from '@/lib/safe-fetch'
 
 const bodySchema = z.object({
   url: z.string().url(),
   ingredientName: z.string().min(1),
 })
 
-function isSafeUrl(urlStr: string): boolean {
-  try {
-    const url = new URL(urlStr)
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
-    const h = url.hostname.toLowerCase()
-    if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return false
-    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(h)) return false
-    if (h.endsWith('.internal') || h.endsWith('.local')) return false
-    return true
-  } catch {
-    return false
-  }
-}
+// Max bytes of the page we read; only the first 16k characters of text are sent to the model anyway.
+const MAX_PAGE_BYTES = 2 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const { url, ingredientName } = parsed.data
 
-  if (!isSafeUrl(url)) {
-    return NextResponse.json({ error: 'URL not allowed' }, { status: 422 })
-  }
-
-  // Fetch page server-side to bypass CORS
+  // Fetch page server-side to bypass CORS. safeFetch is the SSRF guard: public http(s) hosts only (DNS-resolved,
+  // redirects followed manually and re-validated on every hop; see lib/safe-fetch).
   let pageText = ''
   try {
-    const pageRes = await fetch(url, {
+    const pageRes = await safeFetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; NutritionDataBot/1.0)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -48,7 +34,7 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(12000),
     })
     if (!pageRes.ok) throw new Error(`HTTP ${pageRes.status}`)
-    const html = await pageRes.text()
+    const html = await readTextCapped(pageRes, MAX_PAGE_BYTES)
 
     // Strip scripts, styles, and tags — keep text content for Claude
     pageText = html
@@ -60,6 +46,8 @@ export async function POST(req: NextRequest) {
       .trim()
       .slice(0, 16000)
   } catch (err) {
+    // Blocked initial URL or redirect hop: same generic response, no reachability detail.
+    if (err instanceof UnsafeUrlError) return NextResponse.json({ error: 'URL not allowed' }, { status: 422 })
     return NextResponse.json(
       { error: `Could not load page: ${String(err)}. Some sites block server-side requests.` },
       { status: 422 },

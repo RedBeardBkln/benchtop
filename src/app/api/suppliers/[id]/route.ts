@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { suppliers, ingredientSuppliers } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
+import { isUuid, getOwnedSupplier, notFoundResponse } from '@/lib/tenancy'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -14,22 +15,23 @@ const patchSchema = z.object({
 })
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
-  const [row] = await db.select().from(suppliers).where(eq(suppliers.id, id)).limit(1)
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const row = await getOwnedSupplier(ctx, id)
+  if (!row) return notFoundResponse()
   return NextResponse.json(row)
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
+  if (!isUuid(id)) return notFoundResponse()
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
@@ -42,17 +44,24 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (d.websiteUrl !== undefined) updates.websiteUrl = d.websiteUrl
   if (d.notes !== undefined) updates.notes = d.notes
 
-  const [row] = await db.update(suppliers).set(updates).where(eq(suppliers.id, id)).returning()
+  const [row] = await db
+    .update(suppliers)
+    .set(updates)
+    .where(and(eq(suppliers.id, id), eq(suppliers.accountId, ctx.account.id)))
+    .returning()
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(row)
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
+  const supplier = await getOwnedSupplier(ctx, id)
+  if (!supplier) return notFoundResponse()
+
   // Check if this supplier is still linked to any ingredients
   const links = await db
     .select({ id: ingredientSuppliers.id })
@@ -67,6 +76,6 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     )
   }
 
-  await db.delete(suppliers).where(eq(suppliers.id, id))
+  await db.delete(suppliers).where(and(eq(suppliers.id, id), eq(suppliers.accountId, ctx.account.id)))
   return new NextResponse(null, { status: 204 })
 }

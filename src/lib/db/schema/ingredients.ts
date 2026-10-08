@@ -4,10 +4,12 @@ import {
 } from 'drizzle-orm/pg-core'
 import { sourceTypeEnum, verificationEnum } from './enums'
 import { nutrients } from './nutrients'
+import { accounts } from './accounts'
 import { formulations } from './formulations'
 
 export const ingredients = pgTable('ingredients', {
   id: uuid('id').primaryKey().defaultRandom(),
+  accountId: uuid('account_id').notNull().references(() => accounts.id),
   name: text('name').notNull(),
   sourceType: sourceTypeEnum('source_type').notNull().default('manual'),
   fdcId: integer('fdc_id'),
@@ -31,6 +33,7 @@ export const ingredients = pgTable('ingredients', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
+  index('ingredients_account_idx').on(t.accountId),
   index('ingredients_name_idx').on(t.name),
   index('ingredients_fdc_id_idx').on(t.fdcId),
   index('ingredients_is_ab_spi_idx').on(t.isAbSpi),

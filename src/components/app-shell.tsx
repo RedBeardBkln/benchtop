@@ -2,24 +2,31 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { FolderOpen, FlaskConical, LogOut, Truck } from 'lucide-react'
+import { FolderOpen, FlaskConical, LogOut, MailPlus, Settings, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const NAV = [
   { href: '/projects', label: 'Projects', icon: FolderOpen },
   { href: '/ingredients', label: 'Ingredients', icon: FlaskConical },
   { href: '/suppliers', label: 'Suppliers', icon: Truck },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
+
+// Only shown to platform admins
+const ADMIN_NAV = [{ href: '/admin/invitations', label: 'Invitations', icon: MailPlus }]
 
 export function AppShell({
   children,
   userEmail,
+  isPlatformAdmin = false,
 }: {
   children: React.ReactNode
   userEmail?: string
+  isPlatformAdmin?: boolean
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const nav = isPlatformAdmin ? [...NAV, ...ADMIN_NAV] : NAV
 
   async function signOut() {
     const supabase = createClient()
@@ -43,7 +50,7 @@ export function AppShell({
         </div>
 
         <nav className="flex-1 px-2 py-4 space-y-0.5">
-          {NAV.map(({ href, label, icon: Icon }) => {
+          {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link
@@ -81,7 +88,7 @@ export function AppShell({
 
       {/* Bottom nav — mobile only */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-gray-900 border-t border-gray-800 flex pb-[env(safe-area-inset-bottom)] print:hidden">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link

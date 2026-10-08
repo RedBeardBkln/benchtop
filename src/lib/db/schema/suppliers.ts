@@ -3,15 +3,18 @@ import {
   timestamp, index,
 } from 'drizzle-orm/pg-core'
 import { ingredients } from './ingredients'
+import { accounts } from './accounts'
 
 export const suppliers = pgTable('suppliers', {
   id: uuid('id').primaryKey().defaultRandom(),
+  accountId: uuid('account_id').notNull().references(() => accounts.id),
   name: text('name').notNull(),
   websiteUrl: text('website_url'),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
+  index('suppliers_account_idx').on(t.accountId),
   index('suppliers_name_idx').on(t.name),
 ])
 

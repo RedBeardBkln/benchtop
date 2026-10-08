@@ -1,14 +1,40 @@
--- Enable Row Level Security on all application tables.
--- All data access in Benchtop goes through Next.js API routes (Drizzle, postgres
--- superuser connection) so RLS does not affect the app itself. These policies
--- block direct PostgREST / Supabase-client access by anyone who is not
--- authenticated, and silence Supabase's "RLS Disabled in Public" warning.
+-- Row Level Security for all application tables.
 --
--- Policy: authenticated Supabase users (any logged-in ALP Bio employee)
--- have full read/write access to every table. There is no row-level isolation
--- because this is a single-org internal tool.
+-- All data access in Benchtop goes through Next.js API routes (Drizzle, privileged postgres
+-- connection, which bypasses RLS) and tenant isolation is enforced in the application layer by
+-- account_id. RLS exists to make the database itself safe from direct PostgREST / Supabase-client
+-- access with the public anon key.
 --
--- HOW TO APPLY: paste the entire file into Supabase → SQL Editor → Run.
+-- Policy model: RLS is ENABLED on every table and there are intentionally NO policies. That means
+-- the `anon` and `authenticated` roles are denied everything. (Earlier versions of this file granted
+-- every authenticated user full access via an "authenticated_all" policy; that is unsafe now that
+-- outside, paying users have authenticated sessions, and those policies are dropped below.)
+--
+-- HOW TO APPLY: paste the entire file into Supabase -> SQL Editor -> Run. Idempotent.
+-- supabase/migrations/004_outside_users_rls.sql is the same change as a numbered migration, plus
+-- the Storage-bucket checklist.
+
+-- ── Drop the old permissive policies ──────────────────────────────────────────
+
+DROP POLICY IF EXISTS "authenticated_all" ON nutrients;
+DROP POLICY IF EXISTS "authenticated_all" ON ingredient_allergens;
+DROP POLICY IF EXISTS "authenticated_all" ON ingredient_certs;
+DROP POLICY IF EXISTS "authenticated_all" ON ingredient_docs;
+DROP POLICY IF EXISTS "authenticated_all" ON ingredient_nutrients;
+DROP POLICY IF EXISTS "authenticated_all" ON ingredients;
+DROP POLICY IF EXISTS "authenticated_all" ON sub_ingredients;
+DROP POLICY IF EXISTS "authenticated_all" ON suppliers;
+DROP POLICY IF EXISTS "authenticated_all" ON ingredient_suppliers;
+DROP POLICY IF EXISTS "authenticated_all" ON projects;
+DROP POLICY IF EXISTS "authenticated_all" ON formulations;
+DROP POLICY IF EXISTS "authenticated_all" ON formulation_lines;
+DROP POLICY IF EXISTS "authenticated_all" ON formulation_targets;
+DROP POLICY IF EXISTS "authenticated_all" ON process_steps;
+DROP POLICY IF EXISTS "authenticated_all" ON equipment;
+DROP POLICY IF EXISTS "authenticated_all" ON reverse_targets;
+DROP POLICY IF EXISTS "authenticated_all" ON reverse_candidates;
+DROP POLICY IF EXISTS "authenticated_all" ON audit_log;
+DROP POLICY IF EXISTS "authenticated_all" ON batch_runs;
 
 -- ── Reference data ────────────────────────────────────────────────────────────
 
@@ -30,6 +56,7 @@ ALTER TABLE formulation_lines      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE formulation_targets    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE process_steps          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE equipment              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE batch_runs             ENABLE ROW LEVEL SECURITY;
 
 -- ── Reverse-engineering data ──────────────────────────────────────────────────
 
@@ -40,23 +67,19 @@ ALTER TABLE reverse_candidates     ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE audit_log              ENABLE ROW LEVEL SECURITY;
 
--- ── Policies: authenticated users have full access ────────────────────────────
+-- ── Accounts, membership, profiles, invitations, billing (migration 0007) ─────
 
-CREATE POLICY "authenticated_all" ON nutrients            FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON ingredient_allergens FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON ingredient_certs     FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON ingredient_docs      FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON ingredient_nutrients FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON ingredients          FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON sub_ingredients      FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON suppliers            FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON ingredient_suppliers FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON projects             FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON formulations         FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON formulation_lines    FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON formulation_targets  FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON process_steps        FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON equipment            FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON reverse_targets      FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON reverse_candidates   FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "authenticated_all" ON audit_log            FOR ALL TO authenticated USING (true) WITH CHECK (true);
+ALTER TABLE accounts               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_members        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invitations            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stripe_events          ENABLE ROW LEVEL SECURITY;
+
+-- ── Policies ──────────────────────────────────────────────────────────────────
+-- None, on purpose. See the header.
+
+-- ── Storage (checklist; do in the Supabase dashboard) ────────────────────────
+--   [ ] Bucket `ingredient-docs` is private and has no broad `authenticated`/`anon` policy on
+--       storage.objects (the app uses the service-role key for all document access).
+--   [ ] Email sign-ups are disabled (Authentication -> Providers -> Email).

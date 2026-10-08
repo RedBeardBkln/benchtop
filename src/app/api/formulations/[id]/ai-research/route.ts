@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
+import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -51,10 +52,12 @@ JSON structure (return exactly this, no extra keys):
 {"productCategory":"string","formulationApproach":"2 sentences max","ingredientSuggestions":[{"rawName":"string","suggestions":[{"ingredient":"string","rationale":"1 sentence","searchQuery":"string"}]}],"approximatePercentages":[{"ingredient":"string","estimatedMinPct":0,"estimatedMaxPct":0,"rationale":"1 sentence"}],"constraints":["string"],"additionalNotes":"2 sentences max"}`
 }
 
-export async function POST(req: NextRequest, { params: _params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(req: NextRequest, { params }: Ctx) {
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
+  const { id } = await params
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
   if (!process.env.ANTHROPIC_API_KEY)
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not configured' }, { status: 503 })

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { projects, formulations } from '@/lib/db/schema'
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
+import { isUuid, getOwnedProject, notFoundResponse } from '@/lib/tenancy'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -27,14 +28,14 @@ const patchSchema = z.object({
 })
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
 
-  const [project] = await db.select().from(projects).where(eq(projects.id, id)).limit(1)
-  if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const project = await getOwnedProject(ctx, id)
+  if (!project) return notFoundResponse()
 
   // One row per formulation: its latest iteration, plus how many iterations exist
   const latestPerFamily = await db
@@ -43,7 +44,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       iterationCount: sql<number>`count(*) over (partition by ${formulations.familyId})::int`,
     })
     .from(formulations)
-    .where(eq(formulations.projectId, id))
+    .where(and(eq(formulations.projectId, id), eq(formulations.accountId, ctx.account.id)))
     .orderBy(formulations.familyId, desc(formulations.version))
 
   const formList = latestPerFamily
@@ -54,11 +55,12 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
+  if (!isUuid(id)) return notFoundResponse()
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
@@ -70,17 +72,23 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (d.status !== undefined) updates.status = d.status
   if (d.targets !== undefined) updates.targets = d.targets
 
-  const [row] = await db.update(projects).set(updates).where(eq(projects.id, id)).returning()
+  const [row] = await db
+    .update(projects)
+    .set(updates)
+    .where(and(eq(projects.id, id), eq(projects.accountId, ctx.account.id)))
+    .returning()
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(row)
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
-  await db.delete(projects).where(eq(projects.id, id))
+  const project = await getOwnedProject(ctx, id)
+  if (!project) return notFoundResponse()
+  await db.delete(projects).where(and(eq(projects.id, id), eq(projects.accountId, ctx.account.id)))
   return new NextResponse(null, { status: 204 })
 }

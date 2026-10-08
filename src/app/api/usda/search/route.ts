@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 
 const FDC_BASE = 'https://api.nal.usda.gov/fdc/v1'
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
 
   const q = request.nextUrl.searchParams.get('q')?.trim()
   if (!q) return NextResponse.json({ foods: [], totalHits: 0, currentPage: 1, totalPages: 1 })

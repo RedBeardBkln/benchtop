@@ -1,7 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Routes that never need a session and must not be redirected/401'd: the public invite page,
+// legal pages, the invite-redemption API and the Stripe webhook (which authenticates by signature).
+function isOpenRoute(pathname: string): boolean {
+  const is = (base: string) => pathname === base || pathname.startsWith(base + '/')
+  return is('/invite') || is('/legal') || is('/api/invitations/redeem') || is('/api/stripe/webhook')
+}
+
 export async function middleware(request: NextRequest) {
+  // Skip the Supabase session round-trip entirely for open routes
+  if (isOpenRoute(request.nextUrl.pathname)) return NextResponse.next({ request })
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

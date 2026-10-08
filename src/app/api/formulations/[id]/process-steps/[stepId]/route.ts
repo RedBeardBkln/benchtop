@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { processSteps } from '@/lib/db/schema'
 import { and, eq, gt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { lossFields, lossFieldsError } from '@/lib/process-loss-fields'
 import { paramPatchError } from '@/lib/step-measurements'
+import { assertEquipmentOwned, getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string; stepId: string }> }
 
@@ -21,13 +22,19 @@ const patchSchema = z.object({
 })
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id, stepId } = await params
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
+  // equipmentId comes from the request body: it must belong to the caller's account
+  if (parsed.data.equipmentId && !(await assertEquipmentOwned(ctx, [parsed.data.equipmentId]))) {
+    return notFoundResponse('Equipment not found')
+  }
 
   const updates: Record<string, unknown> = {}
   const d = parsed.data
@@ -66,11 +73,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id, stepId } = await params
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
   await db.transaction(async (tx) => {
     const [deleted] = await tx

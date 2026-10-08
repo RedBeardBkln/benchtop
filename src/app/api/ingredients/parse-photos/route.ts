@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { nutrients } from '@/lib/db/schema'
 import Anthropic from '@anthropic-ai/sdk'
@@ -14,9 +14,8 @@ function toMediaType(mime: string): MediaType {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
 
   if (!process.env.ANTHROPIC_API_KEY)
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { processSteps } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { lossFields, lossFieldsError } from '@/lib/process-loss-fields'
 import { paramPatchError } from '@/lib/step-measurements'
+import { assertEquipmentOwned, getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -21,11 +22,12 @@ const postSchema = z.object({
 })
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
   const steps = await db
     .select()
@@ -37,13 +39,19 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 }
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
   const parsed = postSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
+  // equipmentId comes from the request body: it must belong to the caller's account
+  if (parsed.data.equipmentId && !(await assertEquipmentOwned(ctx, [parsed.data.equipmentId]))) {
+    return notFoundResponse('Equipment not found')
+  }
 
   const lossError = lossFieldsError(parsed.data)
   if (lossError) return NextResponse.json({ error: lossError }, { status: 400 })

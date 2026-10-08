@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { formulationLines, formulations } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { hasValidWeightPrecision } from '@/lib/weight'
+import { assertIngredientsOwned, getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -24,15 +25,21 @@ const bodySchema = z.object({
 })
 
 export async function PUT(req: NextRequest, { params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const { id } = await params
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
+
   const { lines } = parsed.data
+  // Ingredient ids come from the request body: every one must belong to the caller's account
+  if (!(await assertIngredientsOwned(ctx, lines.map(l => l.ingredientId)))) {
+    return notFoundResponse('One or more ingredients were not found')
+  }
   const totalWeightG = lines.reduce((s, l) => s + l.weightG, 0)
 
   await db.transaction(async tx => {
@@ -62,7 +69,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     await tx
       .update(formulations)
       .set({ updatedAt: new Date() })
-      .where(eq(formulations.id, id))
+      .where(and(eq(formulations.id, id), eq(formulations.accountId, ctx.account.id)))
   })
 
   return NextResponse.json({ ok: true, lineCount: lines.length })

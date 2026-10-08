@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredientNutrients, nutrients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 import { importUsdaIngredient, FDC_BASE } from '@/lib/usda-import'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -25,10 +26,13 @@ const DATA_TYPE_RANK: Record<string, number> = {
   Branded: 3,
 }
 
-export async function POST(req: NextRequest, { params: _params }: Ctx) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(req: NextRequest, { params }: Ctx) {
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
+
+  const { id } = await params
+  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
   const apiKey = process.env.USDA_FDC_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'USDA_FDC_API_KEY not configured' }, { status: 500 })
@@ -83,6 +87,7 @@ export async function POST(req: NextRequest, { params: _params }: Ctx) {
 
       // 3. Import (or fetch existing)
       const result = await importUsdaIngredient(fdcIdToImport, {
+        accountId: ctx.account.id,
         nameOverride: item.rawName,          // keep the label's name as written
         sourceType: 'ai_extracted',
         fallbackFood: fallbackFoodNutrients

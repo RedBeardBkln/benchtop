@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
   ingredients,
@@ -8,13 +8,13 @@ import {
   ingredientCerts,
   formulationLines,
 } from '@/lib/db/schema'
-import { desc, ilike, sql, eq } from 'drizzle-orm'
+import { and, desc, ilike, sql, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const q = request.nextUrl.searchParams.get('q')?.trim()
 
@@ -44,7 +44,12 @@ export async function GET(request: NextRequest) {
       })
       .from(ingredients)
       .leftJoin(formulationCountSq, eq(formulationCountSq.ingredientId, ingredients.id))
-      .where(q ? ilike(ingredients.name, `%${q}%`) : undefined)
+      .where(
+        and(
+          eq(ingredients.accountId, ctx.account.id),
+          q ? ilike(ingredients.name, `%${q}%`) : undefined,
+        ),
+      )
       .orderBy(desc(ingredients.createdAt))
       .limit(500)
 
@@ -72,9 +77,9 @@ const createSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireApi()
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
 
   const body = await request.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -94,6 +99,7 @@ export async function POST(request: NextRequest) {
     const [row] = await db
       .insert(ingredients)
       .values({
+        accountId: ctx.account.id,
         name: d.name,
         sourceType: d.sourceType,
         isAbSpi: d.isAbSpi,
