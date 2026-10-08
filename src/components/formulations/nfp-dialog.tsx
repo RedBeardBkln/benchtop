@@ -1,23 +1,16 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { X, Download, Printer, ChevronDown, ChevronUp } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { X, Download, Printer, ChevronDown, ChevronUp, Save, Trash2, Eye, Scale } from 'lucide-react'
 import { toast } from 'sonner'
+import { format as formatDate } from 'date-fns'
 import { NfpPanel } from './nfp-panel'
-import type { ExtraNutrient } from './nfp-panel'
 import type { NutrientResult } from '@/lib/formulation-calc'
+import { buildNfpModel, STANDARD_NFP_NAMES, type ExtraNutrientInput, type NfpModel, type NfpOptions } from '@/lib/nfp-model'
+import { declareDvPct, isDvTiered, ruleReferences } from '@/lib/fda-rounding'
 
 type Format = 'png' | 'jpg' | 'pdf'
-
-// Names already displayed in the standard NFP block — exclude from extras picker
-const STANDARD_NFP_NAMES = new Set([
-  'Energy',
-  'Total Fat', 'Saturated Fat', 'Trans Fat', 'Polyunsaturated Fat', 'Monounsaturated Fat',
-  'Cholesterol', 'Sodium',
-  'Total Carbohydrate', 'Dietary Fiber', 'Total Sugars', 'Added Sugars',
-  'Protein',
-  'Vitamin D', 'Calcium', 'Iron', 'Potassium',
-])
 
 // FDA 2020 Daily Values for the extended nutrient set. The standard NFP block
 // pulls DVs straight from the `nutrients.dailyValueAmount` column (via the
@@ -78,8 +71,20 @@ function resolveDv(result: NutrientResult, fallback: number | undefined): number
   return null
 }
 
+type SavedPanel = {
+  id: string
+  name: string
+  rulesVersion: string
+  servingSizeG: string | null
+  options: NfpOptions
+  model: NfpModel
+  createdAt: string
+}
+
 type Props = {
+  formulationId: string
   formName: string
+  version: number
   servingSizeG: number | undefined
   batchSizeG: number
   results: NutrientResult[]
@@ -88,13 +93,20 @@ type Props = {
 }
 
 export function NfpDialog({
+  formulationId,
   formName,
+  version,
   servingSizeG,
   batchSizeG,
   results,
   defaultIngredients,
   onClose,
 }: Props) {
+  const queryClient = useQueryClient()
+  const panelsKey = ['nfp-panels', formulationId]
+  const [viewing, setViewing] = useState<SavedPanel | null>(null)
+  const [saveName, setSaveName] = useState('')
+  const [rulesOpen, setRulesOpen] = useState(false)
   const [format, setFormat] = useState<Format>('png')
   const [includeAllergen, setIncludeAllergen] = useState(false)
   const [allergenText, setAllergenText] = useState('')
@@ -138,21 +150,93 @@ export function NfpDialog({
     return groups
   }, [availableExtras])
 
-  // Build the extras array that gets passed to the panel
-  const extraNutrientsForPanel = useMemo((): ExtraNutrient[] => {
+  // Selected extras, with their %DV basis, handed to the model builder
+  const extraInputs = useMemo((): ExtraNutrientInput[] => {
     return availableExtras
       .filter(r => selectedExtras.has(r.name))
-      .map(r => {
-        const value = usePerServing ? (r.perServing ?? 0) : r.perFinished100g
-        const dv = resolveDv(r, EXTENDED_DV[r.name])
-        return {
-          name: r.name,
-          value,
-          unit: r.unit,
-          dvPct: dv != null ? `${Math.round((value / dv) * 100)}%` : undefined,
-        }
-      })
+      .map(r => ({
+        name: r.name,
+        value: usePerServing ? (r.perServing ?? 0) : r.perFinished100g,
+        unit: r.unit,
+        category: r.category,
+        dailyValue: resolveDv(r, EXTENDED_DV[r.name]),
+      }))
   }, [availableExtras, selectedExtras, usePerServing])
+
+  const liveModel = useMemo(
+    () => buildNfpModel({
+      servingSizeG,
+      servingsPerContainer,
+      results,
+      hideZeros,
+      extras: showExtras ? extraInputs : undefined,
+      allergenStatement: includeAllergen ? allergenText : undefined,
+      ingredientStatement: includeIngredients ? ingredientText : undefined,
+    }),
+    [servingSizeG, servingsPerContainer, results, hideZeros, showExtras, extraInputs,
+      includeAllergen, allergenText, includeIngredients, ingredientText],
+  )
+  const activeModel = viewing ? viewing.model : liveModel
+
+  const currentOptions = (): NfpOptions => ({
+    hideZeros, showExtras, selectedExtras: [...selectedExtras],
+    includeAllergen, allergenText, includeIngredients, ingredientText,
+  })
+
+  function restoreOptions(o: NfpOptions) {
+    setHideZeros(o.hideZeros)
+    setShowExtras(o.showExtras)
+    setExtrasOpen(false)
+    setSelectedExtras(new Set(o.selectedExtras))
+    setIncludeAllergen(o.includeAllergen)
+    setAllergenText(o.allergenText)
+    setIncludeIngredients(o.includeIngredients)
+    setIngredientText(o.ingredientText)
+  }
+
+  const { data: saved, isError: savedError } = useQuery<{ panels: SavedPanel[] }>({
+    queryKey: panelsKey,
+    queryFn: async () => {
+      const r = await fetch(`/api/formulations/${formulationId}/nfp-panels`)
+      if (!r.ok) throw new Error('Could not load saved panels')
+      return r.json()
+    },
+  })
+  const savedPanels = saved?.panels ?? []
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const name = saveName.trim() || `${formName} v${version} — ${formatDate(new Date(), 'MMM d, yyyy h:mm a')}`
+      const r = await fetch(`/api/formulations/${formulationId}/nfp-panels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, servingSizeG: servingSizeG ?? null, options: currentOptions(), model: liveModel }),
+      })
+      const body = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(body.error ?? 'Could not save panel')
+      return body.panel as SavedPanel
+    },
+    onSuccess: () => {
+      setSaveName('')
+      queryClient.invalidateQueries({ queryKey: panelsKey })
+      toast.success(`Panel saved to v${version}`)
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (panelId: string) => {
+      const r = await fetch(`/api/formulations/${formulationId}/nfp-panels/${panelId}`, { method: 'DELETE' })
+      if (!r.ok) throw new Error('Could not delete panel')
+      return panelId
+    },
+    onSuccess: panelId => {
+      if (viewing?.id === panelId) setViewing(null)
+      queryClient.invalidateQueries({ queryKey: panelsKey })
+      toast.success('Saved panel deleted')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
 
   function toggleExtra(name: string) {
     setSelectedExtras(prev => {
@@ -175,18 +259,10 @@ export function NfpDialog({
     setDownloading(true)
     try {
       const { drawNfpToCanvas } = await import('./nfp-canvas')
-      const canvas = drawNfpToCanvas({
-        servingSizeG,
-        servingsPerContainer,
-        results,
-        hideZeros,
-        extraNutrients: showExtras ? extraNutrientsForPanel : undefined,
-        allergenStatement: includeAllergen ? allergenText : undefined,
-        ingredientStatement: includeIngredients ? ingredientText : undefined,
-      })
+      const canvas = drawNfpToCanvas({ model: activeModel })
 
       const slug = formName.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '')
-      const fileName = `${slug}_NFP`
+      const fileName = `${slug}_v${version}_NFP`
 
       if (format === 'pdf') {
         const { jsPDF } = await import('jspdf')
@@ -222,7 +298,7 @@ export function NfpDialog({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 print:hidden">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Nutrition Facts Panel</h2>
-            <p className="text-xs text-gray-400 mt-0.5">FDA 2020 standard format</p>
+            <p className="text-xs text-gray-400 mt-0.5">FDA 2020 standard format · rounded per 21 CFR 101.9</p>
           </div>
           <button
             onClick={onClose}
@@ -267,7 +343,7 @@ export function NfpDialog({
                 className="rounded border-gray-300"
               />
               <span className="text-sm font-medium text-gray-700">
-                Hide nutrients with zero value
+                Hide nutrients that round to zero
               </span>
             </label>
 
@@ -333,7 +409,7 @@ export function NfpDialog({
                             {items.map(r => {
                               const v = usePerServing ? (r.perServing ?? 0) : r.perFinished100g
                               const dv = resolveDv(r, EXTENDED_DV[r.name])
-                              const dvStr = dv != null ? ` · ${Math.round((v / dv) * 100)}% DV` : ''
+                              const dvStr = dv != null ? ` · ${declareDvPct(v, dv, isDvTiered(r.name, r.category)).declared}% DV` : ''
                               return (
                                 <label
                                   key={r.name}
@@ -442,22 +518,139 @@ export function NfpDialog({
                 Print
               </button>
             </div>
+
+            {/* Save to this iteration */}
+            <div className="border-t border-gray-100 pt-4 space-y-3 print:hidden">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800">Saved to v{version}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Panels saved here belong to this iteration only and are kept exactly as shown, even if
+                  ingredient data changes later.
+                </p>
+              </div>
+
+              {viewing ? (
+                <div className="flex items-start gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
+                  <Eye size={14} className="text-blue-600 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-blue-800">
+                      Viewing a saved panel (FDA rules {viewing.rulesVersion}). Download and Print use this version.
+                    </p>
+                    <div className="flex gap-3 mt-1">
+                      <button onClick={() => setViewing(null)} className="text-xs font-medium text-blue-700 hover:underline">
+                        Back to live panel
+                      </button>
+                      <button
+                        onClick={() => { restoreOptions(viewing.options); setViewing(null) }}
+                        className="text-xs font-medium text-blue-700 hover:underline"
+                      >
+                        Reuse these settings
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    value={saveName}
+                    onChange={e => setSaveName(e.target.value)}
+                    maxLength={120}
+                    placeholder={`Name (optional) — e.g. Retail label ${formatDate(new Date(), 'MMM yyyy')}`}
+                    className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={() => saveMutation.mutate()}
+                    disabled={saveMutation.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors shrink-0"
+                  >
+                    <Save size={14} />
+                    {saveMutation.isPending ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              )}
+
+              {savedError && <p className="text-xs text-red-600">Could not load saved panels.</p>}
+              {saved && savedPanels.length === 0 && (
+                <p className="text-xs text-gray-400">No panels saved for this iteration yet.</p>
+              )}
+              {savedPanels.length > 0 && (
+                <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+                  {savedPanels.map(p => (
+                    <li
+                      key={p.id}
+                      className={`flex items-center gap-2 px-3 py-2 ${viewing?.id === p.id ? 'bg-blue-50' : 'bg-white'}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-800 truncate">{p.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {formatDate(new Date(p.createdAt), 'MMM d, yyyy h:mm a')} · {p.model.calories} cal
+                          {p.servingSizeG ? ` · ${p.model.servingSizeText} serving` : ' · per 100g'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setViewing(p)}
+                        title="View this saved panel"
+                        className="p-1.5 text-gray-400 hover:text-blue-600 rounded transition-colors"
+                      >
+                        <Eye size={15} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Delete saved panel "${p.name}"?`)) deleteMutation.mutate(p.id)
+                        }}
+                        disabled={deleteMutation.isPending}
+                        title="Delete this saved panel"
+                        className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* FDA rounding rules reference */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden print:hidden">
+              <button
+                onClick={() => setRulesOpen(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <span className="flex items-center gap-2"><Scale size={13} /> FDA rounding rules applied to this panel</span>
+                {rulesOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+              {rulesOpen && (
+                <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+                  {ruleReferences().map(r => (
+                    <div key={r.id} className="px-3 py-2">
+                      <p className="text-xs font-semibold text-gray-700">{r.title}</p>
+                      <p className="text-[11px] text-gray-400">{r.citation}</p>
+                      <ul className="mt-1 space-y-0.5">
+                        {r.lines.map(l => <li key={l} className="text-xs text-gray-600">• {l}</li>)}
+                      </ul>
+                      {r.note && <p className="text-[11px] text-gray-400 mt-1">{r.note}</p>}
+                    </div>
+                  ))}
+                  <p className="px-3 py-2 text-[11px] text-gray-400">
+                    Amounts exactly halfway between increments round up. Rounding guidance is a reference;
+                    confirm against current FDA regulations before printing a commercial label.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right: live preview */}
           <div className="shrink-0 print:mx-auto">
-            <p className="text-xs text-gray-400 mb-3 print:hidden">Preview</p>
+            <p className="text-xs text-gray-400 mb-3 print:hidden">
+              {viewing ? `Saved panel — ${viewing.name}` : 'Preview'}
+            </p>
             <div>
-              <NfpPanel
-                servingSizeG={servingSizeG}
-                servingsPerContainer={servingsPerContainer}
-                results={results}
-                hideZeros={hideZeros}
-                extraNutrients={showExtras ? extraNutrientsForPanel : undefined}
-                allergenStatement={includeAllergen ? allergenText : undefined}
-                ingredientStatement={includeIngredients ? ingredientText : undefined}
-              />
+              <NfpPanel model={activeModel} />
             </div>
+            <p className="text-xs text-gray-400 mt-3 max-w-[340px] print:hidden">
+              Values are FDA-rounded. Hover (or tab to) a dotted value to see the rule that was applied.
+            </p>
           </div>
         </div>
       </div>

@@ -1622,7 +1622,9 @@ export function FormulationGrid({ id }: { id: string }) {
 
       {showNfpDialog && calcResult && (
         <NfpDialog
+          formulationId={id}
           formName={data.name}
+          version={data.version}
           servingSizeG={servingSizeG ? parseFloat(servingSizeG) : undefined}
           batchSizeG={totalWeightG}
           results={calcResult.results}

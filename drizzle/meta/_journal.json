@@ -64,6 +64,13 @@
       "when": 1791464805162,
       "tag": "0008_public_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791486994925,
+      "tag": "0009_motionless_starbolt",
+      "breakpoints": true
     }
   ]
 }

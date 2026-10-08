@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
-  accountMembers, batchRuns, equipment, formulationLines, formulations, formulationTargets,
+  accountMembers, batchRuns, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
   ingredientAllergens, ingredientCerts, ingredientDocs, ingredientNutrients, ingredientSuppliers,
   ingredients, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
   subIngredients, suppliers,
@@ -36,7 +36,7 @@ export async function GET() {
 
   const [
     lineRows, stepRows, targetRows, runRows, reverseTargetRows, reverseCandidateRows,
-    nutrientRows, allergenRows, certRows, subIngredientRows, docRows, supplierLinkRows,
+    nutrientRows, allergenRows, certRows, subIngredientRows, docRows, supplierLinkRows, nfpPanelRows,
   ] = await Promise.all([
     db.select({ r: formulationLines }).from(formulationLines)
       .innerJoin(formulations, eq(formulationLines.formulationId, formulations.id))
@@ -77,6 +77,9 @@ export async function GET() {
     db.select({ r: ingredientSuppliers }).from(ingredientSuppliers)
       .innerJoin(ingredients, eq(ingredientSuppliers.ingredientId, ingredients.id))
       .where(eq(ingredients.accountId, accountId)),
+    db.select({ r: formulationNfpPanels }).from(formulationNfpPanels)
+      .innerJoin(formulations, eq(formulationNfpPanels.formulationId, formulations.id))
+      .where(eq(formulations.accountId, accountId)),
   ])
 
   const sub = ctx.subscription
@@ -118,6 +121,7 @@ export async function GET() {
     processSteps: stepRows.map(x => x.r),
     formulationTargets: targetRows.map(x => x.r),
     batchRuns: runRows.map(x => x.r),
+    formulationNfpPanels: nfpPanelRows.map(x => x.r),
     reverseTargets: reverseTargetRows.map(x => x.r),
     reverseCandidates: reverseCandidateRows.map(x => x.r),
     ingredients: ingredientRows,

@@ -99,6 +99,26 @@ export const batchRuns = pgTable('batch_runs', {
   index('batch_runs_formulation_idx').on(t.formulationId),
 ])
 
+// A Nutrition Facts Panel saved against one iteration (a formulations row is one iteration, so the
+// panel belongs to exactly that version). `model` is the fully-rounded label (see lib/nfp-model.ts)
+// and is displayed as-is later, so it never changes when ingredient data or the rules do.
+// Tenant scope comes from the parent formulation (cascade-deleted with it).
+export const formulationNfpPanels = pgTable('formulation_nfp_panels', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  // Version of the FDA rounding rules the model was built with (lib/fda-rounding.ts RULES_VERSION)
+  rulesVersion: text('rules_version').notNull(),
+  servingSizeG: numeric('serving_size_g', { precision: 10, scale: 4 }),
+  // Dialog settings used (hide zeros, extras picked, statements) so the panel can be re-opened and tweaked
+  options: jsonb('options').notNull().default('{}'),
+  model: jsonb('model').notNull(),
+  createdBy: uuid('created_by'), // Supabase auth UID
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('formulation_nfp_panels_formulation_idx').on(t.formulationId),
+])
+
 export const formulationTargets = pgTable('formulation_targets', {
   id: uuid('id').primaryKey().defaultRandom(),
   formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),
