@@ -10,6 +10,8 @@ import {
 } from '@/lib/db/schema'
 import { and, desc, ilike, sql, eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
+import { duplicateCounts } from '@/lib/ingredient-identity'
 
 export async function GET(request: NextRequest) {
   const auth = await requireApi()
@@ -38,6 +40,10 @@ export async function GET(request: NextRequest) {
         defaultCostPerKg: ingredients.defaultCostPerKg,
         stockG: ingredients.stockG,
         notes: ingredients.notes,
+        labelName: ingredients.labelName,
+        brandName: ingredients.brandName,
+        supplierName: ingredients.supplierName,
+        itemCode: ingredients.itemCode,
         createdAt: ingredients.createdAt,
         updatedAt: ingredients.updatedAt,
         formulationCount: sql<number>`coalesce(${formulationCountSq.cnt}, 0)`,
@@ -53,7 +59,10 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(ingredients.createdAt))
       .limit(500)
 
-    return NextResponse.json(rows)
+    // Flag entries that share name + brand + supplier + item code with another entry. Computed over the
+    // whole library (not just this page/search) so a filtered list still shows the flag.
+    const dupes = duplicateCounts(await loadIdentityRows(ctx.account.id))
+    return NextResponse.json(rows.map(r => ({ ...r, duplicateCount: dupes.get(r.id) ?? 0 })))
   } catch (err) {
     console.error('GET /api/ingredients error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
@@ -96,6 +105,9 @@ export async function POST(request: NextRequest) {
 
   const d = parsed.data
   try {
+    const dupe = await findDuplicate(ctx.account.id, d)
+    if (dupe) return duplicateResponse(d, dupe)
+
     const [row] = await db
       .insert(ingredients)
       .values({

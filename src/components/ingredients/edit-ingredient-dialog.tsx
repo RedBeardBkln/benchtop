@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Save } from 'lucide-react'
 import { toast } from 'sonner'
+import { readErrorMessage } from '@/lib/utils'
 
 interface EditIngredientDialogProps {
   open: boolean
@@ -35,8 +36,8 @@ export function EditIngredientDialog({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
-      }).then(r => {
-        if (!r.ok) throw new Error('Failed to update ingredient')
+      }).then(async r => {
+        if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to update ingredient'))
         return r.json()
       }),
     onSuccess: () => {
@@ -45,7 +46,7 @@ export function EditIngredientDialog({
       toast.success('Ingredient updated')
       onClose()
     },
-    onError: () => toast.error('Failed to update ingredient'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   function handleSubmit(e: React.FormEvent) {

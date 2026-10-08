@@ -15,8 +15,10 @@ import {
   ingredientSuppliers,
   suppliers,
 } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
+import { identityKey } from '@/lib/ingredient-identity'
 import { getOwnedIngredient, notFoundResponse, isUuid } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -89,8 +91,30 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
         .orderBy(ingredientSuppliers.createdAt),
     ])
 
+    // Other entries with the same name + brand + supplier + item code (pre-existing duplicates)
+    const myKey = identityKey(ingredient)
+    const groupIds = (await loadIdentityRows(ctx.account.id))
+      .filter(r => r.id !== id && identityKey(r) === myKey)
+      .map(r => r.id)
+    const duplicates = groupIds.length === 0 ? [] : await db
+      .select({
+        id: ingredients.id,
+        name: ingredients.name,
+        brandName: ingredients.brandName,
+        supplierName: ingredients.supplierName,
+        itemCode: ingredients.itemCode,
+        stockG: ingredients.stockG,
+        createdAt: ingredients.createdAt,
+        formulationCount: sql<number>`(select count(*)::int from formulation_lines fl where fl.ingredient_id = ${ingredients.id})`,
+        nutrientCount: sql<number>`(select count(*)::int from ingredient_nutrients n where n.ingredient_id = ${ingredients.id})`,
+      })
+      .from(ingredients)
+      .where(and(eq(ingredients.accountId, ctx.account.id), inArray(ingredients.id, groupIds)))
+      .orderBy(ingredients.createdAt)
+
     return NextResponse.json({
       ...ingredient,
+      duplicates,
       nutrients: nutrientRows,
       allergens: allergenRows,
       certs: certRows,
@@ -151,6 +175,23 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   if (d.stockG !== undefined) updateValues.stockG = d.stockG?.toString() ?? null
 
   try {
+    // Only a change to name/brand/supplier/item code is checked, so an entry that is already part of a
+    // duplicate pair can still have its other fields edited until it is renamed or merged.
+    if (d.name !== undefined || d.brandName !== undefined || d.supplierName !== undefined || d.itemCode !== undefined) {
+      const current = await getOwnedIngredient(ctx, id)
+      if (!current) return notFoundResponse()
+      const next = {
+        name: d.name ?? current.name,
+        brandName: d.brandName !== undefined ? d.brandName : current.brandName,
+        supplierName: d.supplierName !== undefined ? d.supplierName : current.supplierName,
+        itemCode: d.itemCode !== undefined ? d.itemCode : current.itemCode,
+      }
+      if (identityKey(next) !== identityKey(current)) {
+        const dupe = await findDuplicate(ctx.account.id, next, id)
+        if (dupe) return duplicateResponse(next, dupe)
+      }
+    }
+
     const [row] = await db
       .update(ingredients)
       .set(updateValues)

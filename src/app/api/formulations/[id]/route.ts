@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   if (!formulation) return notFoundResponse()
 
   const [project] = await db
-    .select({ id: projects.id, name: projects.name, targets: projects.targets })
+    .select({ id: projects.id, name: projects.name, client: projects.client, targets: projects.targets })
     .from(projects)
     .where(and(eq(projects.id, formulation.projectId), eq(projects.accountId, ctx.account.id)))
     .limit(1)

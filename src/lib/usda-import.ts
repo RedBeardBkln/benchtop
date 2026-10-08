@@ -5,6 +5,7 @@
 import { db as defaultDb } from '@/lib/db'
 import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { findDuplicate } from '@/lib/ingredient-duplicates'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 
 export const FDC_BASE = 'https://api.nal.usda.gov/fdc/v1'
@@ -153,12 +154,18 @@ export async function importUsdaIngredient(
   const ingredientName = opts.nameOverride ?? (fdcFood.description as string) ?? `FDC ${fdcId}`
   const repairId = existing[0]?.id
 
+  const nameDupe = repairId ? null : await findDuplicate(opts.accountId, { name: ingredientName })
   let ingredientId: string
+  let reusedExisting = false
   if (repairId) {
     ingredientId = repairId
     if (parsedNutrients.length > 0) {
       await database.insert(ingredientNutrients).values(parsedNutrients.map(r => ({ ...r, ingredientId: repairId })))
     }
+  } else if (nameDupe) {
+    // The library already has this ingredient (same name, no brand/supplier/code): use it rather than adding a duplicate
+    ingredientId = nameDupe.id
+    reusedExisting = true
   } else {
     const [row] = await database
       .insert(ingredients)
@@ -180,10 +187,13 @@ export async function importUsdaIngredient(
   }
 
   const [finalRow] = await database.select().from(ingredients).where(eq(ingredients.id, ingredientId)).limit(1)
+  const nutrientCount = reusedExisting
+    ? (await database.select({ id: ingredientNutrients.id }).from(ingredientNutrients).where(eq(ingredientNutrients.ingredientId, ingredientId))).length
+    : parsedNutrients.length
   return {
-    ingredient: { id: ingredientId, name: ingredientName, fdcId, sourceType: finalRow.sourceType, notes: finalRow.notes },
-    nutrientCount: parsedNutrients.length,
-    created: !repairId,
+    ingredient: { id: ingredientId, name: finalRow.name, fdcId: finalRow.fdcId ?? fdcId, sourceType: finalRow.sourceType, notes: finalRow.notes },
+    nutrientCount,
+    created: !repairId && !reusedExisting,
     sourceUrl,
   }
 }

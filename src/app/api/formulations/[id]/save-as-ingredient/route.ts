@@ -7,7 +7,8 @@ import {
 } from '@/lib/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
-import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { getOwnedFormulation, getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
+import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
 import { toLossStep } from '@/lib/process-loss'
 import { deriveIngredientFromFormulation, type SourceLine } from '@/lib/formulation-to-ingredient'
 
@@ -137,6 +138,18 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       { status: 409 },
     )
   }
+
+  // The library must not gain a second entry with the same identity. When refreshing the existing
+  // saved ingredient its brand/supplier/code are kept, so only the name changes.
+  const prior = existing ? await getOwnedIngredient(ctx, existing.id) : null
+  const identity = {
+    name,
+    brandName: prior?.brandName ?? null,
+    supplierName: prior?.supplierName ?? null,
+    itemCode: prior?.itemCode ?? null,
+  }
+  const dupe = await findDuplicate(ctx.account.id, identity, existing?.id)
+  if (dupe) return duplicateResponse(identity, dupe)
 
   const sourceRef = `Formulation: ${formulation.name} v${formulation.version}`
   const derivedFields = {

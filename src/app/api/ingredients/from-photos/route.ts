@@ -9,6 +9,7 @@ import {
   subIngredients,
 } from '@/lib/db/schema'
 import { z } from 'zod'
+import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
 
 const bodySchema = z.object({
   name: z.string().min(1).max(255),
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const d = parsed.data
+
+  const dupe = await findDuplicate(ctx.account.id, { name: d.name })
+  if (dupe) return duplicateResponse({ name: d.name }, dupe)
 
   try {
     const result = await db.transaction(async tx => {

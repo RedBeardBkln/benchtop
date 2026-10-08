@@ -28,7 +28,21 @@ export type IngredientWithCounts = Ingredient & {
 
 export type SubIngredient = InferSelectModel<typeof subIngredients>
 
+/** Another library entry with the same name + brand + supplier + item code as the one being viewed. */
+export type DuplicateIngredientEntry = {
+  id: string
+  name: string
+  brandName: string | null
+  supplierName: string | null
+  itemCode: string | null
+  stockG: string | null
+  createdAt: string
+  formulationCount: number
+  nutrientCount: number
+}
+
 export type IngredientDetail = Ingredient & {
+  duplicates?: DuplicateIngredientEntry[]
   nutrients: Array<IngredientNutrient & { nutrient: Nutrient }>
   allergens: InferSelectModel<typeof ingredientAllergens>[]
   certs: InferSelectModel<typeof ingredientCerts>[]
@@ -38,7 +52,8 @@ export type IngredientDetail = Ingredient & {
   suppliers: IngredientSupplierWithName[]
 }
 
-export type IngredientListRow = Ingredient & { formulationCount: number }
+/** duplicateCount = how many OTHER entries share this one's name + brand + supplier + item code */
+export type IngredientListRow = Ingredient & { formulationCount: number; duplicateCount?: number }
 
 export type Supplier = InferSelectModel<typeof suppliers>
 export type IngredientSupplier = InferSelectModel<typeof ingredientSuppliers>
@@ -80,7 +95,7 @@ export type ProjectTarget = {
 export type FormulationDetail = Formulation & {
   lines: FormulationLineDetail[]
   processSteps: ProcessStepDetail[]
-  project: { id: string; name: string; targets: ProjectTarget[] }
+  project: { id: string; name: string; client: string | null; targets: ProjectTarget[] }
   // Every iteration of this formulation, newest first
   iterations: Array<{
     id: string

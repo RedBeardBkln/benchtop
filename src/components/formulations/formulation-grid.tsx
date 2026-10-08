@@ -1625,6 +1625,7 @@ export function FormulationGrid({ id }: { id: string }) {
           formulationId={id}
           formName={data.name}
           version={data.version}
+          clientName={data.project?.client ?? null}
           servingSizeG={servingSizeG ? parseFloat(servingSizeG) : undefined}
           batchSizeG={totalWeightG}
           results={calcResult.results}

@@ -9,6 +9,7 @@ import { NfpPanel } from './nfp-panel'
 import type { NutrientResult } from '@/lib/formulation-calc'
 import { buildNfpModel, STANDARD_NFP_NAMES, type ExtraNutrientInput, type NfpModel, type NfpOptions } from '@/lib/nfp-model'
 import { declareDvPct, isDvTiered, ruleReferences } from '@/lib/fda-rounding'
+import { nfpFileName } from '@/lib/download-name'
 
 type Format = 'png' | 'jpg' | 'pdf'
 
@@ -85,6 +86,7 @@ type Props = {
   formulationId: string
   formName: string
   version: number
+  clientName: string | null
   servingSizeG: number | undefined
   batchSizeG: number
   results: NutrientResult[]
@@ -96,6 +98,7 @@ export function NfpDialog({
   formulationId,
   formName,
   version,
+  clientName,
   servingSizeG,
   batchSizeG,
   results,
@@ -261,8 +264,8 @@ export function NfpDialog({
       const { drawNfpToCanvas } = await import('./nfp-canvas')
       const canvas = drawNfpToCanvas({ model: activeModel })
 
-      const slug = formName.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '')
-      const fileName = `${slug}_v${version}_NFP`
+      // "NFP_<formulation name>_<iteration>_<client name>_<date>"
+      const fileName = nfpFileName({ formulationName: formName, iteration: version, clientName })
 
       if (format === 'pdf') {
         const { jsPDF } = await import('jspdf')
@@ -511,7 +514,13 @@ export function NfpDialog({
                 {downloading ? 'Generating…' : `Download ${format.toUpperCase()}`}
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={() => {
+                  // "Save as PDF" in the print dialog proposes the page title as the file name
+                  const prevTitle = document.title
+                  document.title = nfpFileName({ formulationName: formName, iteration: version, clientName })
+                  window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
+                  window.print()
+                }}
                 className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
               >
                 <Printer size={14} />

@@ -12,6 +12,7 @@ import { formatWeightG } from '@/lib/weight'
 import { PCT_DECIMALS_MIN, readPctDecimals } from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
+import { formulationFileName } from '@/lib/download-name'
 
 // Literal class names so Tailwind includes them
 const COL_SPAN: Record<number, string> = {
@@ -58,6 +59,17 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
     staleTime: Infinity,
     enabled: needsNutrients,
   })
+
+  // The browser proposes the tab title as the file name when saving this page as a PDF:
+  // "<formulation name>_<iteration>_<client name>_<date>"
+  useEffect(() => {
+    if (!data) return
+    document.title = formulationFileName({
+      formulationName: data.name,
+      iteration: data.version,
+      clientName: data.project?.client,
+    })
+  }, [data])
 
   if (isLoading) return <div className="px-8 py-8 text-sm text-gray-400">Loading…</div>
   if (error || !data) {

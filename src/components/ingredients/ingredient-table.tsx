@@ -12,13 +12,14 @@ import {
   type SortingState,
 } from '@tanstack/react-table'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Database, Trash2, ArrowUpDown, Camera, Edit2 } from 'lucide-react'
+import { Search, Plus, Database, Trash2, ArrowUpDown, Camera, Edit2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import type { IngredientListRow } from '@/lib/types'
 import { UsdaSearchDialog } from './usda-search-dialog'
 import { AddIngredientDialog } from './add-ingredient-dialog'
 import { PhotoIngredientDialog } from './photo-ingredient-dialog'
 import { EditIngredientDialog } from './edit-ingredient-dialog'
+import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 
 const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
   usda:         { label: 'USDA', className: 'bg-blue-100 text-blue-700' },
@@ -40,6 +41,8 @@ export function IngredientTable() {
   const [addOpen, setAddOpen] = useState(false)
   const [photoOpen, setPhotoOpen] = useState(false)
   const [editingIngredient, setEditingIngredient] = useState<{ id: string; name: string; stockG: string | null } | null>(null)
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [onlyDuplicates, setOnlyDuplicates] = useState(false)
 
   const { data: ingredients = [], isLoading } = useQuery<IngredientListRow[]>({
     queryKey: ['ingredients'],
@@ -69,9 +72,23 @@ export function IngredientTable() {
             Name <ArrowUpDown size={12} />
           </button>
         ),
-        cell: info => (
-          <span className="font-medium text-gray-900">{info.getValue()}</span>
-        ),
+        cell: info => {
+          const dupes = info.row.original.duplicateCount ?? 0
+          return (
+            <span className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-gray-900">{info.getValue()}</span>
+              {dupes > 0 && (
+                <button
+                  onClick={e => { e.stopPropagation(); setResolvingId(info.row.original.id) }}
+                  title="Another ingredient has the same name, brand, supplier and item code. Click to rename or merge."
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+                >
+                  <AlertTriangle size={11} /> Duplicate — rename or merge
+                </button>
+              )}
+            </span>
+          )
+        },
       }),
       col.accessor('sourceType', {
         header: 'Source',
@@ -189,8 +206,11 @@ export function IngredientTable() {
     [deleteMutation],
   )
 
+  const duplicateRows = useMemo(() => ingredients.filter(i => (i.duplicateCount ?? 0) > 0), [ingredients])
+  const visibleIngredients = onlyDuplicates ? duplicateRows : ingredients
+
   const table = useReactTable({
-    data: ingredients,
+    data: visibleIngredients,
     columns,
     state: { globalFilter, sorting },
     onGlobalFilterChange: setGlobalFilter,
@@ -205,6 +225,26 @@ export function IngredientTable() {
 
   return (
     <>
+      {duplicateRows.length > 0 && (
+        <div className="flex items-start gap-3 mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 text-sm text-amber-900">
+            <p className="font-medium">
+              {duplicateRows.length} ingredient{duplicateRows.length === 1 ? ' is' : 's are'} duplicated in your library.
+            </p>
+            <p className="text-amber-800">
+              Entries need a different name, brand, supplier or item code. Rename each one, or merge the duplicates together.
+            </p>
+          </div>
+          <button
+            onClick={() => setOnlyDuplicates(v => !v)}
+            className="px-3 py-1.5 text-xs font-medium border border-amber-300 rounded-md bg-white text-amber-800 hover:bg-amber-100 shrink-0"
+          >
+            {onlyDuplicates ? 'Show all' : 'Show duplicates only'}
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 sm:max-w-sm">
@@ -334,6 +374,12 @@ export function IngredientTable() {
         currentStockG={editingIngredient?.stockG ?? null}
         onClose={() => setEditingIngredient(null)}
       />
+      {resolvingId && (
+        <DuplicateResolveDialog
+          ingredientId={resolvingId}
+          onClose={() => setResolvingId(null)}
+        />
+      )}
     </>
   )
 }

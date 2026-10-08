@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
+import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 
 const PACK_UNITS = ['kg', 'g', 'lb', 'oz', 'mt', 'case', 'bag', 'drum', 'pail', 'each', 'L', 'gal']
 
@@ -61,6 +62,8 @@ type NutrientEdit = {
 
 export function IngredientDetail({ id }: { id: string }) {
   const router = useRouter()
+  const [resolveOpen, setResolveOpen] = useState(false)
+  const [resolveMode, setResolveMode] = useState<'rename' | 'merge'>('rename')
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<Tab>('nutrients')
 
@@ -469,6 +472,39 @@ export function IngredientDetail({ id }: { id: string }) {
       >
         <ArrowLeft size={14} /> Ingredients
       </button>
+
+      {(data.duplicates?.length ?? 0) > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+          <p className="flex-1 min-w-[16rem] text-sm text-amber-900">
+            <span className="font-medium">Duplicate ingredient.</span>{' '}
+            {data.duplicates!.length === 1 ? 'Another entry has' : `${data.duplicates!.length} other entries have`} the same
+            name, brand, supplier and item code. Rename this one, or merge them.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setResolveMode('rename'); setResolveOpen(true) }}
+              className="px-3 py-1.5 text-xs font-medium border border-amber-300 rounded-md bg-white text-amber-800 hover:bg-amber-100"
+            >
+              Rename
+            </button>
+            <button
+              onClick={() => { setResolveMode('merge'); setResolveOpen(true) }}
+              className="px-3 py-1.5 text-xs font-medium border border-amber-300 rounded-md bg-white text-amber-800 hover:bg-amber-100"
+            >
+              Merge…
+            </button>
+          </div>
+        </div>
+      )}
+      {resolveOpen && (
+        <DuplicateResolveDialog
+          ingredientId={id}
+          initialMode={resolveMode}
+          onClose={() => setResolveOpen(false)}
+          onRemoved={() => router.push('/ingredients')}
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
