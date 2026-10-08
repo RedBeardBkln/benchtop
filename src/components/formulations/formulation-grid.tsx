@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Save, Plus, X, Trash2, ChevronDown, ChevronUp, Lock,
   Database, ArrowLeftRight, GitBranch, Target, CheckCircle2, XCircle, AlertCircle,
-  GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer,
+  GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer, PackagePlus,
 } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
@@ -39,6 +39,7 @@ import { SwapSourceDialog, LibraryPickerDialog } from '@/components/formulations
 import { ReverseWizard } from '@/components/formulations/reverse-wizard'
 import { NfpDialog } from '@/components/formulations/nfp-dialog'
 import { CompleteBatchDialog } from '@/components/formulations/complete-batch-dialog'
+import { SaveAsIngredientDialog } from '@/components/formulations/save-as-ingredient-dialog'
 import { PrintOptionsDialog } from '@/components/formulations/print-options-dialog'
 
 // Key nutrients to display as columns in the grid
@@ -204,6 +205,7 @@ export function FormulationGrid({ id }: { id: string }) {
   const [showNewFormulation, setShowNewFormulation] = useState(false)
   const [newFormulationName, setNewFormulationName] = useState('')
   const [showCompleteBatch, setShowCompleteBatch] = useState(false)
+  const [showSaveAsIngredient, setShowSaveAsIngredient] = useState(false)
   const [showSwapSourceDialog, setShowSwapSourceDialog] = useState(false)
   const [showLibraryPicker, setShowLibraryPicker] = useState(false)
   const [swapIngredientName, setSwapIngredientName] = useState('')
@@ -880,6 +882,16 @@ export function FormulationGrid({ id }: { id: string }) {
                          text-sm rounded-md hover:bg-gray-50 transition-colors"
             >
               <Lock size={13} /> Finalize
+            </button>
+          )}
+          {isLocked && lines.length > 0 && (
+            <button
+              onClick={() => setShowSaveAsIngredient(true)}
+              title="Save this finalized formulation as an ingredient for use in other formulations"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-blue-200 text-blue-700
+                         text-sm rounded-md hover:bg-blue-50 transition-colors"
+            >
+              <PackagePlus size={13} /> Save as ingredient
             </button>
           )}
           {calcResult && (
@@ -1632,6 +1644,14 @@ export function FormulationGrid({ id }: { id: string }) {
           queryClient.invalidateQueries({ queryKey: ['ingredients'] })
         }}
       />
+
+      {showSaveAsIngredient && (
+        <SaveAsIngredientDialog
+          formulationId={id}
+          formulationName={data.name}
+          onClose={() => setShowSaveAsIngredient(false)}
+        />
+      )}
 
       {showPrintDialog && (
         <PrintOptionsDialog

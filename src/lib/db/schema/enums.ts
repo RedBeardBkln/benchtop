@@ -1,6 +1,6 @@
 import { pgEnum } from 'drizzle-orm/pg-core'
 
-export const sourceTypeEnum = pgEnum('source_type', ['usda', 'supplier', 'manual', 'ai_extracted'])
+export const sourceTypeEnum = pgEnum('source_type', ['usda', 'supplier', 'manual', 'ai_extracted', 'formulation'])
 export const verificationEnum = pgEnum('verification_status', ['verified', 'unverified'])
 export const formulationModeEnum = pgEnum('formulation_mode', ['ground_up', 'reverse'])
 export const formulationStatusEnum = pgEnum('formulation_status', ['draft', 'locked'])

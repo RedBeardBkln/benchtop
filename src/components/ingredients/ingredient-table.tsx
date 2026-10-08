@@ -25,6 +25,7 @@ const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
   manual:       { label: 'Manual', className: 'bg-gray-100 text-gray-600' },
   supplier:     { label: 'Supplier', className: 'bg-purple-100 text-purple-700' },
   ai_extracted: { label: 'AI', className: 'bg-orange-100 text-orange-700' },
+  formulation:  { label: 'Formulation', className: 'bg-teal-100 text-teal-700' },
 }
 
 const col = createColumnHelper<IngredientListRow>()

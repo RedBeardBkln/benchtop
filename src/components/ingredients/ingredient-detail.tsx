@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -644,6 +645,14 @@ export function IngredientDetail({ id }: { id: string }) {
             <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 uppercase">
               {data.sourceType}
             </span>
+            {data.sourceFormulationId && (
+              <Link
+                href={`/formulations/${data.sourceFormulationId}`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700 hover:underline"
+              >
+                View source formulation <ExternalLink size={10} />
+              </Link>
+            )}
             {data.stockG != null && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">
                 <Package size={10} />

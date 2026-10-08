@@ -10,6 +10,7 @@ const SOURCE_LABELS: Record<string, string> = {
   manual: 'Manual',
   supplier: 'Supplier',
   ai_extracted: 'AI',
+  formulation: 'Formulation',
 }
 
 interface SwapSourceDialogProps {

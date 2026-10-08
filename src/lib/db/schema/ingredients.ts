@@ -4,6 +4,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { sourceTypeEnum, verificationEnum } from './enums'
 import { nutrients } from './nutrients'
+import { formulations } from './formulations'
 
 export const ingredients = pgTable('ingredients', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -25,12 +26,15 @@ export const ingredients = pgTable('ingredients', {
   supplierName: text('supplier_name'),
   itemCode: text('item_code'),
   notes: text('notes'),
+  // Set when this ingredient was saved from a finalized formulation (nutrients etc. are a snapshot of it)
+  sourceFormulationId: uuid('source_formulation_id').references(() => formulations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('ingredients_name_idx').on(t.name),
   index('ingredients_fdc_id_idx').on(t.fdcId),
   index('ingredients_is_ab_spi_idx').on(t.isAbSpi),
+  index('ingredients_source_formulation_idx').on(t.sourceFormulationId),
 ])
 
 // Per-ingredient nutrient values — one row per (ingredient, nutrient) pair
