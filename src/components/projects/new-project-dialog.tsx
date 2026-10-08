@@ -84,7 +84,7 @@ export function NewProjectDialog({
             <input
               value={client}
               onChange={e => setClient(e.target.value)}
-              placeholder="e.g. Alpine Bio Internal"
+              placeholder="e.g. High-protein snack bar"
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md
                          focus:outline-none focus:ring-2 focus:ring-blue-500"
             />

@@ -40,7 +40,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Set new password</h1>
-          <p className="text-sm text-gray-500 mt-1">Alpine Bio · Internal R&D</p>
+          <p className="text-sm text-gray-500 mt-1">Formulation R&D</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

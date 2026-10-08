@@ -4,7 +4,7 @@ import {
 import { sql } from 'drizzle-orm'
 
 // Fixed, well-known id of the account that owns all data that existed before multi-tenancy
-// (the ALP Bio / LaunchTime staff workspace). Created by the 0007 migration; billing exempt.
+// (the original LaunchTime staff workspace). Created by the 0007 migration; billing exempt.
 export const LEGACY_ACCOUNT_ID = '00000000-0000-4000-8000-000000000001'
 
 // Tenant. Every tenant-owned root row (projects, formulations, ingredients, suppliers, equipment,

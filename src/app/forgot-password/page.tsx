@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Reset password</h1>
-          <p className="text-sm text-gray-500 mt-1">Alpine Bio · Internal R&D</p>
+          <p className="text-sm text-gray-500 mt-1">Formulation R&D</p>
         </div>
 
         {sent ? (
@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@alpbio.com"
+                placeholder="you@company.com"
               />
             </div>
 

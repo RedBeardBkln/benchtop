@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Benchtop — Food Formulation Platform',
-  description: 'Internal R&D formulation tool for Alpine Bio',
+  description: 'Formulation R&D workspace',
   appleWebApp: {
     capable: true,
     title: 'benchtop',
