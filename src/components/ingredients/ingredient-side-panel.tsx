@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  X, ExternalLink, Check, AlertTriangle, ArrowLeftRight,
+  X, ExternalLink, Check, ArrowLeftRight,
   ChevronRight, Sparkles,
 } from 'lucide-react'
 import type { IngredientDetail, Nutrient } from '@/lib/types'
@@ -243,14 +243,6 @@ export function IngredientSidePanel({
                   {data?.sourceType && (
                     <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 uppercase">
                       {data.sourceType}
-                    </span>
-                  )}
-                  {data?.isAbSpi && (
-                    <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">AB SPI</span>
-                  )}
-                  {data?.isIsolateOrConcentrate && !data.isAbSpi && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-                      <AlertTriangle size={9} /> Isolate
                     </span>
                   )}
                   {data?.fdcId && (

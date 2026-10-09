@@ -136,8 +136,6 @@ const patchSchema = z.object({
   supplierName: z.string().max(255).nullable().optional(),
   itemCode: z.string().max(100).nullable().optional(),
   verification: z.enum(['verified', 'unverified']).optional(),
-  isAbSpi: z.boolean().optional(),
-  isIsolateOrConcentrate: z.boolean().optional(),
   naturallyDerived: z.boolean().optional(),
   notes: z.string().max(2000).optional(),
   defaultCostPerKg: z.number().positive().nullable().optional(),
@@ -166,8 +164,6 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   if (d.supplierName !== undefined) updateValues.supplierName = d.supplierName
   if (d.itemCode !== undefined) updateValues.itemCode = d.itemCode
   if (d.verification !== undefined) updateValues.verification = d.verification
-  if (d.isAbSpi !== undefined) updateValues.isAbSpi = d.isAbSpi
-  if (d.isIsolateOrConcentrate !== undefined) updateValues.isIsolateOrConcentrate = d.isIsolateOrConcentrate
   if (d.naturallyDerived !== undefined) updateValues.naturallyDerived = d.naturallyDerived
   if (d.notes !== undefined) updateValues.notes = d.notes
   if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null

@@ -566,7 +566,7 @@ export function IngredientDetail({ id }: { id: string }) {
                 autoFocus
                 value={labelNameEdit}
                 onChange={e => setLabelNameEdit(e.target.value)}
-                placeholder="Label statement (e.g. Isolated Soy Protein)"
+                placeholder="Label statement (e.g. Rolled Oats)"
                 className="text-sm text-gray-600 border-b border-blue-400 outline-none bg-transparent w-full"
               />
               <button type="submit" disabled={patchIngredientMutation.isPending}
@@ -693,16 +693,6 @@ export function IngredientDetail({ id }: { id: string }) {
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">
                 <Package size={10} />
                 {parseFloat(data.stockG).toFixed(0)} g on hand
-              </span>
-            )}
-            {data.isAbSpi && (
-              <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
-                AB SPI
-              </span>
-            )}
-            {data.isIsolateOrConcentrate && !data.isAbSpi && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-                <AlertTriangle size={10} /> Isolate/Concentrate
               </span>
             )}
             {data.fdcId && (

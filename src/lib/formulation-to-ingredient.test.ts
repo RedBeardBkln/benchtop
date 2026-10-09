@@ -12,7 +12,6 @@ function line(over: Partial<SourceLine> = {}): SourceLine {
     ingredientName: 'Pea protein',
     labelName: null,
     verification: 'verified',
-    isIsolateOrConcentrate: false,
     naturallyDerived: true,
     costPerKg: 10,
     nutrients: [],
@@ -91,12 +90,11 @@ describe('deriveIngredientFromFormulation', () => {
 
   it('is only verified / natural when every line is', () => {
     const d = deriveIngredientFromFormulation({
-      lines: [line(), line({ verification: 'unverified', naturallyDerived: false, isIsolateOrConcentrate: true })],
+      lines: [line(), line({ verification: 'unverified', naturallyDerived: false })],
       steps: [],
       allNutrients: nutrients,
     })!
     expect(d.verification).toBe('unverified')
     expect(d.naturallyDerived).toBe(false)
-    expect(d.isIsolateOrConcentrate).toBe(true)
   })
 })

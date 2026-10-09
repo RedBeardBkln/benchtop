@@ -14,8 +14,6 @@ import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
 const bodySchema = z.object({
   name: z.string().min(1).max(255),
   labelName: z.string().max(500).nullable().optional(),
-  isAbSpi: z.boolean().default(false),
-  isIsolateOrConcentrate: z.boolean().default(false),
   naturallyDerived: z.boolean().default(true),
   moisturePct: z.number().min(0).max(100).nullable().optional(),
   stockG: z.number().min(0).nullable().optional(),
@@ -55,8 +53,6 @@ export async function POST(req: NextRequest) {
           labelName: d.labelName ?? null,
           sourceType: 'ai_extracted',
           verification: 'unverified',
-          isAbSpi: d.isAbSpi,
-          isIsolateOrConcentrate: d.isIsolateOrConcentrate,
           naturallyDerived: d.naturallyDerived,
           moisturePct: d.moisturePct?.toString() ?? null,
           stockG: d.stockG?.toString() ?? null,

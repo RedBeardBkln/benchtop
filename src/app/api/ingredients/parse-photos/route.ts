@@ -56,7 +56,6 @@ Synthesize all visible information across every image and return ONE JSON object
 {
   "name": "product name as sold",
   "labelName": "exact name printed on label or null",
-  "isIsolateOrConcentrate": false,
   "naturallyDerived": true,
   "moisturePct": null,
   "notes": null,
@@ -71,9 +70,8 @@ Synthesize all visible information across every image and return ONE JSON object
 }
 
 Rules:
-- name: commercial product name (e.g. "Whey Protein Isolate", "Oat Fiber 90").
+- name: commercial product name (e.g. "Rolled Oats", "Oat Fiber 90").
 - labelName: the exact as-printed label name if different from commercial name, else null.
-- isIsolateOrConcentrate: true if product name contains Isolate, Concentrate, Hydrolysate, Extract.
 - naturallyDerived: false only if clearly synthetic (artificial colors, chemical preservatives, etc.).
 - moisturePct: numeric if stated on label (e.g. "moisture max 10%"), else null.
 - notes: any important quality notes from the label (e.g. "cold-processed", "non-denatured"), else null.

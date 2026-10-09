@@ -8,7 +8,6 @@ export type SourceLine = {
   ingredientName: string
   labelName: string | null
   verification: 'verified' | 'unverified'
-  isIsolateOrConcentrate: boolean
   naturallyDerived: boolean
   costPerKg: number | null
   nutrients: Array<{ nutrientId: string; amountPer100g: number }>
@@ -27,7 +26,6 @@ export type DerivedIngredient = {
   costPerKg: number | null
   moisturePct: number | null
   verification: 'verified' | 'unverified'
-  isIsolateOrConcentrate: boolean
   naturallyDerived: boolean
   finishedWeightG: number
 }
@@ -79,7 +77,6 @@ export function deriveIngredientFromFormulation(opts: {
     costPerKg,
     moisturePct,
     verification: lines.every(l => l.verification === 'verified') ? 'verified' : 'unverified',
-    isIsolateOrConcentrate: lines.some(l => l.isIsolateOrConcentrate),
     naturallyDerived: lines.every(l => l.naturallyDerived),
     finishedWeightG: calc.finishedWeightG,
   }

@@ -115,24 +115,6 @@ export function IngredientTable() {
           </span>
         ),
       }),
-      col.accessor('isAbSpi', {
-        header: 'AB SPI',
-        cell: info =>
-          info.getValue() ? (
-            <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
-              AB SPI
-            </span>
-          ) : null,
-      }),
-      col.accessor('isIsolateOrConcentrate', {
-        header: 'Isolate',
-        cell: info =>
-          info.getValue() ? (
-            <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-              Isolate/Conc.
-            </span>
-          ) : null,
-      }),
       col.accessor('fdcId', {
         header: 'FDC ID',
         cell: info => (
@@ -221,7 +203,7 @@ export function IngredientTable() {
   })
 
   // Columns hidden on mobile to keep the table readable on small screens
-  const MOBILE_HIDDEN = new Set(['sourceType', 'isAbSpi', 'isIsolateOrConcentrate', 'fdcId', 'stockG', 'formulationCount'])
+  const MOBILE_HIDDEN = new Set(['sourceType', 'fdcId', 'stockG', 'formulationCount'])
 
   return (
     <>

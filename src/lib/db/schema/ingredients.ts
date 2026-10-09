@@ -15,8 +15,8 @@ export const ingredients = pgTable('ingredients', {
   fdcId: integer('fdc_id'),
   fdcFetchedAt: timestamp('fdc_fetched_at', { withTimezone: true }),
   verification: verificationEnum('verification').notNull().default('unverified'),
+  // Legacy: protein-isolate flags from an earlier workflow; no longer read or written by the app
   isAbSpi: boolean('is_ab_spi').notNull().default(false),
-  // Isolates/concentrates other than AB SPI are flagged and blocked by validation
   isIsolateOrConcentrate: boolean('is_isolate_or_concentrate').notNull().default(false),
   naturallyDerived: boolean('naturally_derived').notNull().default(true),
   defaultCostPerKg: numeric('default_cost_per_kg', { precision: 10, scale: 4 }),

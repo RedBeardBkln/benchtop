@@ -34,8 +34,6 @@ export async function GET(request: NextRequest) {
         sourceType: ingredients.sourceType,
         fdcId: ingredients.fdcId,
         verification: ingredients.verification,
-        isAbSpi: ingredients.isAbSpi,
-        isIsolateOrConcentrate: ingredients.isIsolateOrConcentrate,
         naturallyDerived: ingredients.naturallyDerived,
         defaultCostPerKg: ingredients.defaultCostPerKg,
         stockG: ingredients.stockG,
@@ -72,8 +70,6 @@ export async function GET(request: NextRequest) {
 const createSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(255),
   sourceType: z.enum(['manual', 'supplier']).default('manual'),
-  isAbSpi: z.boolean().default(false),
-  isIsolateOrConcentrate: z.boolean().default(false),
   naturallyDerived: z.boolean().default(true),
   notes: z.string().max(2000).optional(),
   // 0 is valid for newly added ingredients with unknown/placeholder cost.
@@ -114,8 +110,6 @@ export async function POST(request: NextRequest) {
         accountId: ctx.account.id,
         name: d.name,
         sourceType: d.sourceType,
-        isAbSpi: d.isAbSpi,
-        isIsolateOrConcentrate: d.isIsolateOrConcentrate,
         naturallyDerived: d.naturallyDerived,
         notes: d.notes,
         labelName: d.labelName || null,

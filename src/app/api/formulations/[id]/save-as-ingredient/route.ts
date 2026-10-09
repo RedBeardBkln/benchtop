@@ -68,7 +68,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       ingredientName: ingredients.name,
       labelName: ingredients.labelName,
       verification: ingredients.verification,
-      isIsolateOrConcentrate: ingredients.isIsolateOrConcentrate,
       naturallyDerived: ingredients.naturallyDerived,
       costPerKg: ingredients.defaultCostPerKg,
     })
@@ -109,7 +108,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     ingredientName: l.ingredientName,
     labelName: l.labelName,
     verification: l.verification,
-    isIsolateOrConcentrate: l.isIsolateOrConcentrate,
     naturallyDerived: l.naturallyDerived,
     costPerKg: l.costPerKg != null ? parseFloat(l.costPerKg) : null,
     nutrients: (nutrientsBy.get(l.ingredientId) ?? []).map(n => ({
@@ -156,7 +154,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     sourceType: 'formulation' as const,
     sourceFormulationId: id,
     verification: derived.verification,
-    isIsolateOrConcentrate: derived.isIsolateOrConcentrate,
     naturallyDerived: derived.naturallyDerived,
     defaultCostPerKg: derived.costPerKg != null ? derived.costPerKg.toFixed(4) : null,
     moisturePct: derived.moisturePct != null ? derived.moisturePct.toFixed(4) : null,

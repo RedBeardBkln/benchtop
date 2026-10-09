@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 type ParsedIngredient = {
   name: string
   labelName: string | null
-  isIsolateOrConcentrate: boolean
   naturallyDerived: boolean
   moisturePct: number | null
   notes: string | null
@@ -256,12 +255,6 @@ export function PhotoIngredientDialog({
 
             {/* Flags */}
             <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                <input type="checkbox" checked={parsed.isIsolateOrConcentrate}
-                  onChange={e => setParsed(p => p ? { ...p, isIsolateOrConcentrate: e.target.checked } : p)}
-                  className="rounded border-gray-300 text-blue-600" />
-                Isolate/Concentrate
-              </label>
               <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                 <input type="checkbox" checked={parsed.naturallyDerived}
                   onChange={e => setParsed(p => p ? { ...p, naturallyDerived: e.target.checked } : p)}

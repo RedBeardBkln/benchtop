@@ -6,14 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { AlertTriangle, Link, Loader2, X } from 'lucide-react'
+import { Link, Loader2, X } from 'lucide-react'
 import { readErrorMessage } from '@/lib/utils'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
   sourceType: z.enum(['manual', 'supplier']),
-  isAbSpi: z.boolean(),
-  isIsolateOrConcentrate: z.boolean(),
   naturallyDerived: z.boolean(),
   notes: z.string().max(2000).optional(),
   defaultCostPerKg: z.string().optional(),
@@ -48,7 +46,6 @@ export function AddIngredientDialog({
   const {
     register,
     handleSubmit,
-    watch,
     reset,
     setValue,
     formState: { errors },
@@ -56,8 +53,6 @@ export function AddIngredientDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       sourceType: 'manual',
-      isAbSpi: false,
-      isIsolateOrConcentrate: false,
       naturallyDerived: true,
     },
   })
@@ -72,8 +67,6 @@ export function AddIngredientDialog({
     }
   }, [open, initialName, setValue])
 
-  const isConcentrate = watch('isIsolateOrConcentrate')
-  const isAbSpi = watch('isAbSpi')
 
   const mutation = useMutation({
     mutationFn: (data: FormData) =>
@@ -193,7 +186,7 @@ export function AddIngredientDialog({
               </label>
               <input
                 {...register('name')}
-                placeholder="e.g. Soy Protein Isolate (AB SPI)"
+                placeholder="e.g. Organic Rolled Oats"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
                            focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -209,7 +202,7 @@ export function AddIngredientDialog({
               </label>
               <input
                 {...register('labelName')}
-                placeholder="e.g. Isolated Soy Protein"
+                placeholder="e.g. Rolled Oats"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
                            focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -264,28 +257,6 @@ export function AddIngredientDialog({
 
             {/* Flags */}
             <div className="space-y-2.5">
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input type="checkbox" {...register('isAbSpi')} className="rounded" />
-                <span className="text-sm text-gray-700">
-                  This is <strong>AB Soy Protein Isolate</strong>
-                </span>
-              </label>
-
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input type="checkbox" {...register('isIsolateOrConcentrate')} className="rounded" />
-                <span className="text-sm text-gray-700">Isolate or concentrate (non-AB)</span>
-              </label>
-
-              {isConcentrate && !isAbSpi && (
-                <div className="flex items-start gap-2 bg-red-50 text-red-700 text-xs rounded-md p-3">
-                  <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-                  <span>
-                    Non-AB isolates/concentrates are blocked by formulation validation. You can add
-                    this ingredient but it will trigger a warning in any formulation that uses it.
-                  </span>
-                </div>
-              )}
-
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" {...register('naturallyDerived')} className="rounded" />
                 <span className="text-sm text-gray-700">Naturally derived</span>
@@ -363,7 +334,7 @@ export function AddIngredientDialog({
               <input
                 value={urlName}
                 onChange={e => setUrlName(e.target.value)}
-                placeholder="e.g. Pea Protein Isolate"
+                placeholder="e.g. Organic Rolled Oats"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
                            focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
