@@ -3,12 +3,18 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { formulations, formulationLines, ingredientNutrients, nutrients, projects } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { solve } from '@/lib/solver'
-import type { SolverInput, SolverLine } from '@/lib/solver'
+import { solve, targetsInNutrientUnits } from '@/lib/solver'
+import type { SolverInput, SolverLine, SolverResult } from '@/lib/solver'
 import { loadConcentrationYieldPct } from '@/lib/formulation-yield'
 import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
+
+function withUnconvertibleNote(result: SolverResult, skipped: string[]): SolverResult {
+  if (skipped.length === 0) return result
+  const note = `Skipped target${skipped.length !== 1 ? 's' : ''} with a unit that can't be converted to the nutrient's unit: ${skipped.join(', ')}`
+  return { ...result, message: result.message ? `${result.message} — ${note}` : note }
+}
 
 export async function POST(req: NextRequest, { params }: Ctx) {
   const auth = await requireApi()
@@ -70,13 +76,21 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     })
   }
 
+  // Targets go into each nutrient's own unit, the unit ingredient amounts are stored in
+  const units = await db.select({ name: nutrients.name, unit: nutrients.unit }).from(nutrients)
+  const { targets, unconvertible } = targetsInNutrientUnits(
+    (project?.targets ?? []) as SolverInput['targets'],
+    t => t.nutrient,
+    new Map(units.map(u => [u.name, u.unit])),
+  )
+
   const input: SolverInput = {
     lines: solverLines,
-    targets: (project?.targets ?? []) as SolverInput['targets'],
+    targets,
     yieldPct: await loadConcentrationYieldPct(id, solverLines.reduce((s, l) => s + l.weightG, 0), ctx.account.id),
     servingSizeG: formulation.servingSizeG ? parseFloat(formulation.servingSizeG) : null,
   }
 
   const result = solve(input)
-  return NextResponse.json(result)
+  return NextResponse.json(withUnconvertibleNote(result, unconvertible.map(t => `${t.label || t.nutrient} (${t.unit})`)))
 }

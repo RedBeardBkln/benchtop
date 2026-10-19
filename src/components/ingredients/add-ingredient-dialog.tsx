@@ -26,6 +26,11 @@ type FormData = z.infer<typeof schema>
 
 type ParsedNutrient = { name: string; amountPer100g: number; unit: string }
 
+/** Nutrients the server left out because their unit couldn't be converted to the stored one. */
+function warnUnconvertible(names: string[] | undefined) {
+  if (names?.length) toast.warning(`Not saved — unit couldn't be converted: ${names.join(', ')}`)
+}
+
 export function AddIngredientDialog({
   open,
   onClose,
@@ -107,10 +112,11 @@ export function AddIngredientDialog({
       }),
     onSuccess: (result) => {
       toast.success('Ingredient added from URL')
+      warnUnconvertible(result.unconvertible)
       setUrlInput('')
       setUrlName('')
       setParsedNutrients(null)
-      onCreated(result.id)
+      onCreated(result.ingredientId)
     },
     onError: (err: Error) => toast.error(err.message),
   })

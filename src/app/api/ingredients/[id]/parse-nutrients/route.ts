@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
+import { convertToUnit } from '@/lib/units'
 import { AdminNotConfiguredError, DOCS_BUCKET, getSupabaseAdmin } from '@/lib/supabase/admin'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -103,13 +104,15 @@ ID|Name|Unit
 ${nutrientList}
 
 Return ONLY a valid JSON array with no surrounding text or markdown:
-[{"nutrientId":"<uuid>","amountPer100g":<number>}]
+[{"nutrientId":"<uuid>","amountPer100g":<number>,"unit":"<unit of amountPer100g>"}]
 
 Rules:
 - Only include nutrients explicitly stated in the document
 - If a value is given as "< X g", use X/2 as the estimate
 - Exclude nutrients that are absent, trace, or not stated
-- amountPer100g must be a non-negative finite number`,
+- amountPer100g must be a non-negative finite number
+- Express amountPer100g in the Unit listed for that nutrient, converting if the document uses another (1 g = 1,000 mg = 1,000,000 mcg; 1 mg = 1,000 mcg). Set "unit" to the unit your number is in.
+- A percentage of the ingredient by weight is grams per 100 g (e.g. 0.2% vitamin K = 0.2 g = 200,000 mcg per 100 g)`,
           },
         ],
       },
@@ -118,7 +121,7 @@ Rules:
 
   const raw = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
 
-  let results: Array<{ nutrientId: string; amountPer100g: number }> = []
+  let results: Array<{ nutrientId: string; amountPer100g: number; unit?: string }> = []
   try {
     const match = raw.match(/\[[\s\S]*\]/)
     results = match ? JSON.parse(match[0]) : []
@@ -126,15 +129,23 @@ Rules:
     return NextResponse.json({ error: 'Could not parse AI response', raw }, { status: 500 })
   }
 
-  const validIds = new Set(allNutrients.map(n => n.id))
-  const filtered = results.filter(
-    r =>
-      typeof r.nutrientId === 'string' &&
-      validIds.has(r.nutrientId) &&
-      typeof r.amountPer100g === 'number' &&
-      isFinite(r.amountPer100g) &&
-      r.amountPer100g >= 0
-  )
+  const unitById = new Map(allNutrients.map(n => [n.id, n.unit]))
+  const filtered = results
+    .filter(
+      r =>
+        typeof r.nutrientId === 'string' &&
+        unitById.has(r.nutrientId) &&
+        typeof r.amountPer100g === 'number' &&
+        isFinite(r.amountPer100g) &&
+        r.amountPer100g >= 0
+    )
+    // Belt and braces: if the model reported a different unit than the nutrient's, convert it
+    .flatMap(r => {
+      const amount = typeof r.unit === 'string' && r.unit.trim()
+        ? convertToUnit(r.amountPer100g, r.unit, unitById.get(r.nutrientId)!)
+        : r.amountPer100g
+      return amount == null ? [] : [{ nutrientId: r.nutrientId, amountPer100g: amount }]
+    })
 
   return NextResponse.json({ parsed: filtered, docLabel: doc.label, count: filtered.length })
 }

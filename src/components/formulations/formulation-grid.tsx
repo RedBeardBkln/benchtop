@@ -1585,9 +1585,11 @@ export function FormulationGrid({ id }: { id: string }) {
             </button>
           </div>
 
-          {/* Infeasible / error message */}
-          {solverResult.status !== 'optimal' && solverResult.message && (
-            <div className="px-4 py-3 text-sm text-red-600 bg-red-50 border-b border-violet-100">
+          {/* Infeasible / error message, or a note on an optimal result (e.g. skipped targets) */}
+          {solverResult.message && (
+            <div className={`px-4 py-3 text-sm border-b border-violet-100 ${
+              solverResult.status === 'optimal' ? 'text-amber-800 bg-amber-50' : 'text-red-600 bg-red-50'
+            }`}>
               {solverResult.message}
             </div>
           )}

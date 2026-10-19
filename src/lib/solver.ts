@@ -14,6 +14,31 @@
 const Solver = require('javascript-lp-solver')
 
 import type { ProjectTarget } from '@/lib/types'
+import { convertToUnit } from '@/lib/units'
+
+/**
+ * Ingredient amounts are in each nutrient's own unit, so targets must be too: a "Vitamin K ≥ 0.1 mg"
+ * target becomes "≥ 100 mcg" when Vitamin K is stored in mcg. A target whose unit can't be converted
+ * (e.g. IU) is returned in `unconvertible` and left out, rather than solved against the wrong scale.
+ */
+export function targetsInNutrientUnits<T extends { unit: string; value: number; valueMax?: number }>(
+  targets: T[],
+  nutrientOf: (t: T) => string | null | undefined,
+  unitByNutrient: Map<string, string>,
+): { targets: T[]; unconvertible: T[] } {
+  const out: T[] = []
+  const unconvertible: T[] = []
+  for (const t of targets) {
+    const name = nutrientOf(t)
+    const unit = name ? unitByNutrient.get(name) : undefined
+    if (!unit) { out.push(t); continue }   // unknown nutrient: the solver reports it as no-data
+    const value = convertToUnit(t.value, t.unit, unit)
+    const valueMax = t.valueMax != null ? convertToUnit(t.valueMax, t.unit, unit) : undefined
+    if (value == null || valueMax === null) { unconvertible.push(t); continue }
+    out.push({ ...t, value, ...(valueMax !== undefined ? { valueMax } : {}), unit })
+  }
+  return { targets: out, unconvertible }
+}
 
 export type SolverLine = {
   key: string

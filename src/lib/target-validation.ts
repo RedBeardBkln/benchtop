@@ -1,5 +1,8 @@
 import type { ProjectTarget } from '@/lib/types'
 import type { NutrientResult } from '@/lib/formulation-calc'
+import { convertToUnit } from '@/lib/units'
+
+export { convertToUnit }
 
 export type ValidationStatus = 'pass' | 'fail' | 'warn' | 'no-data'
 
@@ -61,25 +64,6 @@ export function validateTarget(
     }
     default: return 'no-data'
   }
-}
-
-/**
- * Convert a value expressed in `fromUnit` to `toUnit`. Returns null when the
- * pair is not a known compatible conversion (e.g. g → IU). Recognizes:
- *   mass: g ↔ mg ↔ mcg
- *   energy: kcal ↔ kJ
- * Identity (same unit) returns the input unchanged.
- */
-export function convertToUnit(value: number, fromUnit: string, toUnit: string): number | null {
-  if (fromUnit === toUnit) return value
-  const mass = (v: number, f: string, t: string): number | null => {
-    const toG: Record<string, number> = { g: 1, mg: 1e-3, mcg: 1e-6 }
-    if (!(f in toG) || !(t in toG)) return null
-    return v * (toG[f] / toG[t])
-  }
-  if (fromUnit === 'kcal' && toUnit === 'kJ') return value * 4.184
-  if (fromUnit === 'kJ'  && toUnit === 'kcal') return value / 4.184
-  return mass(value, fromUnit, toUnit)
 }
 
 export function fmtRequirement(t: ProjectTarget): string {

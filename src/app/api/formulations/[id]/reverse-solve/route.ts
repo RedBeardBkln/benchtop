@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { assertIngredientsOwned, getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
-import { reverseSolve } from '@/lib/solver'
+import { reverseSolve, targetsInNutrientUnits } from '@/lib/solver'
 import { loadConcentrationYieldPct } from '@/lib/formulation-yield'
-import type { ReverseInput, SolverLine, NutrientTarget } from '@/lib/solver'
+import type { ReverseInput, SolverLine, NutrientTarget, SolverResult } from '@/lib/solver'
+import { db } from '@/lib/db'
+import { nutrients } from '@/lib/db/schema'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
+
+function withUnconvertibleNote(result: SolverResult, skipped: string[]): SolverResult {
+  if (skipped.length === 0) return result
+  const note = `Skipped target${skipped.length !== 1 ? 's' : ''} with a unit that can't be converted to the nutrient's unit: ${skipped.join(', ')}`
+  return { ...result, message: result.message ? `${result.message} — ${note}` : note }
+}
 
 const bodySchema = z.object({
   targetNutrients: z.array(z.object({
@@ -62,12 +70,20 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     bodyServingSizeG ??
     (formulation.servingSizeG ? parseFloat(formulation.servingSizeG) : null)
 
+  // Label targets can arrive in the panel's unit (e.g. mg); ingredient amounts are in the nutrient's own unit
+  const units = await db.select({ name: nutrients.name, unit: nutrients.unit }).from(nutrients)
+  const { targets, unconvertible } = targetsInNutrientUnits(
+    targetNutrients as NutrientTarget[],
+    t => t.name,
+    new Map(units.map(u => [u.name, u.unit])),
+  )
+
   const input: ReverseInput = {
     candidates: solverLines,
-    targetNutrients: targetNutrients as NutrientTarget[],
+    targetNutrients: targets,
     yieldPct: await loadConcentrationYieldPct(id, parseFloat(formulation.batchSizeG ?? '0'), ctx.account.id),
     servingSizeG,
   }
 
-  return NextResponse.json(reverseSolve(input))
+  return NextResponse.json(withUnconvertibleNote(reverseSolve(input), unconvertible.map(t => `${t.name} (${t.unit})`)))
 }

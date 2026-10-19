@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { Nutrient } from '@/lib/types'
 import type { SolverResult } from '@/lib/solver'
+import { convertToUnit } from '@/lib/units'
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -976,6 +977,9 @@ export function ReverseWizard({
           name: n.name, unit: n.unit, category: n.category,
         })), 'usda')
       toast.success(`Saved & linked "${item.rawName}"`)
+      if (data.unconvertible?.length) {
+        toast.warning(`Not saved — unit couldn't be converted: ${data.unconvertible.join(', ')}`)
+      }
     } catch (err) {
       toast.error(String(err))
     } finally {
@@ -2118,6 +2122,9 @@ export function ReverseWizard({
                 {solverResult.status !== 'optimal' && (
                   <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">{solverResult.message}</p>
                 )}
+                {solverResult.status === 'optimal' && solverResult.message && (
+                  <p className="text-sm text-amber-800 p-3 bg-amber-50 rounded-lg">{solverResult.message}</p>
+                )}
 
                 {solverResult.status === 'optimal' && (() => {
                   const batch = parseFloat(batchSizeG) || 1000
@@ -2183,7 +2190,10 @@ export function ReverseWizard({
                                 {solverResult.auditTrace.map((entry, i) => {
                                   // Label's original per-serving value from the targets state
                                   const targetRow = activeTargets.find(t => t.nutrientName === entry.label)
-                                  const labelVal = targetRow ? parseFloat(targetRow.value) : null
+                                  // …in the audit's unit (the nutrient's own), which the label may not use
+                                  const labelVal = targetRow
+                                    ? convertToUnit(parseFloat(targetRow.value), targetRow.unit, entry.unit)
+                                    : null
 
                                   // Convert achieved (per 100 g) to per serving
                                   const achieved = entry.achieved != null && servingG

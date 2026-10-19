@@ -5,10 +5,11 @@ import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
+import { convertToUnit } from '@/lib/units'
 
 const bodySchema = z.object({
   name: z.string().min(1).max(255),
-  sourceType: z.enum(['manual', 'ai_extracted']).default('manual'),
+  sourceType: z.enum(['manual', 'supplier', 'ai_extracted']).default('manual'),
   sourceUrl: z.string().url().optional(),
   nutrients: z.array(z.object({
     name: z.string().min(1),
@@ -39,12 +40,19 @@ export async function POST(req: NextRequest) {
     nutrientId: string; amountPer100g: string; sourceRef: string; sourceUrl: string
   }> = []
 
+  // Values arrive in whatever unit the source used (e.g. Vitamin K in mg); store them in the nutrient's own unit
+  const unconvertible: string[] = []
   for (const n of inputNutrients) {
     const match = allNutrients.find(dbN => dbN.name.toLowerCase() === n.name.toLowerCase())
     if (match) {
+      const amount = n.unit.trim() ? convertToUnit(n.amountPer100g, n.unit, match.unit) : n.amountPer100g
+      if (amount == null) {
+        unconvertible.push(`${n.name} (${n.unit} → ${match.unit})`)
+        continue
+      }
       nutrientRowsToInsert.push({
         nutrientId: match.id,
-        amountPer100g: n.amountPer100g.toString(),
+        amountPer100g: amount.toString(),
         sourceRef: sourceUrl ? `External: ${sourceUrl}` : 'Manual entry',
         sourceUrl: sourceUrl ?? '',
       })
@@ -52,7 +60,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (nutrientRowsToInsert.length === 0) {
-    return NextResponse.json({ error: 'None of the provided nutrient names matched the database' }, { status: 422 })
+    const why = unconvertible.length > 0
+      ? `None of the nutrients could be saved — units couldn't be converted: ${unconvertible.join(', ')}`
+      : 'None of the provided nutrient names matched the database'
+    return NextResponse.json({ error: why }, { status: 422 })
   }
 
   // Create ingredient
@@ -91,6 +102,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ingredientId: row.id,
     ingredientName: row.name,
+    // Nutrients left out because their unit can't be converted to the stored one (e.g. IU → mcg)
+    unconvertible,
     nutrients: resultNutrients.map(n => ({
       nutrientId: n.nutrientId,
       amountPer100g: parseFloat(n.amountPer100g),
