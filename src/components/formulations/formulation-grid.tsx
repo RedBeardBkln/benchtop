@@ -1158,13 +1158,14 @@ export function FormulationGrid({ id }: { id: string }) {
       )}
 
       {/* Grid table */}
+      {/* Sized to its columns, so extra nutrient columns scroll sideways; the ingredient column stays pinned */}
       <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-max min-w-full text-sm border-collapse">
           <thead className="bg-gray-50 text-xs text-gray-500">
             <tr>
               <th className="px-2 py-2.5 w-6 print:hidden" />
               <th className="px-3 py-2.5 text-left font-medium w-6">#</th>
-              <th className="px-3 py-2.5 text-left font-medium min-w-48">Ingredient</th>
+              <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2.5 text-left font-medium">Ingredient</th>
               <th className="px-3 py-2.5 text-right font-medium w-36">Weight (g)</th>
               <th className="px-3 py-2.5 text-right font-medium w-40">
                 <span className="inline-flex items-center gap-1">
@@ -1210,8 +1211,8 @@ export function FormulationGrid({ id }: { id: string }) {
                   onDragEnd={() => { setDragKey(null); setDragOverKey(null) }}
                   className={`group transition-colors ${
                     isBeingDragged ? 'opacity-40 bg-blue-50' :
-                    isDropTarget   ? 'border-t-2 border-blue-400 bg-blue-50/40' :
-                    'hover:bg-gray-50'
+                    isDropTarget   ? 'border-t-2 border-blue-400 bg-blue-50' :
+                    'bg-white hover:bg-gray-50'
                   }`}
                 >
                   <td className={`px-2 py-2 print:hidden ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}>
@@ -1220,13 +1221,13 @@ export function FormulationGrid({ id }: { id: string }) {
                     )}
                   </td>
                   <td className="px-3 py-2 text-gray-400 text-xs">{line.position}</td>
-                  <td className="px-3 py-2">
+                  <td className="sticky left-0 z-10 bg-inherit px-3 py-2">
                     <button
                       onClick={() => {
                         setSidebarIngredientId(line.ingredientId)
                         setSidebarLineKey(line.key)
                       }}
-                      className="flex items-center gap-1.5 group/name text-left hover:text-blue-600 transition-colors"
+                      className="flex items-center gap-1.5 group/name text-left hover:text-blue-600 transition-colors min-w-44 max-w-xs"
                     >
                       <span className="font-medium text-gray-800 group-hover/name:text-blue-600 transition-colors">
                         {line.ingredientName}
@@ -1298,7 +1299,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <tr className="bg-gray-50 border-t-2 border-gray-200 font-medium text-xs text-gray-600">
                 <td className="px-2 py-2" />
                 <td className="px-3 py-2" />
-                <td className="px-3 py-2">Total ({lines.length} ingredient{lines.length !== 1 ? 's' : ''})</td>
+                <td className="sticky left-0 z-10 bg-inherit px-3 py-2">Total ({lines.length} ingredient{lines.length !== 1 ? 's' : ''})</td>
                 <td className="px-3 py-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   <span className={Math.abs(100 - (totalWeightG > 0 ? 100 : 0)) < 0.01 ? 'text-green-600' : 'text-gray-500'}>
@@ -1322,7 +1323,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <tr className="bg-blue-50 text-xs font-semibold text-blue-700">
                 <td className="px-2 py-2" />
                 <td className="px-3 py-2" />
-                <td className="px-3 py-2">Per 100 g finished</td>
+                <td className="sticky left-0 z-10 bg-inherit px-3 py-2">Per 100 g finished</td>
                 <td className="px-3 py-2 text-right tabular-nums">—</td>
                 <td className="px-3 py-2 text-right">—</td>
                 {gridNutrients.map(n => {
@@ -1342,7 +1343,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <tr className="bg-emerald-50 text-xs font-semibold text-emerald-700">
                 <td className="px-2 py-2" />
                 <td className="px-3 py-2" />
-                <td className="px-3 py-2">Per serving ({servingSizeG} g)</td>
+                <td className="sticky left-0 z-10 bg-inherit px-3 py-2">Per serving ({servingSizeG} g)</td>
                 <td className="px-3 py-2 text-right tabular-nums">—</td>
                 <td className="px-3 py-2 text-right">—</td>
                 {gridNutrients.map(n => {
