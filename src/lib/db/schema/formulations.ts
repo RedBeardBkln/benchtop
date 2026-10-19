@@ -32,6 +32,9 @@ export const formulations = pgTable('formulations', {
   notes: text('notes'),
   // What distinguishes this iteration from its siblings; per-row and never copied, so a new iteration starts blank
   iterationNote: text('iteration_note'),
+  // Nutrient ids shown as columns in the formula grid, in order; null = the default set.
+  // A view preference: copied to new iterations, and saving it doesn't bump updated_at.
+  gridNutrientIds: jsonb('grid_nutrient_ids').$type<string[]>(),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

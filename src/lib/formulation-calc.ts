@@ -88,14 +88,53 @@ export function calcNutrientProfile(opts: {
     })
   }
 
-  return { results, totalWeightG, finishedWeightG, processYield }
+  return { results, totalWeightG, finishedWeightG, concentrationWeightG, processYield }
 }
 
 export type CalcResult = {
   results: NutrientResult[]
   totalWeightG: number
   finishedWeightG: number
+  /** Weight the batch's nutrients are spread over once moisture has left (the per-100 g basis) */
+  concentrationWeightG: number
   processYield: ProcessYield
+}
+
+export type NutrientContribution<L> = {
+  line: L
+  /** Absolute amount this line puts into the batch */
+  inBatch: number
+  /** This line's part of the nutrient's per-100 g finished value (the parts sum to the total) */
+  perFinished100g: number
+  /** Share of the nutrient's total, 0–100 */
+  sharePct: number
+}
+
+/**
+ * How much of one nutrient each line contributes, largest first.
+ * Lines that contribute none are left out.
+ */
+export function calcNutrientContributions<L extends CalcLine>(
+  lines: L[],
+  nutrientId: string,
+  concentrationWeightG: number,
+): NutrientContribution<L>[] {
+  const amounts = lines.flatMap(line => {
+    if (line.weightG <= 0) return []
+    const n = line.nutrients.find(n => n.nutrientId === nutrientId)
+    if (!n || n.amountPer100g == null) return []
+    const inBatch = n.amountPer100g * (line.weightG / 100)
+    return inBatch > 0 ? [{ line, inBatch }] : []
+  })
+  const total = amounts.reduce((s, a) => s + a.inBatch, 0)
+  return amounts
+    .map(({ line, inBatch }) => ({
+      line,
+      inBatch,
+      perFinished100g: concentrationWeightG > 0 ? (inBatch / concentrationWeightG) * 100 : 0,
+      sharePct: total > 0 ? (inBatch / total) * 100 : 0,
+    }))
+    .sort((a, b) => b.inBatch - a.inBatch)
 }
 
 export function formatAmt(amount: number, unit: string): string {

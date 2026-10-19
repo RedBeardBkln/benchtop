@@ -134,6 +134,17 @@ function StepLoss({
   )
 }
 
+// Whether the panel is collapsed: a per-browser view preference shared by every formulation
+const COLLAPSED_KEY = 'processStepsCollapsed'
+
+function readCollapsed(): boolean {
+  try { return window.localStorage.getItem(COLLAPSED_KEY) === '1' } catch { return false }
+}
+
+function writeCollapsed(collapsed: boolean): void {
+  try { window.localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0') } catch { /* storage unavailable */ }
+}
+
 async function jsonOrThrow(r: Response) {
   const body = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(body.error ?? 'Request failed')
@@ -156,6 +167,13 @@ export function ProcessStepsPanel({
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [newInstruction, setNewInstruction] = useState('')
   const [newLoss, setNewLoss] = useState<LossDraft>(NO_LOSS)
+  const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => { setCollapsed(readCollapsed()) }, [])
+
+  function toggleCollapsed() {
+    setCollapsed(!collapsed)
+    writeCollapsed(!collapsed)
+  }
 
   useEffect(() => {
     setOrdered(steps)
@@ -282,9 +300,20 @@ export function ProcessStepsPanel({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold text-gray-900">Process steps</h2>
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        aria-expanded={!collapsed}
+        className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors"
+      >
+        {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        Process steps
+        <span className="text-xs text-gray-400 font-normal">
+          ({ordered.length} step{ordered.length !== 1 ? 's' : ''})
+        </span>
+      </button>
 
-      {ordered.length > 0 && (
+      {!collapsed && ordered.length > 0 && (
         <div className="border border-gray-100 rounded-lg overflow-hidden divide-y divide-gray-50">
           {ordered.map((step, i) => {
             const isBeingDragged = dragKey === step.id
@@ -408,7 +437,7 @@ export function ProcessStepsPanel({
         </div>
       )}
 
-      {!isLocked && (
+      {!collapsed && !isLocked && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <input

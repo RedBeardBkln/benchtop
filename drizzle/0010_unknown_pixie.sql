@@ -1,0 +1,1 @@
+ALTER TABLE "formulations" ADD COLUMN "grid_nutrient_ids" jsonb;

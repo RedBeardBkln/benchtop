@@ -2,15 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Save, Plus, X, Trash2, ChevronDown, ChevronUp, Lock,
+  ArrowLeft, Save, Plus, X, Trash2, ChevronDown, ChevronUp, ChevronRight, Lock,
   Database, ArrowLeftRight, GitBranch, Target, CheckCircle2, XCircle, AlertCircle,
   GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer, PackagePlus,
 } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
-import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
+import { calcNutrientContributions, calcNutrientProfile, formatAmt, type NutrientContribution } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
 import { WeightInput } from '@/components/formulations/weight-input'
@@ -24,6 +24,7 @@ import type { SolverResult } from '@/lib/solver'
 import { IngredientSidePanel } from '@/components/ingredients/ingredient-side-panel'
 import { ProcessStepsPanel } from '@/components/formulations/process-steps-panel'
 import { IterationNote } from '@/components/formulations/iteration-note'
+import { GridColumnPicker } from '@/components/formulations/grid-column-picker'
 import { readErrorMessage } from '@/lib/utils'
 
 function statusIcon(s: ValidationStatus) {
@@ -42,8 +43,11 @@ import { CompleteBatchDialog } from '@/components/formulations/complete-batch-di
 import { SaveAsIngredientDialog } from '@/components/formulations/save-as-ingredient-dialog'
 import { PrintOptionsDialog } from '@/components/formulations/print-options-dialog'
 
-// Key nutrients to display as columns in the grid
-const GRID_NUTRIENT_NAMES = ['Energy', 'Protein', 'Total Fat', 'Total Carbohydrate', 'Dietary Fiber']
+// Nutrient columns the grid shows until the formulation picks its own
+const DEFAULT_GRID_NUTRIENT_NAMES = ['Energy', 'Protein', 'Total Fat', 'Total Carbohydrate', 'Dietary Fiber']
+
+// Shorter grid headers for long nutrient names
+const GRID_HEADER_LABELS: Record<string, string> = { 'Total Carbohydrate': 'Carbs' }
 
 type LineState = {
   key: string           // stable React key (uuid or temp)
@@ -164,6 +168,63 @@ function IngredientSearchDropdown({
   )
 }
 
+/** Per-ingredient breakdown of one nutrient, shown under its row in the full nutrient profile. */
+function NutrientContributionList({
+  contributions, unit, servingSizeG, totalLines,
+}: {
+  contributions: NutrientContribution<LineState>[]
+  unit: string
+  servingSizeG: number | null
+  totalLines: number
+}) {
+  if (contributions.length === 0) {
+    return <p className="text-xs text-gray-400 pl-4">No ingredient contributes this nutrient.</p>
+  }
+  const others = totalLines - contributions.length
+  return (
+    <div className="pl-4 overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead className="text-gray-400">
+          <tr>
+            <th className="text-left font-medium py-1">Ingredient</th>
+            <th className="text-left font-medium py-1 w-2/5 min-w-32">Share</th>
+            <th className="text-right font-medium py-1 pl-3">In batch</th>
+            <th className="text-right font-medium py-1 pl-3">Per 100 g</th>
+            {servingSizeG && <th className="text-right font-medium py-1 pl-3">Per serving</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {contributions.map(c => (
+            <tr key={c.line.key}>
+              <td className="py-0.5 pr-3 text-gray-700">{c.line.ingredientName}</td>
+              <td className="py-0.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-gray-200 overflow-hidden">
+                    <div className="h-full rounded-full bg-blue-500" style={{ width: `${c.sharePct}%` }} />
+                  </div>
+                  <span className="w-12 text-right tabular-nums text-gray-600">{c.sharePct.toFixed(1)}%</span>
+                </div>
+              </td>
+              <td className="py-0.5 pl-3 text-right tabular-nums text-gray-600 whitespace-nowrap">{formatAmt(c.inBatch, unit)} {unit}</td>
+              <td className="py-0.5 pl-3 text-right tabular-nums text-gray-600">{formatAmt(c.perFinished100g, unit)}</td>
+              {servingSizeG && (
+                <td className="py-0.5 pl-3 text-right tabular-nums text-gray-600">
+                  {formatAmt((c.perFinished100g * servingSizeG) / 100, unit)}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {others > 0 && (
+        <p className="mt-1 text-[11px] text-gray-400">
+          Other ingredients ({others}) contribute none or have no value for this nutrient.
+        </p>
+      )}
+    </div>
+  )
+}
+
 /** " (note…)" suffix for the version dropdown; empty when the iteration has no note. */
 function iterationLabel(note: string | null): string {
   const flat = note?.replace(/\s+/g, ' ').trim()
@@ -184,6 +245,11 @@ export function FormulationGrid({ id }: { id: string }) {
   const [isDirty, setIsDirty] = useState(false)
   const [showAddRow, setShowAddRow] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  // Profile rows expanded to show each ingredient's contribution
+  const [expandedNutrients, setExpandedNutrients] = useState<Set<string>>(new Set())
+  // null = the default columns
+  const [gridNutrientIds, setGridNutrientIds] = useState<string[] | null>(null)
+  const gridSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showManualDialog, setShowManualDialog] = useState(false)
   const [manualInitialName, setManualInitialName] = useState('')
   const [showUsdaDialog, setShowUsdaDialog] = useState(false)
@@ -252,6 +318,7 @@ export function FormulationGrid({ id }: { id: string }) {
     )
     setServingSizeG(data.servingSizeG ? String(parseFloat(data.servingSizeG)) : '')
     setBatchLocked(data.batchLocked)
+    setGridNutrientIds(data.gridNutrientIds ?? null)
     setBatchTargetG(data.batchLocked && data.batchSizeG ? parseFloat(data.batchSizeG) : null)
     // Auto-launch wizard for new reverse-mode formulations with no lines yet
     if (data.mode === 'reverse' && data.lines.length === 0) {
@@ -287,19 +354,83 @@ export function FormulationGrid({ id }: { id: string }) {
   // Grid nutrient columns
   const gridNutrients = useMemo(() => {
     if (!allNutrients) return []
-    return GRID_NUTRIENT_NAMES
+    if (gridNutrientIds) return allNutrients.filter(n => gridNutrientIds.includes(n.id))
+    return DEFAULT_GRID_NUTRIENT_NAMES
       .map(name => allNutrients.find(n => n.name === name))
       .filter(Boolean) as Nutrient[]
-  }, [allNutrients])
+  }, [allNutrients, gridNutrientIds])
+
+  // Nutrients at least one ingredient in the formula has a value for
+  const presentNutrientIds = useMemo(
+    () => new Set(lines.flatMap(l => l.nutrients.map(n => n.nutrientId))),
+    [lines],
+  )
+
+  // The column view saves itself (debounced) — it's a view setting, separate from the Save button
+  const gridColumnsMutation = useMutation({
+    mutationFn: (ids: string[] | null) =>
+      fetch(`/api/formulations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gridNutrientIds: ids }),
+      }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Could not save the column view')) }),
+    onSuccess: (_r, ids) => {
+      queryClient.setQueryData<FormulationDetail>(['formulation', id], old => old && { ...old, gridNutrientIds: ids })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const pendingGridIdsRef = useRef<{ ids: string[] | null } | null>(null)
+
+  function changeGridColumns(ids: string[] | null) {
+    setGridNutrientIds(ids)
+    pendingGridIdsRef.current = { ids }
+    if (gridSaveTimerRef.current) clearTimeout(gridSaveTimerRef.current)
+    gridSaveTimerRef.current = setTimeout(() => void flushGridColumns(), 600)
+  }
+
+  // Leaving the page (e.g. switching iteration) mid-debounce still saves the change
+  useEffect(() => () => {
+    if (gridSaveTimerRef.current) clearTimeout(gridSaveTimerRef.current)
+    const pending = pendingGridIdsRef.current
+    if (!pending) return
+    queryClient.setQueryData<FormulationDetail>(['formulation', id], old => old && { ...old, gridNutrientIds: pending.ids })
+    fetch(`/api/formulations/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gridNutrientIds: pending.ids }),
+      keepalive: true,
+    }).catch(() => {})
+  }, [id, queryClient])
+
+  // Saves a column change that is still waiting on the debounce (so a new iteration copies it)
+  async function flushGridColumns() {
+    if (gridSaveTimerRef.current) clearTimeout(gridSaveTimerRef.current)
+    gridSaveTimerRef.current = null
+    const pending = pendingGridIdsRef.current
+    pendingGridIdsRef.current = null
+    if (pending) await gridColumnsMutation.mutateAsync(pending.ids).catch(() => {})
+  }
+
+  function toggleNutrientExpanded(nutrientId: string) {
+    setExpandedNutrients(prev => {
+      const next = new Set(prev)
+      if (next.has(nutrientId)) next.delete(nutrientId)
+      else next.add(nutrientId)
+      return next
+    })
+  }
 
   // New iteration: next version of this same formulation
   const iterateMutation = useMutation({
-    mutationFn: () =>
-      fetch(`/api/formulations/${id}/iterate`, { method: 'POST' }).then(async r => {
+    mutationFn: async () => {
+      await flushGridColumns()
+      return fetch(`/api/formulations/${id}/iterate`, { method: 'POST' }).then(async r => {
         const body = await r.json()
         if (!r.ok) throw new Error(body.error ?? 'Could not create iteration')
         return body
-      }),
+      })
+    },
     onSuccess: (iteration) => {
       // Refresh the iteration list on every version of this family, plus project counts
       queryClient.invalidateQueries({ queryKey: ['formulation'] })
@@ -313,8 +444,9 @@ export function FormulationGrid({ id }: { id: string }) {
 
   // New formulation: separate formulation under a new name, starting at v1
   const forkMutation = useMutation({
-    mutationFn: (name: string) =>
-      fetch(`/api/formulations/${id}/fork`, {
+    mutationFn: async (name: string) => {
+      await flushGridColumns()
+      return fetch(`/api/formulations/${id}/fork`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
@@ -322,7 +454,8 @@ export function FormulationGrid({ id }: { id: string }) {
         const body = await r.json()
         if (!r.ok) throw new Error(body.error ?? 'Could not create formulation')
         return body
-      }),
+      })
+    },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['project'] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
@@ -990,22 +1123,37 @@ export function FormulationGrid({ id }: { id: string }) {
         </div>
       )}
 
-      {/* Sort controls */}
-      {lines.length > 1 && !isLocked && (
-        <div className="flex items-center gap-1 mb-2 justify-end print:hidden">
-          <span className="text-xs text-gray-400 mr-0.5">Sort:</span>
-          <button
-            onClick={() => sortLines('weight')}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
-          >
-            <ArrowDownNarrowWide size={11} /> By weight
-          </button>
-          <button
-            onClick={() => sortLines('pct')}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
-          >
-            <ArrowDownNarrowWide size={11} /> By %
-          </button>
+      {/* Sort + column controls */}
+      {lines.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 mb-2 justify-end print:hidden">
+          {lines.length > 1 && !isLocked && (
+            <>
+              <span className="text-xs text-gray-400 mr-0.5">Sort:</span>
+              <button
+                onClick={() => sortLines('weight')}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+              >
+                <ArrowDownNarrowWide size={11} /> By weight
+              </button>
+              <button
+                onClick={() => sortLines('pct')}
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+              >
+                <ArrowDownNarrowWide size={11} /> By %
+              </button>
+              <span className="mx-1 h-4 w-px bg-gray-200" />
+            </>
+          )}
+          {allNutrients && (
+            <GridColumnPicker
+              allNutrients={allNutrients}
+              selectedIds={gridNutrients.map(n => n.id)}
+              presentIds={presentNutrientIds}
+              isDefault={gridNutrientIds === null}
+              onChange={ids => changeGridColumns(ids)}
+              onReset={() => changeGridColumns(null)}
+            />
+          )}
         </div>
       )}
 
@@ -1016,7 +1164,7 @@ export function FormulationGrid({ id }: { id: string }) {
             <tr>
               <th className="px-2 py-2.5 w-6 print:hidden" />
               <th className="px-3 py-2.5 text-left font-medium w-6">#</th>
-              <th className="px-3 py-2.5 text-left font-medium">Ingredient</th>
+              <th className="px-3 py-2.5 text-left font-medium min-w-48">Ingredient</th>
               <th className="px-3 py-2.5 text-right font-medium w-36">Weight (g)</th>
               <th className="px-3 py-2.5 text-right font-medium w-40">
                 <span className="inline-flex items-center gap-1">
@@ -1039,8 +1187,8 @@ export function FormulationGrid({ id }: { id: string }) {
                 </span>
               </th>
               {gridNutrients.map(n => (
-                <th key={n.id} className="px-3 py-2.5 text-right font-medium w-24">
-                  {n.name === 'Total Carbohydrate' ? 'Carbs' : n.name}
+                <th key={n.id} className="px-3 py-2.5 text-right font-medium w-24 whitespace-nowrap" title={n.name}>
+                  {GRID_HEADER_LABELS[n.name] ?? n.name}
                   <span className="text-gray-400 font-normal ml-0.5">/{n.unit}</span>
                 </th>
               ))}
@@ -1250,16 +1398,30 @@ export function FormulationGrid({ id }: { id: string }) {
       {/* Full nutrient profile toggle */}
       {calcResult && calcResult.results.length > 0 && (
         <div className="mt-6">
-          <button
-            onClick={() => setShowProfile(p => !p)}
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            {showProfile ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            Full nutrient profile
-            <span className="text-xs text-gray-400 font-normal ml-1">
-              ({calcResult.results.length} nutrients)
-            </span>
-          </button>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <button
+              onClick={() => setShowProfile(p => !p)}
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              {showProfile ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              Full nutrient profile
+              <span className="text-xs text-gray-400 font-normal ml-1">
+                ({calcResult.results.length} nutrients)
+              </span>
+            </button>
+            {showProfile && (
+              <>
+                <span className="text-xs text-gray-400">Click a nutrient to see each ingredient&apos;s contribution</span>
+                <button
+                  onClick={() => setExpandedNutrients(prev =>
+                    prev.size > 0 ? new Set() : new Set(calcResult.results.map(r => r.nutrientId)))}
+                  className="text-xs text-blue-600 hover:underline print:hidden"
+                >
+                  {expandedNutrients.size > 0 ? 'Collapse all' : 'Expand all'}
+                </button>
+              </>
+            )}
+          </div>
 
           {showProfile && (
             <div className="mt-3 space-y-4">
@@ -1282,20 +1444,49 @@ export function FormulationGrid({ id }: { id: string }) {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {rows.map(r => (
-                            <tr key={r.nutrientId} className="hover:bg-gray-50">
-                              <td className="px-4 py-1.5 text-gray-800">{r.name}</td>
-                              <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
-                                {formatAmt(r.perFinished100g, r.unit)}
-                              </td>
-                              {servingSizeG && parseFloat(servingSizeG) > 0 && (
-                                <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
-                                  {r.perServing != null ? formatAmt(r.perServing, r.unit) : '—'}
-                                </td>
-                              )}
-                              <td className="px-4 py-1.5 text-right text-gray-400">{r.unit}</td>
-                            </tr>
-                          ))}
+                          {rows.map(r => {
+                            const isOpen = expandedNutrients.has(r.nutrientId)
+                            const serving = servingSizeG ? parseFloat(servingSizeG) : 0
+                            return (
+                              <Fragment key={r.nutrientId}>
+                                <tr
+                                  onClick={() => toggleNutrientExpanded(r.nutrientId)}
+                                  className={`cursor-pointer ${isOpen ? 'bg-gray-50' : 'hover:bg-gray-50'}`}
+                                  aria-expanded={isOpen}
+                                >
+                                  <td className="px-4 py-1.5 text-gray-800">
+                                    <span className="inline-flex items-center gap-1">
+                                      {isOpen
+                                        ? <ChevronDown size={12} className="text-gray-400" />
+                                        : <ChevronRight size={12} className="text-gray-300" />}
+                                      {r.name}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
+                                    {formatAmt(r.perFinished100g, r.unit)}
+                                  </td>
+                                  {serving > 0 && (
+                                    <td className="px-4 py-1.5 text-right tabular-nums text-gray-700">
+                                      {r.perServing != null ? formatAmt(r.perServing, r.unit) : '—'}
+                                    </td>
+                                  )}
+                                  <td className="px-4 py-1.5 text-right text-gray-400">{r.unit}</td>
+                                </tr>
+                                {isOpen && (
+                                  <tr className="bg-gray-50/60">
+                                    <td colSpan={serving > 0 ? 4 : 3} className="px-4 pb-2.5 pt-1">
+                                      <NutrientContributionList
+                                        contributions={calcNutrientContributions(lines, r.nutrientId, calcResult.concentrationWeightG)}
+                                        unit={r.unit}
+                                        servingSizeG={serving > 0 ? serving : null}
+                                        totalLines={lines.length}
+                                      />
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>

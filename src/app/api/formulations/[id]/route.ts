@@ -20,6 +20,8 @@ const patchSchema = z.object({
   iterationNote: z.string().max(2000).nullable().optional(),
   status: z.enum(['draft', 'locked']).optional(),
   archived: z.boolean().optional(),
+  // Grid column view; null resets to the default columns
+  gridNutrientIds: z.array(z.string().uuid()).max(200).nullable().optional(),
 })
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
@@ -126,8 +128,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const updates: Record<string, unknown> = { updatedAt: new Date() }
   const d = parsed.data
+  // Changing only the grid's column view isn't an edit to the formulation, so it leaves updatedAt alone
+  const viewOnly = d.gridNutrientIds !== undefined && Object.keys(d).every(k => k === 'gridNutrientIds')
+  const updates: Record<string, unknown> = viewOnly ? {} : { updatedAt: new Date() }
+  if (d.gridNutrientIds !== undefined) updates.gridNutrientIds = d.gridNutrientIds ? [...new Set(d.gridNutrientIds)] : null
   if (d.name !== undefined) updates.name = d.name
   if (d.servingSizeG !== undefined) updates.servingSizeG = d.servingSizeG?.toString() ?? null
   if (d.batchSizeG !== undefined) updates.batchSizeG = d.batchSizeG?.toString() ?? null

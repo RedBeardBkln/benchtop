@@ -50,6 +50,7 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
         batchSizeG: source.batchSizeG,
         batchLocked: source.batchLocked,
         notes: source.notes,
+        gridNutrientIds: source.gridNutrientIds,
       })
       .returning()
 
