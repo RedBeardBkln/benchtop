@@ -3,6 +3,12 @@ import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { and, eq } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { ingredients } from '@/lib/db/schema'
+import { categoryPath } from '@/lib/ingredient-categories'
+
+type OnHand = { id: string; name: string; path: string }
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -20,7 +26,7 @@ const bodySchema = z.object({
   impliedConstraints: z.array(z.string()),
 })
 
-function buildPrompt(d: z.infer<typeof bodySchema>): string {
+function buildPrompt(d: z.infer<typeof bodySchema>, onHand: OnHand[]): string {
   const nutrients = d.nutrients.map(n => `  • ${n.name}: ${n.value} ${n.unit}`).join('\n') || '  (none provided)'
   const deck = d.deckIngredients.map((ing, i) => {
     const sub = ing.subIngredients.length ? ` (${ing.subIngredients.join(', ')})` : ''
@@ -30,6 +36,7 @@ function buildPrompt(d: z.infer<typeof bodySchema>): string {
   const unlinked = d.deckIngredients.filter(i => i.status === 'unlinked').map(i => `  • "${i.rawName}"`).join('\n') || '  (none)'
   const claims = d.claims.join(', ') || 'none'
   const constraints = d.impliedConstraints.join('; ') || 'none'
+  const onHandList = onHand.map(o => `  ${o.id} | ${o.name}${o.path ? ` (${o.path})` : ''}`).join('\n') || '  (none recorded)'
 
   return `You are an expert food scientist. Reverse-engineer this product. Be CONCISE — keep every "rationale" and "additionalNotes" field to one short sentence. Return ONLY a raw JSON object (no markdown fences, no prose, no backticks).
 
@@ -48,8 +55,13 @@ ${unlinked}
 CLAIMS: ${claims}
 CONSTRAINTS: ${constraints}
 
+ON-HAND MATERIALS (already in the lab; id | name (category)):
+${onHandList}
+
+For "onHandMatches": for each deck ingredient that an on-hand material can supply (the same material, or a close functional equivalent in the same category), give the deck rawName, the on-hand id, and why. Skip deck ingredients with no reasonable on-hand match.
+
 JSON structure (return exactly this, no extra keys):
-{"productCategory":"string","formulationApproach":"2 sentences max","ingredientSuggestions":[{"rawName":"string","suggestions":[{"ingredient":"string","rationale":"1 sentence","searchQuery":"string"}]}],"approximatePercentages":[{"ingredient":"string","estimatedMinPct":0,"estimatedMaxPct":0,"rationale":"1 sentence"}],"constraints":["string"],"additionalNotes":"2 sentences max"}`
+{"productCategory":"string","formulationApproach":"2 sentences max","ingredientSuggestions":[{"rawName":"string","suggestions":[{"ingredient":"string","rationale":"1 sentence","searchQuery":"string"}]}],"approximatePercentages":[{"ingredient":"string","estimatedMinPct":0,"estimatedMaxPct":0,"rationale":"1 sentence"}],"constraints":["string"],"onHandMatches":[{"rawName":"string","ingredientId":"string","rationale":"1 sentence"}],"additionalNotes":"2 sentences max"}`
 }
 
 export async function POST(req: NextRequest, { params }: Ctx) {
@@ -65,13 +77,22 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
+  const onHand: OnHand[] = (await db
+    .select({
+      id: ingredients.id, name: ingredients.name,
+      category: ingredients.category, subcategory: ingredients.subcategory, microCategory: ingredients.microCategory,
+    })
+    .from(ingredients)
+    .where(and(eq(ingredients.accountId, ctx.account.id), eq(ingredients.onHand, true)))
+  ).map(i => ({ id: i.id, name: i.name, path: categoryPath(i) }))
+
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 8192,
-      messages: [{ role: 'user', content: buildPrompt(parsed.data) }],
+      messages: [{ role: 'user', content: buildPrompt(parsed.data, onHand) }],
     })
 
     if (message.stop_reason === 'max_tokens') {
@@ -94,6 +115,17 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         { error: `Claude returned non-JSON output. First 300 chars: ${snippet}` },
         { status: 500 }
       )
+    }
+    // Keep only matches that point at a real on-hand ingredient, and attach its name for the UI
+    const onHandById = new Map(onHand.map(o => [o.id, o]))
+    if (result && typeof result === 'object') {
+      const r = result as { onHandMatches?: Array<{ rawName?: unknown; ingredientId?: unknown; rationale?: unknown }> }
+      r.onHandMatches = (Array.isArray(r.onHandMatches) ? r.onHandMatches : []).flatMap(m => {
+        const o = typeof m.ingredientId === 'string' ? onHandById.get(m.ingredientId) : undefined
+        return o && typeof m.rawName === 'string'
+          ? [{ rawName: m.rawName, ingredientId: o.id, ingredientName: o.name, rationale: String(m.rationale ?? '') }]
+          : []
+      })
     }
     return NextResponse.json(result)
   } catch (err) {

@@ -28,6 +28,12 @@ export const ingredients = pgTable('ingredients', {
   supplierName: text('supplier_name'),
   itemCode: text('item_code'),
   notes: text('notes'),
+  // Library taxonomy, e.g. Starches > Tapioca > Native. Category is one of INGREDIENT_CATEGORIES.
+  category: text('category'),
+  subcategory: text('subcategory'),
+  microCategory: text('micro_category'),
+  // Physically in the lab (set by the lab intake upload); formulation tools prefer these
+  onHand: boolean('on_hand').notNull().default(false),
   // Set when this ingredient was saved from a finalized formulation (nutrients etc. are a snapshot of it)
   sourceFormulationId: uuid('source_formulation_id').references(() => formulations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -38,6 +44,7 @@ export const ingredients = pgTable('ingredients', {
   index('ingredients_fdc_id_idx').on(t.fdcId),
   index('ingredients_is_ab_spi_idx').on(t.isAbSpi),
   index('ingredients_source_formulation_idx').on(t.sourceFormulationId),
+  index('ingredients_category_idx').on(t.category),
 ])
 
 // Per-ingredient nutrient values — one row per (ingredient, nutrient) pair

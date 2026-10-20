@@ -20,6 +20,7 @@ import { z } from 'zod'
 import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
 import { identityKey } from '@/lib/ingredient-identity'
 import { getOwnedIngredient, notFoundResponse, isUuid } from '@/lib/tenancy'
+import { INGREDIENT_CATEGORIES } from '@/lib/ingredient-categories'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -141,6 +142,10 @@ const patchSchema = z.object({
   defaultCostPerKg: z.number().positive().nullable().optional(),
   moisturePct: z.number().min(0).max(100).nullable().optional(),
   stockG: z.number().nullable().optional(),
+  category: z.enum(INGREDIENT_CATEGORIES).nullable().optional(),
+  subcategory: z.string().trim().max(120).nullable().optional(),
+  microCategory: z.string().trim().max(120).nullable().optional(),
+  onHand: z.boolean().optional(),
 })
 
 export async function PATCH(request: NextRequest, { params }: Ctx) {
@@ -169,6 +174,10 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null
   if (d.moisturePct !== undefined) updateValues.moisturePct = d.moisturePct?.toString() ?? null
   if (d.stockG !== undefined) updateValues.stockG = d.stockG?.toString() ?? null
+  if (d.category !== undefined) updateValues.category = d.category
+  if (d.subcategory !== undefined) updateValues.subcategory = d.subcategory || null
+  if (d.microCategory !== undefined) updateValues.microCategory = d.microCategory || null
+  if (d.onHand !== undefined) updateValues.onHand = d.onHand
 
   try {
     // Only a change to name/brand/supplier/item code is checked, so an entry that is already part of a

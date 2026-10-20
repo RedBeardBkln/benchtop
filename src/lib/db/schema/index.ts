@@ -12,6 +12,7 @@ export * from './equipment'
 export * from './projects'
 export * from './formulations'
 export * from './reverse'
+export * from './intake'
 export * from './audit'
 
 // ---- Import tables for relations ----

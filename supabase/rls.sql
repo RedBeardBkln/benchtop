@@ -58,6 +58,7 @@ ALTER TABLE process_steps          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE equipment              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE batch_runs             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE formulation_nfp_panels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE intake_items           ENABLE ROW LEVEL SECURITY;
 
 -- ── Reverse-engineering data ──────────────────────────────────────────────────
 

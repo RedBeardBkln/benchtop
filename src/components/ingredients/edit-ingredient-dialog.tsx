@@ -5,34 +5,47 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
+import { INGREDIENT_CATEGORIES } from '@/lib/ingredient-categories'
+
+export type EditableIngredient = {
+  id: string
+  name: string
+  stockG: string | null
+  category: string | null
+  subcategory: string | null
+  microCategory: string | null
+  onHand: boolean
+}
 
 interface EditIngredientDialogProps {
-  open: boolean
-  ingredientId: string | null
-  currentName: string
-  currentStockG: string | null
+  ingredient: EditableIngredient | null
   onClose: () => void
 }
 
-export function EditIngredientDialog({
-  open, ingredientId, currentName, currentStockG, onClose,
-}: EditIngredientDialogProps) {
+const inputClass = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400'
+
+export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDialogProps) {
   const queryClient = useQueryClient()
-  const [name, setName] = useState(currentName)
-  const [stockG, setStockG] = useState(
-    currentStockG != null ? parseFloat(currentStockG).toFixed(0) : ''
-  )
+  const [name, setName] = useState('')
+  const [stockG, setStockG] = useState('')
+  const [category, setCategory] = useState('')
+  const [subcategory, setSubcategory] = useState('')
+  const [microCategory, setMicroCategory] = useState('')
+  const [onHand, setOnHand] = useState(false)
 
   useEffect(() => {
-    if (open) {
-      setName(currentName)
-      setStockG(currentStockG != null ? parseFloat(currentStockG).toFixed(0) : '')
-    }
-  }, [open, currentName, currentStockG])
+    if (!ingredient) return
+    setName(ingredient.name)
+    setStockG(ingredient.stockG != null ? parseFloat(ingredient.stockG).toFixed(0) : '')
+    setCategory(ingredient.category ?? '')
+    setSubcategory(ingredient.subcategory ?? '')
+    setMicroCategory(ingredient.microCategory ?? '')
+    setOnHand(ingredient.onHand)
+  }, [ingredient])
 
   const patchMutation = useMutation({
-    mutationFn: (fields: { name?: string; stockG?: number | null }) =>
-      fetch(`/api/ingredients/${ingredientId}`, {
+    mutationFn: (fields: Record<string, unknown>) =>
+      fetch(`/api/ingredients/${ingredient?.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
@@ -42,7 +55,7 @@ export function EditIngredientDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ingredients'] })
-      if (ingredientId) queryClient.invalidateQueries({ queryKey: ['ingredient', ingredientId] })
+      if (ingredient) queryClient.invalidateQueries({ queryKey: ['ingredient', ingredient.id] })
       toast.success('Ingredient updated')
       onClose()
     },
@@ -53,15 +66,21 @@ export function EditIngredientDialog({
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
-    const stockVal = stockG.trim() === '' ? null : parseFloat(stockG)
-    patchMutation.mutate({ name: trimmed, stockG: stockVal })
+    patchMutation.mutate({
+      name: trimmed,
+      stockG: stockG.trim() === '' ? null : parseFloat(stockG),
+      category: category || null,
+      subcategory: category ? subcategory.trim() || null : null,
+      microCategory: category ? microCategory.trim() || null : null,
+      onHand,
+    })
   }
 
-  if (!open) return null
+  if (!ingredient) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 max-h-full overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-gray-900">Edit Ingredient</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -76,10 +95,33 @@ export function EditIngredientDialog({
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+              className={inputClass}
               required
             />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Category</label>
+            <select value={category} onChange={e => setCategory(e.target.value)} className={inputClass}>
+              <option value="">Uncategorized</option>
+              {INGREDIENT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          {category && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Subcategory</label>
+                <input value={subcategory} onChange={e => setSubcategory(e.target.value)} placeholder="e.g. Tapioca" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">Micro category</label>
+                <input value={microCategory} onChange={e => setMicroCategory(e.target.value)} placeholder="e.g. Native" className={inputClass} />
+              </div>
+            </div>
+          )}
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={onHand} onChange={e => setOnHand(e.target.checked)} className="rounded border-gray-300" />
+            On hand in the lab
+          </label>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">
               Stock on hand (g)

@@ -78,6 +78,13 @@
       "when": 1792411936872,
       "tag": "0010_unknown_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792517791457,
+      "tag": "0011_purple_forgotten_one",
+      "breakpoints": true
     }
   ]
 }

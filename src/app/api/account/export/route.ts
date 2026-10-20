@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import {
   accountMembers, batchRuns, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
   ingredientAllergens, ingredientCerts, ingredientDocs, ingredientNutrients, ingredientSuppliers,
-  ingredients, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
+  ingredients, intakeItems, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
   subIngredients, suppliers,
 } from '@/lib/db/schema'
 
@@ -20,7 +20,7 @@ export async function GET() {
   const accountId = ctx.account.id
 
   const [
-    projectRows, formulationRows, ingredientRows, supplierRows, equipmentRows, memberRows,
+    projectRows, formulationRows, ingredientRows, supplierRows, equipmentRows, memberRows, intakeRows,
   ] = await Promise.all([
     db.select().from(projects).where(eq(projects.accountId, accountId)),
     db.select().from(formulations).where(eq(formulations.accountId, accountId)),
@@ -32,6 +32,7 @@ export async function GET() {
       .from(accountMembers)
       .leftJoin(profiles, eq(profiles.userId, accountMembers.userId))
       .where(eq(accountMembers.accountId, accountId)),
+    db.select().from(intakeItems).where(eq(intakeItems.accountId, accountId)),
   ])
 
   const [
@@ -125,6 +126,7 @@ export async function GET() {
     reverseTargets: reverseTargetRows.map(x => x.r),
     reverseCandidates: reverseCandidateRows.map(x => x.r),
     ingredients: ingredientRows,
+    intakeItems: intakeRows,
     ingredientNutrients: nutrientRows.map(x => ({ ...x.r, nutrientName: x.nutrientName, nutrientUnit: x.nutrientUnit })),
     ingredientAllergens: allergenRows.map(x => x.r),
     ingredientCerts: certRows.map(x => x.r),

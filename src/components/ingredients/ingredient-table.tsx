@@ -12,13 +12,15 @@ import {
   type SortingState,
 } from '@tanstack/react-table'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Database, Trash2, ArrowUpDown, Camera, Edit2, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { Search, Plus, Database, Trash2, ArrowUpDown, Camera, Edit2, AlertTriangle, ClipboardList } from 'lucide-react'
 import { toast } from 'sonner'
 import type { IngredientListRow } from '@/lib/types'
 import { UsdaSearchDialog } from './usda-search-dialog'
 import { AddIngredientDialog } from './add-ingredient-dialog'
 import { PhotoIngredientDialog } from './photo-ingredient-dialog'
-import { EditIngredientDialog } from './edit-ingredient-dialog'
+import { EditIngredientDialog, type EditableIngredient } from './edit-ingredient-dialog'
+import { INGREDIENT_CATEGORIES, categoryPath } from '@/lib/ingredient-categories'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 
 const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
@@ -40,7 +42,9 @@ export function IngredientTable() {
   const [usdaOpen, setUsdaOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [photoOpen, setPhotoOpen] = useState(false)
-  const [editingIngredient, setEditingIngredient] = useState<{ id: string; name: string; stockG: string | null } | null>(null)
+  const [editingIngredient, setEditingIngredient] = useState<EditableIngredient | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [onlyOnHand, setOnlyOnHand] = useState(false)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
   const [onlyDuplicates, setOnlyDuplicates] = useState(false)
 
@@ -77,6 +81,9 @@ export function IngredientTable() {
           return (
             <span className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-gray-900">{info.getValue()}</span>
+              {info.row.original.onHand && (
+                <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">On hand</span>
+              )}
               {dupes > 0 && (
                 <button
                   onClick={e => { e.stopPropagation(); setResolvingId(info.row.original.id) }}
@@ -89,6 +96,20 @@ export function IngredientTable() {
             </span>
           )
         },
+      }),
+      col.accessor(row => categoryPath(row), {
+        id: 'category',
+        header: ({ column }) => (
+          <button
+            className="flex items-center gap-1 hover:text-gray-900"
+            onClick={() => column.toggleSorting()}
+          >
+            Category <ArrowUpDown size={12} />
+          </button>
+        ),
+        cell: info => info.getValue()
+          ? <span className="text-xs text-gray-600">{info.getValue()}</span>
+          : <span className="text-xs text-gray-300">—</span>,
       }),
       col.accessor('sourceType', {
         header: 'Source',
@@ -162,6 +183,10 @@ export function IngredientTable() {
                   id: row.original.id,
                   name: row.original.name,
                   stockG: row.original.stockG as string | null,
+                  category: row.original.category,
+                  subcategory: row.original.subcategory,
+                  microCategory: row.original.microCategory,
+                  onHand: row.original.onHand,
                 })
               }}
               className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
@@ -189,7 +214,16 @@ export function IngredientTable() {
   )
 
   const duplicateRows = useMemo(() => ingredients.filter(i => (i.duplicateCount ?? 0) > 0), [ingredients])
-  const visibleIngredients = onlyDuplicates ? duplicateRows : ingredients
+  const visibleIngredients = useMemo(
+    () => (onlyDuplicates ? duplicateRows : ingredients).filter(i =>
+      (!onlyOnHand || i.onHand) &&
+      (!categoryFilter || (categoryFilter === '__none' ? !i.category : i.category === categoryFilter))),
+    [onlyDuplicates, duplicateRows, ingredients, onlyOnHand, categoryFilter],
+  )
+  const usedCategories = useMemo(
+    () => INGREDIENT_CATEGORIES.filter(c => ingredients.some(i => i.category === c)),
+    [ingredients],
+  )
 
   const table = useReactTable({
     data: visibleIngredients,
@@ -203,7 +237,7 @@ export function IngredientTable() {
   })
 
   // Columns hidden on mobile to keep the table readable on small screens
-  const MOBILE_HIDDEN = new Set(['sourceType', 'fdcId', 'stockG', 'formulationCount'])
+  const MOBILE_HIDDEN = new Set(['category', 'sourceType', 'fdcId', 'stockG', 'formulationCount'])
 
   return (
     <>
@@ -240,6 +274,14 @@ export function IngredientTable() {
           />
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Link
+            href="/ingredients/intake"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200
+                       rounded-md bg-white hover:bg-emerald-50 text-emerald-700 transition-colors"
+          >
+            <ClipboardList size={14} />
+            Lab intake
+          </Link>
           <button
             onClick={() => setUsdaOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200
@@ -264,6 +306,22 @@ export function IngredientTable() {
             <Plus size={14} /> Add
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <select
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+          className="px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All categories</option>
+          {usedCategories.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="__none">Uncategorized</option>
+        </select>
+        <label className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-pointer">
+          <input type="checkbox" checked={onlyOnHand} onChange={e => setOnlyOnHand(e.target.checked)} className="rounded border-gray-300" />
+          On hand only
+        </label>
       </div>
 
       {/* Table */}
@@ -350,10 +408,7 @@ export function IngredientTable() {
         }}
       />
       <EditIngredientDialog
-        open={editingIngredient !== null}
-        ingredientId={editingIngredient?.id ?? null}
-        currentName={editingIngredient?.name ?? ''}
-        currentStockG={editingIngredient?.stockG ?? null}
+        ingredient={editingIngredient}
         onClose={() => setEditingIngredient(null)}
       />
       {resolvingId && (

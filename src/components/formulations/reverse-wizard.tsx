@@ -48,6 +48,7 @@ type ResearchResult = {
     ingredient: string; estimatedMinPct: number; estimatedMaxPct: number; rationale: string
   }>
   constraints: string[]
+  onHandMatches?: Array<{ rawName: string; ingredientId: string; ingredientName: string; rationale: string }>
   additionalNotes: string
 }
 
@@ -796,6 +797,26 @@ export function ReverseWizard({
 
   function updateBound(id: string, field: 'minPct' | 'maxPct', val: string) {
     setDeckIngredients(prev => prev.map(d => d.id === id ? { ...d, [field]: val } : d))
+  }
+
+  // Link a deck item to an on-hand library ingredient Claude suggested
+  async function linkOnHand(deckItemId: string, ingredientId: string) {
+    try {
+      const r = await fetch(`/api/ingredients/${ingredientId}`)
+      if (!r.ok) throw new Error('Could not load ingredient')
+      const detail = await r.json()
+      const nutrients: NutrientInfo[] = (detail.nutrients ?? []).map((n: {
+        nutrientId: string; amountPer100g: string
+        nutrient: { id: string; name: string; unit: string; category: string }
+      }) => ({
+        nutrientId: n.nutrientId, amountPer100g: parseFloat(n.amountPer100g),
+        name: n.nutrient.name, unit: n.nutrient.unit, category: n.nutrient.category,
+      }))
+      linkDeckItem(deckItemId, detail.id, detail.name, nutrients, 'library')
+      toast.success(`Linked to on-hand "${detail.name}"`)
+    } catch (err) {
+      toast.error(String(err))
+    }
   }
 
   async function onUsdaImported(ingredientId?: string) {
@@ -1919,6 +1940,43 @@ export function ReverseWizard({
                   </div>
                   <p className="text-sm text-gray-600">{researchResult.formulationApproach}</p>
                 </div>
+
+                {/* On-hand matches */}
+                {(researchResult.onHandMatches?.length ?? 0) > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">
+                      Already on hand in your lab
+                    </h4>
+                    <div className="space-y-2">
+                      {researchResult.onHandMatches!.map((m, i) => {
+                        const deckItem = deckIngredients.find(d => d.rawName === m.rawName)
+                        const linkedHere = deckItem?.linkedIngredientId === m.ingredientId
+                        return (
+                          <div key={i} className="flex items-start gap-2 border border-emerald-100 bg-emerald-50/40 rounded-lg p-3">
+                            <div className="flex-1 text-sm">
+                              <span className="text-gray-500">{m.rawName}</span>
+                              <span className="text-gray-400 mx-1.5">→</span>
+                              <span className="font-medium text-gray-800">{m.ingredientName}</span>
+                              {m.rationale && <span className="block text-xs text-gray-500 mt-0.5">{m.rationale}</span>}
+                            </div>
+                            {deckItem && (
+                              linkedHere ? (
+                                <span className="text-xs text-emerald-700 whitespace-nowrap">Linked</span>
+                              ) : (
+                                <button
+                                  onClick={() => linkOnHand(deckItem.id, m.ingredientId)}
+                                  className="px-2 py-1 text-xs border border-emerald-300 rounded text-emerald-700 hover:bg-emerald-100 whitespace-nowrap"
+                                >
+                                  {deckItem.status === 'unlinked' ? 'Use this' : 'Use instead'}
+                                </button>
+                              )
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Ingredient suggestions */}
                 {researchResult.ingredientSuggestions.length > 0 && (

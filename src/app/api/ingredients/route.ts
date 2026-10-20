@@ -42,6 +42,10 @@ export async function GET(request: NextRequest) {
         brandName: ingredients.brandName,
         supplierName: ingredients.supplierName,
         itemCode: ingredients.itemCode,
+        category: ingredients.category,
+        subcategory: ingredients.subcategory,
+        microCategory: ingredients.microCategory,
+        onHand: ingredients.onHand,
         createdAt: ingredients.createdAt,
         updatedAt: ingredients.updatedAt,
         formulationCount: sql<number>`coalesce(${formulationCountSq.cnt}, 0)`,
@@ -54,7 +58,8 @@ export async function GET(request: NextRequest) {
           q ? ilike(ingredients.name, `%${q}%`) : undefined,
         ),
       )
-      .orderBy(desc(ingredients.createdAt))
+      // A search (the formulation pickers) lists what's physically on hand first
+      .orderBy(...(q ? [desc(ingredients.onHand)] : []), desc(ingredients.createdAt))
       .limit(500)
 
     // Flag entries that share name + brand + supplier + item code with another entry. Computed over the

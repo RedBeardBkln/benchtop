@@ -9,7 +9,8 @@ import {
   Database, ArrowLeftRight, GitBranch, Target, CheckCircle2, XCircle, AlertCircle,
   GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer, PackagePlus,
 } from 'lucide-react'
-import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
+import type { FormulationDetail, IngredientListRow, Nutrient, ProjectTarget } from '@/lib/types'
+import { categoryPath, onHandAlternatives } from '@/lib/ingredient-categories'
 import { calcNutrientContributions, calcNutrientProfile, formatAmt, type NutrientContribution } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
@@ -74,7 +75,10 @@ function IngredientSearchDropdown({
   onImportUsda: (query: string) => void
 }) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Array<{ id: string; name: string; verification: string }>>([])
+  const [results, setResults] = useState<Array<{
+    id: string; name: string; verification: string; onHand: boolean
+    category: string | null; subcategory: string | null; microCategory: string | null
+  }>>([])
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -135,10 +139,18 @@ function IngredientSearchDropdown({
               onClick={() => pick(ing)}
               className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between border-b border-gray-50"
             >
-              <span className="font-medium text-gray-800">{ing.name}</span>
-              {ing.verification === 'verified' && (
-                <span className="text-xs text-green-600">✓</span>
-              )}
+              <span className="min-w-0">
+                <span className="block font-medium text-gray-800 truncate">{ing.name}</span>
+                {ing.category && <span className="block text-xs text-gray-400 truncate">{categoryPath(ing)}</span>}
+              </span>
+              <span className="flex items-center gap-1.5 shrink-0 ml-2">
+                {ing.onHand && (
+                  <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700">On hand</span>
+                )}
+                {ing.verification === 'verified' && (
+                  <span className="text-xs text-green-600">✓</span>
+                )}
+              </span>
             </button>
           ))}
           {query.trim() && results.length === 0 && (
@@ -285,6 +297,13 @@ export function FormulationGrid({ id }: { id: string }) {
         return r.json()
       }),
   })
+
+  // The library, for on-hand status and on-hand alternatives to each line
+  const { data: library = [] } = useQuery<IngredientListRow[]>({
+    queryKey: ['ingredients'],
+    queryFn: () => fetch('/api/ingredients').then(r => r.json()),
+  })
+  const libraryById = useMemo(() => new Map(library.map(i => [i.id, i])), [library])
 
   const { data: allNutrients } = useQuery<Nutrient[]>({
     queryKey: ['nutrients-all'],
@@ -1235,7 +1254,25 @@ export function FormulationGrid({ id }: { id: string }) {
                       {line.ingredientVerification !== 'verified' && (
                         <span className="text-xs text-yellow-500" title="Unverified">⚠</span>
                       )}
+                      {libraryById.get(line.ingredientId)?.onHand && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="On hand in the lab" />
+                      )}
                     </button>
+                    {!isLocked && (() => {
+                      const libIng = libraryById.get(line.ingredientId)
+                      const inFormula = new Set(lines.map(l => l.ingredientId))
+                      const alts = libIng ? onHandAlternatives(libIng, library.filter(i => !inFormula.has(i.id)), 3) : []
+                      if (!libIng || alts.length === 0) return null
+                      return (
+                        <button
+                          onClick={() => { setSwapTargetKey(line.key); setShowLibraryPicker(true) }}
+                          className="mt-0.5 block text-left text-[11px] text-emerald-700 hover:underline print:hidden max-w-xs truncate"
+                          title={`Not on hand. On-hand ${libIng.category} you could use instead: ${alts.map(a => a.name).join(', ')}`}
+                        >
+                          On hand instead: {alts.map(a => a.name).join(', ')}
+                        </button>
+                      )
+                    })()}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -1775,7 +1812,7 @@ export function FormulationGrid({ id }: { id: string }) {
       />
       <LibraryPickerDialog
         open={showLibraryPicker}
-        excludeId={sidebarIngredientId}
+        excludeId={lines.find(l => l.key === swapTargetKey)?.ingredientId ?? sidebarIngredientId}
         onClose={() => { setShowLibraryPicker(false); setSwapTargetKey(null) }}
         onSelect={(id) => {
           setShowLibraryPicker(false)

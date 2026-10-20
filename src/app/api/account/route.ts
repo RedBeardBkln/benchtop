@@ -3,7 +3,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
-  accountMembers, accounts, auditLog, equipment, ingredientDocs, ingredients, profiles,
+  accountMembers, accounts, auditLog, equipment, ingredientDocs, ingredients, intakeItems, profiles,
   projects, subscriptions, suppliers,
 } from '@/lib/db/schema'
 import { accountNameSchema, deleteAccountSchema } from '@/lib/account-schemas'
@@ -111,6 +111,7 @@ export async function DELETE(req: NextRequest) {
 
   await db.transaction(async tx => {
     await tx.delete(projects).where(eq(projects.accountId, accountId))
+    await tx.delete(intakeItems).where(eq(intakeItems.accountId, accountId))
     await tx.delete(ingredients).where(eq(ingredients.accountId, accountId)) // cascades nutrients, allergens, certs, docs, sub-ingredients, supplier links
     await tx.delete(suppliers).where(eq(suppliers.accountId, accountId))
     await tx.delete(equipment).where(eq(equipment.accountId, accountId))
