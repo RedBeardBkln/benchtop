@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { formatIngredientName } from '@/lib/ingredient-name'
 import { and, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
@@ -136,7 +137,7 @@ Return one entry per item, using its id.`
         .update(intakeItems)
         .set({
           status: 'identified',
-          name: clean(c.name, 255),
+          name: clean(formatIngredientName(c.name), 255),
           category: c.category,
           subcategory: clean(c.subcategory, 120),
           microCategory: clean(c.microCategory, 120),

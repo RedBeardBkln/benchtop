@@ -5,6 +5,7 @@ import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
+import { formatIngredientName } from '@/lib/ingredient-name'
 import { convertToUnit } from '@/lib/units'
 
 const bodySchema = z.object({
@@ -26,7 +27,8 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const { name, sourceType, sourceUrl, nutrients: inputNutrients } = parsed.data
+  const { sourceType, sourceUrl, nutrients: inputNutrients } = parsed.data
+  const name = formatIngredientName(parsed.data.name)
 
   const dupe = await findDuplicate(ctx.account.id, { name })
   if (dupe) return duplicateResponse({ name }, dupe)

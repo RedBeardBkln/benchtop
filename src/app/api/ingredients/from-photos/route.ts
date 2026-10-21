@@ -10,6 +10,7 @@ import {
 } from '@/lib/db/schema'
 import { z } from 'zod'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
+import { formatIngredientName } from '@/lib/ingredient-name'
 
 const bodySchema = z.object({
   name: z.string().min(1).max(255),
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const d = parsed.data
+  const d = { ...parsed.data, name: formatIngredientName(parsed.data.name) }
 
   const dupe = await findDuplicate(ctx.account.id, { name: d.name })
   if (dupe) return duplicateResponse({ name: d.name }, dupe)

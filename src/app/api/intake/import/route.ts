@@ -5,8 +5,9 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredients, intakeItems } from '@/lib/db/schema'
 import { findDuplicate } from '@/lib/ingredient-duplicates'
-import { identityKey } from '@/lib/ingredient-identity'
+import { identityKey, normalizePart } from '@/lib/ingredient-identity'
 import { quantityToGrams } from '@/lib/ingredient-categories'
+import { formatIngredientName } from '@/lib/ingredient-name'
 
 const bodySchema = z.object({
   // Upload only these entries; omitted = every identified entry
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       const createdByKey = new Map<string, string>()
 
       for (const item of items) {
-        const name = (item.name || item.rawName).trim()
+        const name = formatIngredientName(item.name || item.rawName)
         const qty = item.quantity != null ? parseFloat(item.quantity) : null
         const grams = qty != null && item.quantityUnit ? quantityToGrams(qty, item.quantityUnit) : null
         const otherQty = qty != null && item.quantityUnit && grams == null ? `${qty} ${item.quantityUnit}` : null
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
               name,
               sourceType: 'manual',
               verification: 'unverified',
-              labelName: item.rawName !== name ? item.rawName : null,
+              labelName: normalizePart(item.rawName) !== normalizePart(name) ? item.rawName : null,
               category: item.category,
               subcategory: item.subcategory,
               microCategory: item.microCategory,

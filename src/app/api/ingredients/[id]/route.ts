@@ -19,6 +19,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
 import { identityKey } from '@/lib/ingredient-identity'
+import { formatIngredientName } from '@/lib/ingredient-name'
 import { getOwnedIngredient, notFoundResponse, isUuid } from '@/lib/tenancy'
 import { INGREDIENT_CATEGORIES } from '@/lib/ingredient-categories'
 
@@ -161,7 +162,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const d = parsed.data
+  const d = { ...parsed.data, name: parsed.data.name !== undefined ? formatIngredientName(parsed.data.name) : undefined }
   const updateValues: Record<string, unknown> = { updatedAt: new Date() }
   if (d.name !== undefined) updateValues.name = d.name
   if (d.labelName !== undefined) updateValues.labelName = d.labelName

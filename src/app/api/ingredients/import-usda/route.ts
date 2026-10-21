@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
+import { formatIngredientName } from '@/lib/ingredient-name'
 import { z } from 'zod'
 
 const FDC_BASE = 'https://api.nal.usda.gov/fdc/v1'
@@ -218,7 +219,7 @@ export async function POST(request: NextRequest) {
   }
 
   // New ingredient path
-  const ingredientName = nameOverride ?? (fdcFood.description as string) ?? `FDC ${fdcId}`
+  const ingredientName = formatIngredientName(nameOverride ?? (fdcFood.description as string) ?? `FDC ${fdcId}`)
   const dupe = await findDuplicate(ctx.account.id, { name: ingredientName })
   if (dupe) return duplicateResponse({ name: ingredientName }, dupe)
 

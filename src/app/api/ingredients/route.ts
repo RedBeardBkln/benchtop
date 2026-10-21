@@ -12,6 +12,7 @@ import { and, desc, ilike, sql, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
 import { duplicateCounts } from '@/lib/ingredient-identity'
+import { formatIngredientName } from '@/lib/ingredient-name'
 
 export async function GET(request: NextRequest) {
   const auth = await requireApi()
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: firstError }, { status: 400 })
   }
 
-  const d = parsed.data
+  const d = { ...parsed.data, name: formatIngredientName(parsed.data.name) }
   try {
     const dupe = await findDuplicate(ctx.account.id, d)
     if (dupe) return duplicateResponse(d, dupe)

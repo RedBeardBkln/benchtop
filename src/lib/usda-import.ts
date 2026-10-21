@@ -6,6 +6,7 @@ import { db as defaultDb } from '@/lib/db'
 import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { findDuplicate } from '@/lib/ingredient-duplicates'
+import { formatIngredientName } from '@/lib/ingredient-name'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 
 export const FDC_BASE = 'https://api.nal.usda.gov/fdc/v1'
@@ -151,7 +152,7 @@ export async function importUsdaIngredient(
 
   const parsedNutrients = parseUsdaNutrients((fdcFood.foodNutrients as unknown[]) ?? [], nutrientMap, fdcId)
 
-  const ingredientName = opts.nameOverride ?? (fdcFood.description as string) ?? `FDC ${fdcId}`
+  const ingredientName = formatIngredientName(opts.nameOverride ?? (fdcFood.description as string) ?? `FDC ${fdcId}`)
   const repairId = existing[0]?.id
 
   const nameDupe = repairId ? null : await findDuplicate(opts.accountId, { name: ingredientName })

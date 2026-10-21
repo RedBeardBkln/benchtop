@@ -9,6 +9,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOwnedFormulation, getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
+import { formatIngredientName } from '@/lib/ingredient-name'
 import { toLossStep } from '@/lib/process-loss'
 import { deriveIngredientFromFormulation, type SourceLine } from '@/lib/formulation-to-ingredient'
 
@@ -55,7 +56,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const msg = Object.values(parsed.error.flatten().fieldErrors).flat().find(Boolean) ?? 'Invalid input'
     return NextResponse.json({ error: msg }, { status: 400 })
   }
-  const { name, updateExisting } = parsed.data
+  const { updateExisting } = parsed.data
+  const name = formatIngredientName(parsed.data.name)
 
   // Only a finalized formulation is stable enough to become a reusable ingredient
   if (formulation.status !== 'locked')
