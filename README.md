@@ -60,7 +60,15 @@ documents). Existing data belongs to one billing-exempt **legacy account** share
   link themselves (no email provider). Only a SHA-256 hash of the token is stored. Redemption
   (`/invite/<token>`) creates a pre-confirmed login, a new account (owner), a profile and records
   acceptance of the Terms/Privacy versions.
-- **Settings** (`/settings`): profile, account (name, email, password), billing, privacy and terms
+- **Teams.** The account owner and any admins invite teammates at `/settings/team`. A **member**
+  sees only what they are granted (all projects, every project for a client, or specific projects,
+  each as *view* or *edit*; the ingredient library and suppliers as *view* or *edit*); **admins**
+  see and edit everything and manage the team. Rules are in `src/lib/team-access.ts` and enforced by
+  `src/lib/tenancy.ts` (no access = 404, view-only on a change = 403 `view_only`). Every member besides
+  the owner is a paid seat: $5/month on a monthly plan or $50/year on a yearly one, billed as a second
+  item on the account's subscription and synced on accept/remove (`src/lib/billing/seat-sync.ts`).
+  A login belongs to one account, so only emails without a benchtop login can be invited.
+- **Settings** (`/settings`): profile, account (name, email, password), team, billing, privacy and terms
   (data export as JSON, account deletion). Public pages: `/legal/terms`, `/legal/privacy`
   (draft text, needs legal review; see `src/lib/legal.ts` for the placeholders to fill in).
 
@@ -78,6 +86,7 @@ See `.env.example` for the full template. Real values go in `.env.local` (git-ig
 | `PLATFORM_ADMIN_EMAILS` | Who may create invitations (applied by `pnpm db:bootstrap --apply`) | Warning; no admins are created |
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` | Checkout and Customer Portal | Billing endpoints return `503 {code: "billing_not_configured"}`; billing page shows a "not configured" notice; outside accounts without a subscription are **not** entitled (fails closed); the legacy account is unaffected |
 | `STRIPE_WEBHOOK_SECRET` | `/api/stripe/webhook` signature verification | Webhook returns 503 |
+| `STRIPE_SEAT_PRICE_MONTHLY_ID`, `STRIPE_SEAT_PRICE_YEARLY_ID` | Extra team seats ($5/month and $50/year prices) | Team invitations return `503 {code: "not_configured"}` for subscribed accounts; billing-exempt accounts are unaffected |
 | `BILLING_DEV_BYPASS` | Dev only: `true` lets outside accounts in without a subscription | Off. **Ignored when `NODE_ENV=production`** |
 | `ANTHROPIC_API_KEY`, `USDA_FDC_API_KEY`, `BRAVE_SEARCH_API_KEY` | AI parsing / research, USDA and web lookups | Existing behaviour (routes return 503 or an error) |
 
@@ -91,8 +100,11 @@ See `.env.example` for the full template. Real values go in `.env.local` (git-ig
    `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
    `customer.subscription.deleted` and `invoice.payment_failed`. Put its signing secret in
    `STRIPE_WEBHOOK_SECRET`.
-3. Enable the Customer Portal (Settings -> Billing -> Customer portal) so "Manage billing" works.
-4. Local development: `stripe listen --forward-to localhost:3000/api/stripe/webhook` prints a
+3. Team seats: on a second Product ("Additional user") create two recurring Prices, $5/month and
+   $50/year, and put their ids in `STRIPE_SEAT_PRICE_MONTHLY_ID` and `STRIPE_SEAT_PRICE_YEARLY_ID`.
+   The one matching the plan's interval is used.
+4. Enable the Customer Portal (Settings -> Billing -> Customer portal) so "Manage billing" works.
+5. Local development: `stripe listen --forward-to localhost:3000/api/stripe/webhook` prints a
    `whsec_...` secret to use as `STRIPE_WEBHOOK_SECRET`. Test card: `4242 4242 4242 4242`.
 
 ### Supabase dashboard settings

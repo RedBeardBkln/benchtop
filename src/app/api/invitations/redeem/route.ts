@@ -7,11 +7,15 @@ import { hashToken, INVITE_FAILURE_MESSAGES } from '@/lib/invitations'
 import { lookupInvite } from '@/lib/invitations-server'
 import { getSupabaseAdmin, isAdminConfigured } from '@/lib/supabase/admin'
 import { PRIVACY_VERSION, TERMS_VERSION } from '@/lib/legal'
+import { syncSeats } from '@/lib/billing/seat-sync'
+import { accessForRole, memberAccessSchema } from '@/lib/team-access'
 
 // PUBLIC route (no session): authenticated by possession of a valid invite token.
 // Order of operations: claim token (single conditional UPDATE, race-safe) -> create pre-confirmed
 // auth user -> create account/membership/profile in one DB transaction. Any failure after the
 // claim is compensated (auth user deleted, token un-claimed) so a retry is possible.
+// A team invitation (account_id set) joins that account instead of creating one, and its seat is
+// then billed.
 
 const GENERIC_ERROR = 'We could not complete your signup. Please try again or contact the person who invited you.'
 
@@ -58,6 +62,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: INVITE_FAILURE_MESSAGES[reason], code: reason }, { status: 410 })
   }
 
+  // A team invitation whose account has since been deleted can't be used
+  let teamAccountId: string | null = null
+  if (claimed.accountId) {
+    const [account] = await db
+      .select({ id: accounts.id, deletedAt: accounts.deletedAt })
+      .from(accounts)
+      .where(eq(accounts.id, claimed.accountId))
+      .limit(1)
+    if (!account || account.deletedAt) {
+      await unclaim(tokenHash)
+      return NextResponse.json({ error: INVITE_FAILURE_MESSAGES.invalid, code: 'invalid' }, { status: 410 })
+    }
+    teamAccountId = account.id
+  }
+
   const admin = getSupabaseAdmin()
   let userId: string | null = null
   try {
@@ -84,11 +103,22 @@ export async function POST(req: NextRequest) {
     const newUserId = userId
     const now = new Date()
     await db.transaction(async tx => {
-      const [account] = await tx
-        .insert(accounts)
-        .values({ name: company || fullName })
-        .returning({ id: accounts.id })
-      await tx.insert(accountMembers).values({ accountId: account.id, userId: newUserId, role: 'owner' })
+      if (teamAccountId) {
+        const role = claimed.role === 'admin' ? 'admin' : 'member'
+        const stored = memberAccessSchema.safeParse(claimed.access)
+        await tx.insert(accountMembers).values({
+          accountId: teamAccountId,
+          userId: newUserId,
+          role,
+          access: accessForRole(role, stored.success ? stored.data : undefined),
+        })
+      } else {
+        const [account] = await tx
+          .insert(accounts)
+          .values({ name: company || fullName })
+          .returning({ id: accounts.id })
+        await tx.insert(accountMembers).values({ accountId: account.id, userId: newUserId, role: 'owner' })
+      }
       await tx.insert(profiles).values({
         userId: newUserId,
         fullName,
@@ -101,7 +131,14 @@ export async function POST(req: NextRequest) {
       await tx.update(invitations).set({ acceptedBy: newUserId }).where(eq(invitations.id, claimed.id))
     })
 
-    return NextResponse.json({ ok: true, email: claimed.email }, { status: 201 })
+    if (teamAccountId) {
+      // The member is in either way; a billing failure is logged and shows on the team page
+      // (seats billed vs used) where an admin can retry it.
+      const seats = await syncSeats(teamAccountId).catch(err => ({ ok: false as const, error: String(err) }))
+      if (!seats.ok) console.error('[redeem] seat sync failed:', seats.error)
+    }
+
+    return NextResponse.json({ ok: true, email: claimed.email, team: Boolean(teamAccountId) }, { status: 201 })
   } catch (err) {
     console.error('[redeem] failed after claiming invite:', err)
     // Compensate so the invitee can retry and no orphan auth user is left behind

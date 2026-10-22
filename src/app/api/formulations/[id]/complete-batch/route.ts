@@ -6,7 +6,7 @@ import {
 } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { getOwnedFormulation, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -22,8 +22,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   const { id } = await params
 
-  const formulation = await getOwnedFormulation(ctx, id)
-  if (!formulation) return notFoundResponse()
+  const loaded = await loadFormulationForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
+  const formulation = loaded.formulation
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })

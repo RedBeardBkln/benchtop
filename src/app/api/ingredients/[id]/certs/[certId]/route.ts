@@ -8,7 +8,7 @@ import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 type Ctx = { params: Promise<{ id: string; certId: string }> }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

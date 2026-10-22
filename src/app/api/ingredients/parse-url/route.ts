@@ -13,7 +13,7 @@ const bodySchema = z.object({
 const MAX_PAGE_BYTES = 2 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))

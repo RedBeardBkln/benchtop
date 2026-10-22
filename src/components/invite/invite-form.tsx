@@ -8,7 +8,9 @@ import { createClient } from '@/lib/supabase/client'
 import { PASSWORD_MIN_LENGTH } from '@/lib/account-schemas'
 import { btnPrimary, Field, inputCls } from '@/components/settings/ui'
 
-export function InviteForm({ token, email }: { token: string; email: string }) {
+// `teamName` is set for an invitation to join an existing team: no company is asked for, and the
+// new member goes straight to the projects list instead of the billing page.
+export function InviteForm({ token, email, teamName }: { token: string; email: string; teamName?: string }) {
   const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [company, setCompany] = useState('')
@@ -45,7 +47,7 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
       router.push('/login')
       return
     }
-    router.push('/settings/billing?welcome=1')
+    router.push(teamName ? '/projects' : '/settings/billing?welcome=1')
     router.refresh()
   }
 
@@ -57,9 +59,11 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
       <Field label="Full name" htmlFor="fullName">
         <input id="fullName" required maxLength={120} value={fullName} onChange={e => setFullName(e.target.value)} className={inputCls} autoComplete="name" />
       </Field>
-      <Field label="Company (optional)" htmlFor="company">
-        <input id="company" maxLength={120} value={company} onChange={e => setCompany(e.target.value)} className={inputCls} autoComplete="organization" />
-      </Field>
+      {!teamName && (
+        <Field label="Company (optional)" htmlFor="company">
+          <input id="company" maxLength={120} value={company} onChange={e => setCompany(e.target.value)} className={inputCls} autoComplete="organization" />
+        </Field>
+      )}
       <Field label="Password" htmlFor="password" hint={`At least ${PASSWORD_MIN_LENGTH} characters`}>
         <input id="password" type="password" required minLength={PASSWORD_MIN_LENGTH} value={password} onChange={e => setPassword(e.target.value)} className={inputCls} autoComplete="new-password" />
       </Field>

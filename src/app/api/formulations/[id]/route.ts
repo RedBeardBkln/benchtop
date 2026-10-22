@@ -7,7 +7,7 @@ import {
 } from '@/lib/db/schema'
 import { and, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
 import { z } from 'zod'
-import { getOwnedFormulation, notFoundResponse, isUuid } from '@/lib/tenancy'
+import { getOwnedFormulation, loadFormulationForEdit, notFoundResponse, projectLevel } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -115,7 +115,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .where(and(eq(formulations.familyId, formulation.familyId), eq(formulations.accountId, ctx.account.id)))
     .orderBy(desc(formulations.version))
 
-  return NextResponse.json({ ...formulation, lines: linesWithNutrients, processSteps: steps, project, iterations })
+  // The UI shows view-only members a read-only formulation
+  const canEdit = project ? projectLevel(ctx, project) === 'edit' : false
+  return NextResponse.json({ ...formulation, lines: linesWithNutrients, processSteps: steps, project, iterations, canEdit })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -124,7 +126,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { ctx } = auth
 
   const { id } = await params
-  if (!isUuid(id)) return notFoundResponse()
+  const loaded = await loadFormulationForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 

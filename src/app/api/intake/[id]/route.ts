@@ -24,7 +24,7 @@ const patchSchema = z.object({
 
 // Edit one list entry. Changing the label text sends it back to 'pending' so Claude re-identifies it.
 export async function PATCH(request: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
   const { id } = await params
@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
   const { id } = await params

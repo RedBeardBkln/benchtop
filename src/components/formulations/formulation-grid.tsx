@@ -403,6 +403,8 @@ export function FormulationGrid({ id }: { id: string }) {
 
   function changeGridColumns(ids: string[] | null) {
     setGridNutrientIds(ids)
+    // View-only members can change their own column view, but it isn't saved for everyone
+    if (data?.canEdit === false) return
     pendingGridIdsRef.current = { ids }
     if (gridSaveTimerRef.current) clearTimeout(gridSaveTimerRef.current)
     gridSaveTimerRef.current = setTimeout(() => void flushGridColumns(), 600)
@@ -852,7 +854,9 @@ export function FormulationGrid({ id }: { id: string }) {
     )
   }
 
-  const isLocked = data.status === 'locked'
+  // View-only team members get the same read-only grid as a finalized formulation
+  const readOnly = data.canEdit === false
+  const isLocked = data.status === 'locked' || readOnly
   const pctRemaining = totalWeightG > 0
     ? 100 - lines.reduce((s, l) => s + (l.weightG / totalWeightG) * 100, 0)
     : 100
@@ -927,13 +931,16 @@ export function FormulationGrid({ id }: { id: string }) {
             ) : (
               <span className="text-sm text-gray-400">v{data.version}</span>
             )}
-            <IterationNote formulationId={id} note={data.iterationNote} />
+            {readOnly
+              ? data.iterationNote && <span className="text-sm text-gray-600">{data.iterationNote}</span>
+              : <IterationNote formulationId={id} note={data.iterationNote} />}
             <span className="capitalize">{data.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</span>
             <span className={`px-1.5 py-0.5 rounded font-medium ${
               isLocked ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'
             }`}>
               {data.status}
             </span>
+            {readOnly && <span className="px-1.5 py-0.5 rounded font-medium bg-amber-50 text-amber-700">view only</span>}
           </div>
         </div>
 
@@ -949,7 +956,7 @@ export function FormulationGrid({ id }: { id: string }) {
               {saveMutation.isPending ? 'Saving…' : 'Save'}
             </button>
           )}
-          {data.mode === 'reverse' && (
+          {data.mode === 'reverse' && !readOnly && (
             <button
               onClick={() => setShowReverseWizard(true)}
               title="Run the reverse-engineer wizard to find an ingredient blend matching a target label"
@@ -959,7 +966,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <Zap size={13} /> Reverse wizard
             </button>
           )}
-          {(data.project?.targets?.length ?? 0) > 0 && lines.length > 0 && (
+          {(data.project?.targets?.length ?? 0) > 0 && lines.length > 0 && !readOnly && (
             <button
               onClick={() => solveMutation.mutate()}
               disabled={solveMutation.isPending}
@@ -971,7 +978,7 @@ export function FormulationGrid({ id }: { id: string }) {
               {solveMutation.isPending ? 'Solving…' : 'Solve'}
             </button>
           )}
-          <div className="relative">
+          {!readOnly && <div className="relative">
             <button
               onClick={() => setShowDuplicateMenu(v => !v)}
               disabled={iterateMutation.isPending || forkMutation.isPending}
@@ -1016,8 +1023,8 @@ export function FormulationGrid({ id }: { id: string }) {
                 </div>
               </>
             )}
-          </div>
-          {isLocked ? (
+          </div>}
+          {readOnly ? null : isLocked ? (
             <button
               onClick={() => setConfirmAction('unfinalize')}
               title="Unlock this formulation to allow editing"
@@ -1036,7 +1043,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <Lock size={13} /> Finalize
             </button>
           )}
-          {isLocked && lines.length > 0 && (
+          {data.status === 'locked' && lines.length > 0 && (
             <button
               onClick={() => setShowSaveAsIngredient(true)}
               title="Save this finalized formulation as an ingredient for use in other formulations"
@@ -1064,7 +1071,7 @@ export function FormulationGrid({ id }: { id: string }) {
           >
             <Printer size={13} /> Print
           </button>
-          {lines.length > 0 && (
+          {lines.length > 0 && !readOnly && (
             <button
               onClick={() => setShowCompleteBatch(true)}
               title="Record a completed batch — deplete ingredient stock"
@@ -1074,14 +1081,16 @@ export function FormulationGrid({ id }: { id: string }) {
               <CheckCircle2 size={13} /> Complete batch
             </button>
           )}
-          <button
-            onClick={() => setConfirmAction('archive')}
-            title="Archive this formulation"
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500
-                       text-sm rounded-md hover:bg-gray-50 transition-colors"
-          >
-            <Archive size={13} /> Archive
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => setConfirmAction('archive')}
+              title="Archive this formulation"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500
+                         text-sm rounded-md hover:bg-gray-50 transition-colors"
+            >
+              <Archive size={13} /> Archive
+            </button>
+          )}
         </div>
       </div>
 

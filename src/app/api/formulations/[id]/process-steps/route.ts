@@ -6,7 +6,7 @@ import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { lossFields, lossFieldsError } from '@/lib/process-loss-fields'
 import { paramPatchError } from '@/lib/step-measurements'
-import { assertEquipmentOwned, getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { assertEquipmentOwned, getOwnedFormulation, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -47,7 +47,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const parsed = postSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
+  const loaded = await loadFormulationForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
   // equipmentId comes from the request body: it must belong to the caller's account
   if (parsed.data.equipmentId && !(await assertEquipmentOwned(ctx, [parsed.data.equipmentId]))) {
     return notFoundResponse('Equipment not found')

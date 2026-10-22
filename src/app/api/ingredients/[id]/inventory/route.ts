@@ -3,7 +3,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { batchRuns, formulationLines, formulations, ingredients } from '@/lib/db/schema'
 import { and, eq, desc } from 'drizzle-orm'
-import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
+import { getOwnedIngredient, notFoundResponse, visibleProjectIds } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -26,6 +26,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       notes: batchRuns.notes,
       formulationId: formulations.id,
       formulationName: formulations.name,
+      projectId: formulations.projectId,
       weightG: formulationLines.weightG,
     })
     .from(batchRuns)
@@ -35,7 +36,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .orderBy(desc(batchRuns.runAt))
     .limit(100)
 
-  const depletions = runs.map(r => ({
+  // Only batches from projects the caller can see
+  const visible = await visibleProjectIds(ctx)
+  const depletions = runs.filter(r => !visible || visible.has(r.projectId)).map(r => ({
     runId: r.runId,
     runAt: r.runAt,
     formulationId: r.formulationId,

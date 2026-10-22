@@ -52,7 +52,7 @@ type Classified = {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
   const accountId = ctx.account.id

@@ -21,7 +21,13 @@ export async function GET() {
   const auth = await requireApi({ allowUnentitled: true, platformAdmin: true })
   if (!auth.ok) return auth.res
 
-  const rows = await db.select().from(invitations).orderBy(desc(invitations.createdAt)).limit(500)
+  // New-account invitations only; team invitations are managed by each account's admins
+  const rows = await db
+    .select()
+    .from(invitations)
+    .where(isNull(invitations.accountId))
+    .orderBy(desc(invitations.createdAt))
+    .limit(500)
   const now = new Date()
   return NextResponse.json(
     rows.map(r => ({

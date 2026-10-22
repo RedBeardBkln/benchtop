@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

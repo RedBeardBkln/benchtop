@@ -8,7 +8,7 @@ const ALLOWED_TYPES = new Set([
 ])
 
 export async function POST(req: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
 
   const formData = await req.formData().catch(() => null)

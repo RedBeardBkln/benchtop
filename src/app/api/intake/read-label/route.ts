@@ -44,7 +44,7 @@ const schema = {
 // Reads the name (and any written amount) off photos of container labels and adds each to the intake
 // list. Only reads the text — identification and categorizing happen later for the whole list.
 export async function POST(req: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

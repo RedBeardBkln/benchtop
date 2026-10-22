@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
-import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { loadFormulationForEdit } from '@/lib/tenancy'
 import { duplicateFormulation } from '@/lib/duplicate-formulation'
 import { z } from 'zod'
 
@@ -23,8 +23,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   }
 
   const { id } = await params
-  const source = await getOwnedFormulation(ctx, id)
-  if (!source) return notFoundResponse()
+  const loaded = await loadFormulationForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
+  const source = loaded.formulation
 
   const { name } = parsed.data
   if (name.toLowerCase() === source.name.trim().toLowerCase()) {

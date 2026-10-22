@@ -18,7 +18,7 @@ const bodySchema = z.object({
 // existing ingredient (by Claude, by the user, or by the duplicate rule) updates that ingredient instead
 // of creating a second one; its category is only filled in where the ingredient has none.
 export async function POST(request: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
   const accountId = ctx.account.id

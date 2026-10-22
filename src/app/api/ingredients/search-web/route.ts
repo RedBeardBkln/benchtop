@@ -41,7 +41,7 @@ function curatedLinks(query: string): SearchResult[] {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))

@@ -12,6 +12,8 @@ import { ProjectTargets } from './project-targets'
 type ProjectWithFormulations = Project & {
   formulations: Array<Formulation & { iterationCount: number }>
   targets: ProjectTarget[]
+  // False for team members with view-only access
+  canEdit: boolean
 }
 
 function NewFormulationDialog({
@@ -178,6 +180,8 @@ export function ProjectDetail({ id }: { id: string }) {
     )
   }
 
+  const canEdit = data.canEdit !== false
+
   return (
     <>
       <div className="px-4 sm:px-8 py-6 sm:py-8 max-w-4xl">
@@ -217,13 +221,15 @@ export function ProjectDetail({ id }: { id: string }) {
             ) : (
               <div className="flex items-center gap-2 group/name mb-0.5">
                 <h1 className="text-2xl font-semibold text-gray-900">{data.name}</h1>
-                <button
-                  onClick={() => { setNameEdit(data.name); setEditingName(true) }}
-                  className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded"
-                  title="Rename project"
-                >
-                  <Edit2 size={14} />
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => { setNameEdit(data.name); setEditingName(true) }}
+                    className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded"
+                    title="Rename project"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                )}
               </div>
             )}
             <div className="flex items-center gap-2 mt-1.5">
@@ -233,20 +239,25 @@ export function ProjectDetail({ id }: { id: string }) {
               }`}>
                 {data.status}
               </span>
+              {!canEdit && (
+                <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">view only</span>
+              )}
             </div>
             {data.objectiveText && (
               <p className="mt-2 text-sm text-gray-500 max-w-xl">{data.objectiveText}</p>
             )}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => archiveMutation.mutate()}
-              disabled={archiveMutation.isPending}
-              className="px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors"
-            >
-              {data.status === 'active' ? 'Archive' : 'Restore'}
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => archiveMutation.mutate()}
+                disabled={archiveMutation.isPending}
+                className="px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors"
+              >
+                {data.status === 'active' ? 'Archive' : 'Restore'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Formulations section */}
@@ -267,12 +278,14 @@ export function ProjectDetail({ id }: { id: string }) {
                       {showArchived ? 'Hide archived' : `Archived (${archived.length})`}
                     </button>
                   )}
-                  <button
-                    onClick={() => setDialogOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus size={14} /> New formulation
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => setDialogOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus size={14} /> New formulation
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -280,9 +293,11 @@ export function ProjectDetail({ id }: { id: string }) {
                 <div className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">
                   <FlaskConical size={28} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-sm text-gray-400">No formulations yet.</p>
-                  <button onClick={() => setDialogOpen(true)} className="mt-2 text-sm text-blue-600 hover:underline">
-                    Create first formulation →
-                  </button>
+                  {canEdit && (
+                    <button onClick={() => setDialogOpen(true)} className="mt-2 text-sm text-blue-600 hover:underline">
+                      Create first formulation →
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -345,12 +360,14 @@ export function ProjectDetail({ id }: { id: string }) {
                           </td>
                           <td className="px-4 py-3 text-gray-400 tabular-nums">{new Date(f.updatedAt).toLocaleDateString()}</td>
                           <td className="px-4 py-3">
-                            <button
-                              onClick={e => { e.stopPropagation(); restoreFormulationMutation.mutate(f.id) }}
-                              className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-200 rounded hover:bg-white text-gray-500 transition-colors"
-                            >
-                              <RotateCcw size={11} /> Restore
-                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={e => { e.stopPropagation(); restoreFormulationMutation.mutate(f.id) }}
+                                className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-200 rounded hover:bg-white text-gray-500 transition-colors"
+                              >
+                                <RotateCcw size={11} /> Restore
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -375,6 +392,7 @@ export function ProjectDetail({ id }: { id: string }) {
             <ProjectTargets
               projectId={id}
               initialTargets={(data.targets ?? []) as ProjectTarget[]}
+              readOnly={!canEdit}
             />
           </div>
         </div>

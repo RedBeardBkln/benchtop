@@ -1,5 +1,7 @@
 import { requirePage } from '@/lib/auth/context'
 import { AppShell } from '@/components/app-shell'
+import { LibraryViewOnlyNotice } from '@/components/view-only-notice'
+import { canEditLibrary } from '@/lib/team-access'
 import { IngredientTable } from '@/components/ingredients/ingredient-table'
 
 export default async function IngredientsPage() {
@@ -14,6 +16,7 @@ export default async function IngredientsPage() {
             All ingredients with verified nutrient data. Every value carries a source reference.
           </p>
         </div>
+        {!canEditLibrary(ctx.access) && <LibraryViewOnlyNotice />}
         <IngredientTable />
       </div>
     </AppShell>

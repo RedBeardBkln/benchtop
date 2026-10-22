@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { accounts, subscriptions } from '@/lib/db/schema'
 import { ENTITLED_STATUSES } from './entitlement'
+import { getSeatPriceIds } from './stripe'
 import {
   customerIdOf,
   mapSubscription,
@@ -45,7 +46,7 @@ export async function applySubscription(
   eventCreated: number,
   opts: { checkoutReturn?: boolean } = {},
 ): Promise<boolean> {
-  const mapped = mapSubscription(sub)
+  const mapped = mapSubscription(sub, getSeatPriceIds())
   const values = {
     accountId,
     stripeSubscriptionId: mapped.stripeSubscriptionId,
@@ -53,6 +54,7 @@ export async function applySubscription(
     priceId: mapped.priceId,
     currentPeriodEnd: mapped.currentPeriodEnd,
     cancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
+    seatQuantity: mapped.seatQuantity,
     lastEventCreated: eventCreated,
     updatedAt: new Date(),
   }
@@ -67,6 +69,7 @@ export async function applySubscription(
         priceId: values.priceId,
         currentPeriodEnd: values.currentPeriodEnd,
         cancelAtPeriodEnd: values.cancelAtPeriodEnd,
+        seatQuantity: values.seatQuantity,
         lastEventCreated: values.lastEventCreated,
         updatedAt: values.updatedAt,
       },

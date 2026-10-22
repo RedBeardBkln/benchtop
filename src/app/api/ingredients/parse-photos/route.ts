@@ -15,7 +15,7 @@ function toMediaType(mime: string): MediaType {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
 
   if (!process.env.ANTHROPIC_API_KEY)

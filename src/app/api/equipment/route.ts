@@ -25,7 +25,7 @@ export async function GET() {
 // Adds a piece of equipment to the caller's account; if one with the same name (ignoring case) exists
 // in that account, that one is returned instead
 export async function POST(req: NextRequest) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

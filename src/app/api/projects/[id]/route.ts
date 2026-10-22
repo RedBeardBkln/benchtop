@@ -3,7 +3,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { projects, formulations } from '@/lib/db/schema'
 import { and, desc, eq, sql } from 'drizzle-orm'
-import { isUuid, getOwnedProject, notFoundResponse } from '@/lib/tenancy'
+import { getOwnedProject, loadProjectForEdit, notFoundResponse, projectLevel } from '@/lib/tenancy'
 import { z } from 'zod'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -51,7 +51,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .map(r => ({ ...r.formulation, iterationCount: r.iterationCount }))
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
-  return NextResponse.json({ ...project, formulations: formList })
+  return NextResponse.json({ ...project, formulations: formList, canEdit: projectLevel(ctx, project) === 'edit' })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -60,9 +60,17 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { ctx } = auth
 
   const { id } = await params
-  if (!isUuid(id)) return notFoundResponse()
+  const loaded = await loadProjectForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  // A member can't move a project to a client they couldn't edit it under
+  if (parsed.data.client !== undefined && projectLevel(ctx, { id, client: parsed.data.client }) !== 'edit') {
+    return NextResponse.json(
+      { error: "You don't have edit access to that client's projects", code: 'forbidden' },
+      { status: 403 },
+    )
+  }
 
   const updates: Record<string, unknown> = { updatedAt: new Date() }
   const d = parsed.data
@@ -87,8 +95,8 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const { ctx } = auth
 
   const { id } = await params
-  const project = await getOwnedProject(ctx, id)
-  if (!project) return notFoundResponse()
+  const loaded = await loadProjectForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
   await db.delete(projects).where(and(eq(projects.id, id), eq(projects.accountId, ctx.account.id)))
   return new NextResponse(null, { status: 204 })
 }

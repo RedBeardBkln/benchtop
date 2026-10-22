@@ -156,9 +156,11 @@ function TargetForm({
 export function ProjectTargets({
   projectId,
   initialTargets,
+  readOnly = false,
 }: {
   projectId: string
   initialTargets: ProjectTarget[]
+  readOnly?: boolean
 }) {
   const queryClient = useQueryClient()
   const [targets, setTargets] = useState<ProjectTarget[]>(initialTargets)
@@ -256,7 +258,7 @@ export function ProjectTargets({
               </span>
 
               {/* Actions */}
-              <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/row:opacity-100 transition-opacity">
+              {!readOnly && <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/row:opacity-100 transition-opacity">
                 <button
                   onClick={() => setEditingIndex(i)}
                   className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
@@ -272,14 +274,14 @@ export function ProjectTargets({
                 >
                   <X size={13} />
                 </button>
-              </div>
+              </div>}
             </div>
           )
         )
       )}
 
       {/* Add form */}
-      {addingNew ? (
+      {readOnly ? null : addingNew ? (
         <TargetForm
           initial={EMPTY_TARGET()}
           nutrients={nutrients}

@@ -13,7 +13,7 @@ const schema = z.object({
 })
 
 export async function PUT(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

@@ -15,6 +15,7 @@ describe('mapSubscription', () => {
       priceId: 'price_1',
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
       cancelAtPeriodEnd: false,
+      seatQuantity: 0,
     })
   })
 

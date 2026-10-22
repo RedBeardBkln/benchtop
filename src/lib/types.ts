@@ -104,6 +104,8 @@ export type FormulationDetail = Formulation & {
     iterationNote: string | null
     updatedAt: string
   }>
+  // False for team members with view-only access to the project
+  canEdit: boolean
 }
 
 // USDA FoodData Central types

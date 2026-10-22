@@ -1,11 +1,15 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { redirect } from 'next/navigation'
 import { requirePage } from '@/lib/auth/context'
+import { canEditLibrary } from '@/lib/team-access'
 import { AppShell } from '@/components/app-shell'
 import { LabIntake } from '@/components/ingredients/lab-intake'
 
 export default async function LabIntakePage() {
   const ctx = await requirePage()
+  // Intake only adds to the library, so it's of no use with view-only access
+  if (!canEditLibrary(ctx.access)) redirect('/ingredients')
 
   return (
     <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>

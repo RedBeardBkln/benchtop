@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { memberAccessSchema } from './team-access'
 
 // Shared (client + server) validation for profile and invite-redemption inputs.
 
@@ -65,4 +66,16 @@ export const accountNameSchema = z.object({
 
 export const deleteAccountSchema = z.object({
   confirmEmail: z.string().trim().min(3).max(254),
+})
+
+// Team management (owners and admins). `access` only applies to role 'member'.
+export const teamInviteSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  role: z.enum(['admin', 'member']),
+  access: memberAccessSchema.optional(),
+})
+
+export const teamMemberUpdateSchema = z.object({
+  role: z.enum(['admin', 'member']),
+  access: memberAccessSchema.optional(),
 })

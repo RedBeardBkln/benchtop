@@ -4,6 +4,8 @@ import { db } from '@/lib/db'
 import { projects, formulations } from '@/lib/db/schema'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { projectLevel, visibleProjects } from '@/lib/tenancy'
+import { canCreateProject } from '@/lib/team-access'
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -35,7 +37,9 @@ export async function GET() {
     .groupBy(projects.id)
     .orderBy(desc(projects.updatedAt))
 
-  return NextResponse.json(rows)
+  return NextResponse.json(
+    visibleProjects(ctx, rows).map(r => ({ ...r, canEdit: projectLevel(ctx, r) === 'edit' })),
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -47,6 +51,18 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const { name, client, objectiveText } = parsed.data
+  if (!canCreateProject(ctx.access, client || null)) {
+    return NextResponse.json(
+      {
+        error: client
+          ? `You don't have edit access to ${client} projects`
+          : 'You can only create projects for clients you have edit access to',
+        code: 'forbidden',
+      },
+      { status: 403 },
+    )
+  }
+
   const [row] = await db
     .insert(projects)
     .values({

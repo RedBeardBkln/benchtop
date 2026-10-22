@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
-import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { loadFormulationForEdit } from '@/lib/tenancy'
 import { duplicateFormulation } from '@/lib/duplicate-formulation'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -12,8 +12,9 @@ export async function POST(_req: NextRequest, { params }: Ctx) {
   const { ctx } = auth
 
   const { id } = await params
-  const source = await getOwnedFormulation(ctx, id)
-  if (!source) return notFoundResponse()
+  const loaded = await loadFormulationForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
+  const source = loaded.formulation
 
   try {
     const created = await duplicateFormulation(source, { kind: 'iteration' })

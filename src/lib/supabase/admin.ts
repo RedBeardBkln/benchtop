@@ -67,3 +67,29 @@ export async function findAuthUserIdByEmail(email: string): Promise<string | nul
   }
   return null
 }
+
+// Emails of auth users by id (same two lookup paths as above). Missing users are left out.
+export async function getAuthEmails(userIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  if (userIds.length === 0) return out
+  try {
+    const rows = await db.execute(
+      sql`select id, email from auth.users where id in (${sql.join(userIds.map(id => sql`${id}::uuid`), sql`, `)})`,
+    )
+    for (const r of rows as unknown as Array<{ id: string; email: string | null }>) {
+      if (r.email) out.set(r.id, r.email)
+    }
+    return out
+  } catch {
+    // auth schema not reachable from this connection; fall through to the admin API
+  }
+  if (!isAdminConfigured()) return out
+  const admin = getSupabaseAdmin()
+  await Promise.all(
+    userIds.map(async id => {
+      const { data } = await admin.auth.admin.getUserById(id)
+      if (data.user?.email) out.set(id, data.user.email)
+    }),
+  )
+  return out
+}

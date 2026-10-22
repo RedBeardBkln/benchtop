@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { formulationNfpPanels } from '@/lib/db/schema'
-import { getOwnedFormulation, isUuid, notFoundResponse } from '@/lib/tenancy'
+import { isUuid, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string; panelId: string }> }
 
@@ -12,7 +12,9 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   if (!auth.ok) return auth.res
 
   const { id, panelId } = await params
-  if (!(await getOwnedFormulation(auth.ctx, id)) || !isUuid(panelId)) return notFoundResponse()
+  const loaded = await loadFormulationForEdit(auth.ctx, id)
+  if (!loaded.ok) return loaded.res
+  if (!isUuid(panelId)) return notFoundResponse()
 
   // Scoped to the owned formulation, so a panel id from another iteration/account is a miss
   const deleted = await db

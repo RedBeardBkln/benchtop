@@ -22,7 +22,7 @@ const IMAGE_TYPES: Record<string, 'image/jpeg' | 'image/png' | 'image/gif' | 'im
 const bodySchema = z.object({ docId: z.string().uuid() })
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

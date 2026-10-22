@@ -3,7 +3,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { formulations } from '@/lib/db/schema'
 import { z } from 'zod'
-import { getOwnedProject, notFoundResponse } from '@/lib/tenancy'
+import { loadProjectForEdit } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -24,8 +24,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const project = await getOwnedProject(ctx, projectId)
-  if (!project) return notFoundResponse()
+  const loaded = await loadProjectForEdit(ctx, projectId)
+  if (!loaded.ok) return loaded.res
 
   const { name, mode, servingSizeG, batchSizeG, notes } = parsed.data
   const newId = crypto.randomUUID()

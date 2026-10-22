@@ -4,7 +4,10 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { accounts } from '@/lib/db/schema'
 import { isEntitled } from '@/lib/billing/entitlement'
-import { billingNotConfiguredResponse, getPriceId, getStripe, isBillingConfigured } from '@/lib/billing/stripe'
+import {
+  billingNotConfiguredResponse, getPriceId, getSeatPriceId, getStripe, isBillingConfigured, isSeatBillingConfigured,
+} from '@/lib/billing/stripe'
+import { countSeats, planInterval } from '@/lib/billing/seat-sync'
 import { getAppOrigin } from '@/lib/app-url'
 
 // Starts a Stripe Checkout (subscription mode). Owner only; allowed while the account is unentitled.
@@ -56,11 +59,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Resubscribing with team members already in the account: their seats are part of the plan
+    const lineItems = [{ price: getPriceId(), quantity: 1 }]
+    const seats = await countSeats(ctx.account.id)
+    if (seats > 0 && isSeatBillingConfigured()) {
+      lineItems.push({ price: getSeatPriceId(await planInterval()), quantity: seats })
+    }
+
     const origin = getAppOrigin(req.nextUrl.origin)
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId ?? undefined,
-      line_items: [{ price: getPriceId(), quantity: 1 }],
+      line_items: lineItems,
       client_reference_id: ctx.account.id,
       subscription_data: { metadata: { account_id: ctx.account.id } },
       success_url: `${origin}/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,

@@ -11,7 +11,7 @@ type Ctx = { params: Promise<{ id: string }> }
 const bodySchema = z.object({ intoId: z.string().uuid() })
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

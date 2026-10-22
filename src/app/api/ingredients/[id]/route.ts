@@ -20,7 +20,7 @@ import { z } from 'zod'
 import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
 import { identityKey } from '@/lib/ingredient-identity'
 import { formatIngredientName } from '@/lib/ingredient-name'
-import { getOwnedIngredient, notFoundResponse, isUuid } from '@/lib/tenancy'
+import { getOwnedIngredient, notFoundResponse, isUuid, visibleProjects } from '@/lib/tenancy'
 import { INGREDIENT_CATEGORIES } from '@/lib/ingredient-categories'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -68,6 +68,7 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
           formulationName: formulations.name,
           projectId: projects.id,
           projectName: projects.name,
+          projectClient: projects.client,
         })
         .from(formulationLines)
         .innerJoin(formulations, eq(formulationLines.formulationId, formulations.id))
@@ -122,7 +123,13 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
       certs: certRows,
       subIngredients: subRows,
       docs: docRows,
-      formulations: formulationRows,
+      // Only formulations in projects the caller can see
+      formulations: visibleProjects(
+        ctx,
+        formulationRows.map(r => ({ ...r, id: r.projectId, client: r.projectClient })),
+      ).map(({ formulationId, formulationName, projectId, projectName }) => ({
+        formulationId, formulationName, projectId, projectName,
+      })),
       suppliers: supplierRows,
     })
   } catch (err) {
@@ -150,7 +157,7 @@ const patchSchema = z.object({
 })
 
 export async function PATCH(request: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
@@ -212,7 +219,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Ctx) {
-  const auth = await requireApi()
+  const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
   const { ctx } = auth
 

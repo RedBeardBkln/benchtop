@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { formulationNfpPanels } from '@/lib/db/schema'
-import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { getOwnedFormulation, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
 import { nfpModelSchema, nfpOptionsSchema } from '@/lib/nfp-model'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -52,7 +52,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { ctx } = auth
 
   const { id } = await params
-  if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
+  const loaded = await loadFormulationForEdit(ctx, id)
+  if (!loaded.ok) return loaded.res
 
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {

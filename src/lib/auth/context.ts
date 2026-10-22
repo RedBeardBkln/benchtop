@@ -5,8 +5,12 @@ import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/db'
 import { accountMembers, accounts, profiles, subscriptions } from '@/lib/db/schema'
 import { isDevBypassActive, isEntitled } from '@/lib/billing/entitlement'
+import {
+  accessForRole, canEditLibrary, DEFAULT_MEMBER_ACCESS, isTeamAdmin, memberAccessSchema,
+  type MemberAccess, type MemberRole,
+} from '@/lib/team-access'
 
-export type MemberRole = 'owner' | 'member'
+export type { MemberRole } from '@/lib/team-access'
 
 export type AuthContext = {
   user: { id: string; email: string | undefined }
@@ -18,6 +22,8 @@ export type AuthContext = {
     createdAt: Date
   }
   role: MemberRole
+  // What a 'member' may see and edit; null for owners and admins (unrestricted)
+  access: MemberAccess | null
   profile: typeof profiles.$inferSelect | null
   subscription: typeof subscriptions.$inferSelect | null
   entitled: boolean
@@ -39,7 +45,7 @@ export async function getContext(): Promise<ContextResult> {
   if (!user) return { ok: false, reason: 'unauthenticated' }
 
   const [row] = await db
-    .select({ role: accountMembers.role, account: accounts })
+    .select({ role: accountMembers.role, access: accountMembers.access, account: accounts })
     .from(accountMembers)
     .innerJoin(accounts, eq(accountMembers.accountId, accounts.id))
     .where(eq(accountMembers.userId, user.id))
@@ -58,6 +64,11 @@ export async function getContext(): Promise<ContextResult> {
     devBypass: isDevBypassActive(),
   })
 
+  const role: MemberRole = row.role === 'owner' || row.role === 'admin' ? row.role : 'member'
+  // A malformed stored value falls back to the restrictive default, never to full access
+  const stored = memberAccessSchema.safeParse(row.access)
+  const access = accessForRole(role, stored.success ? stored.data : DEFAULT_MEMBER_ACCESS)
+
   const ctx: AuthContext = {
     user: { id: user.id, email: user.email },
     account: {
@@ -67,7 +78,8 @@ export async function getContext(): Promise<ContextResult> {
       stripeCustomerId: row.account.stripeCustomerId,
       createdAt: row.account.createdAt,
     },
-    role: row.role === 'owner' ? 'owner' : 'member',
+    role,
+    access,
     profile: profile ?? null,
     subscription: subscription ?? null,
     entitled,
@@ -80,8 +92,16 @@ export async function getContext(): Promise<ContextResult> {
 export type RequireOptions = {
   // Settings, billing APIs and the like must work for signed-in members without a subscription
   allowUnentitled?: boolean
-  role?: MemberRole
+  role?: 'owner'
+  // Owners and admins: team management
+  teamAdmin?: boolean
+  // Changes to the ingredient library, suppliers, equipment or lab intake
+  libraryEdit?: boolean
   platformAdmin?: boolean
+}
+
+function forbidden(error: string) {
+  return NextResponse.json({ error, code: 'forbidden' }, { status: 403 })
 }
 
 export type ApiAuth = { ok: true; ctx: AuthContext } | { ok: false; res: NextResponse }
@@ -108,7 +128,13 @@ export async function requireApi(opts: RequireOptions = {}): Promise<ApiAuth> {
     }
   }
   if (opts.role === 'owner' && ctx.role !== 'owner') {
-    return { ok: false, res: NextResponse.json({ error: 'Only the account owner can do this', code: 'forbidden' }, { status: 403 }) }
+    return { ok: false, res: forbidden('Only the account owner can do this') }
+  }
+  if (opts.teamAdmin && !isTeamAdmin(ctx.role)) {
+    return { ok: false, res: forbidden('Only account admins can do this') }
+  }
+  if (opts.libraryEdit && !canEditLibrary(ctx.access)) {
+    return { ok: false, res: forbidden('You have view-only access to the ingredient library') }
   }
   if (opts.platformAdmin && !ctx.isPlatformAdmin) {
     return { ok: false, res: NextResponse.json({ error: 'Forbidden', code: 'forbidden' }, { status: 403 }) }
@@ -126,6 +152,7 @@ export async function requirePage(opts: RequireOptions = {}): Promise<AuthContex
   const ctx = result.ctx!
   if (!result.ok && !opts.allowUnentitled) redirect('/settings/billing?reason=subscription_required')
   if (opts.role === 'owner' && ctx.role !== 'owner') notFound()
+  if (opts.teamAdmin && !isTeamAdmin(ctx.role)) notFound()
   if (opts.platformAdmin && !ctx.isPlatformAdmin) notFound()
   return ctx
 }
