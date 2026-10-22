@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { FolderOpen, FlaskConical, LogOut, MailPlus, Settings, Truck } from 'lucide-react'
+import { Building2, FolderOpen, FlaskConical, LogOut, MailPlus, Settings, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 
@@ -13,6 +13,9 @@ const NAV = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
+// Only shown to account owners and admins (client records hold accounting and shipping details)
+const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2 }
+
 // Only shown to platform admins
 const ADMIN_NAV = [{ href: '/admin/invitations', label: 'Invitations', icon: MailPlus }]
 
@@ -20,14 +23,17 @@ export function AppShell({
   children,
   userEmail,
   isPlatformAdmin = false,
+  showClients = false,
 }: {
   children: React.ReactNode
   userEmail?: string
   isPlatformAdmin?: boolean
+  showClients?: boolean
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const nav = isPlatformAdmin ? [...NAV, ...ADMIN_NAV] : NAV
+  const base = showClients ? [NAV[0], CLIENTS_NAV, ...NAV.slice(1)] : NAV
+  const nav = isPlatformAdmin ? [...base, ...ADMIN_NAV] : base
 
   async function signOut() {
     const supabase = createClient()

@@ -3,6 +3,7 @@ import { requirePage } from '@/lib/auth/context'
 import { getOwnedFormulation } from '@/lib/tenancy'
 import { AppShell } from '@/components/app-shell'
 import { FormulationGrid } from '@/components/formulations/formulation-grid'
+import { isTeamAdmin } from '@/lib/team-access'
 
 export default async function FormulationPage({
   params,
@@ -15,7 +16,7 @@ export default async function FormulationPage({
   if (!(await getOwnedFormulation(ctx, id))) notFound()
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
       <FormulationGrid key={id} id={id} />
     </AppShell>
   )

@@ -111,3 +111,10 @@ export function accessForRole(role: MemberRole, access: MemberAccess | null | un
   if (isTeamAdmin(role)) return null
   return access ?? DEFAULT_MEMBER_ACCESS
 }
+
+/** Point client grants for `from` at the renamed client `to`; null when nothing changed. */
+export function renameClientGrants(access: MemberAccess, from: string, to: string): MemberAccess | null {
+  const key = normalizeClient(from)
+  if (!access.clients.some(c => normalizeClient(c.client) === key)) return null
+  return { ...access, clients: access.clients.map(c => (normalizeClient(c.client) === key ? { ...c, client: to } : c)) }
+}

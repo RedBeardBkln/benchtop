@@ -6,10 +6,11 @@ import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { projectLevel, visibleProjects } from '@/lib/tenancy'
 import { canCreateProject } from '@/lib/team-access'
+import { getOwnedClient } from '@/lib/clients-server'
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
-  client: z.string().max(255).optional().or(z.literal('')),
+  clientId: z.string().uuid().nullable().optional(),
   objectiveText: z.string().max(5000).optional().or(z.literal('')),
 })
 
@@ -23,6 +24,7 @@ export async function GET() {
       id: projects.id,
       name: projects.name,
       client: projects.client,
+      clientId: projects.clientId,
       status: projects.status,
       createdAt: projects.createdAt,
       updatedAt: projects.updatedAt,
@@ -50,8 +52,11 @@ export async function POST(req: NextRequest) {
   const parsed = createSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const { name, client, objectiveText } = parsed.data
-  if (!canCreateProject(ctx.access, client || null)) {
+  const { name, clientId, objectiveText } = parsed.data
+  const clientRow = clientId ? await getOwnedClient(ctx.account.id, clientId) : null
+  if (clientId && !clientRow) return NextResponse.json({ error: 'Client not found' }, { status: 400 })
+  const client = clientRow?.name ?? null
+  if (!canCreateProject(ctx.access, client)) {
     return NextResponse.json(
       {
         error: client
@@ -68,7 +73,8 @@ export async function POST(req: NextRequest) {
     .values({
       accountId: ctx.account.id,
       name,
-      client: client || null,
+      client,
+      clientId: clientRow?.id ?? null,
       objectiveText: objectiveText || null,
     })
     .returning()

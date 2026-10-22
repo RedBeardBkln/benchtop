@@ -3,7 +3,7 @@ import { requirePage } from '@/lib/auth/context'
 import { getOwnedIngredient } from '@/lib/tenancy'
 import { AppShell } from '@/components/app-shell'
 import { LibraryViewOnlyNotice } from '@/components/view-only-notice'
-import { canEditLibrary } from '@/lib/team-access'
+import { canEditLibrary, isTeamAdmin } from '@/lib/team-access'
 import { IngredientDetail } from '@/components/ingredients/ingredient-detail'
 
 export default async function IngredientDetailPage({
@@ -17,7 +17,7 @@ export default async function IngredientDetailPage({
   if (!(await getOwnedIngredient(ctx, id))) notFound()
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
       {!canEditLibrary(ctx.access) && (
         <div className="px-4 pt-5 sm:px-8 print:hidden"><LibraryViewOnlyNotice /></div>
       )}

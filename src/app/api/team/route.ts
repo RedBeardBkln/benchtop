@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { invitations, projects } from '@/lib/db/schema'
+import { clients as clientsTable, invitations, projects } from '@/lib/db/schema'
 import { planInterval, seatBillingState } from '@/lib/billing/seat-sync'
 import { listMembers } from '@/lib/team-server'
 import { memberAccessSchema } from '@/lib/team-access'
@@ -15,7 +15,7 @@ export async function GET() {
   const { ctx } = auth
 
   const now = new Date()
-  const [members, pending, projectRows] = await Promise.all([
+  const [members, pending, projectRows, clientRows] = await Promise.all([
     listMembers(ctx.account.id),
     db
       .select()
@@ -34,15 +34,11 @@ export async function GET() {
       .from(projects)
       .where(eq(projects.accountId, ctx.account.id))
       .orderBy(asc(projects.name)),
+    db.select({ name: clientsTable.name }).from(clientsTable).where(eq(clientsTable.accountId, ctx.account.id)),
   ])
 
-  // Distinct client names, case-insensitively (first spelling wins)
-  const clientsByKey = new Map<string, string>()
-  for (const p of projectRows) {
-    const name = p.client?.trim()
-    if (name && !clientsByKey.has(name.toLowerCase())) clientsByKey.set(name.toLowerCase(), name)
-  }
-  const clients = [...clientsByKey.values()].sort((a, b) => a.localeCompare(b))
+  // Client records (names are unique per account, case-insensitively)
+  const clients = clientRows.map(c => c.name).sort((a, b) => a.localeCompare(b))
 
   const state = seatBillingState({ billingExempt: ctx.account.billingExempt, subscription: ctx.subscription })
 

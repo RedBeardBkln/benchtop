@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, numeric, timestamp, jsonb, index } from 'drizzle-orm/pg-core'
 import { projectStatusEnum } from './enums'
 import { accounts } from './accounts'
+import { clients } from './clients'
 
 // targets jsonb shape: Array<{
 //   nutrient: string | null,   // nutrient name or null for custom
@@ -15,7 +16,9 @@ export const projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
   accountId: uuid('account_id').notNull().references(() => accounts.id),
   name: text('name').notNull(),
+  // Name copy of the linked client: team access grants match projects by client name
   client: text('client'),
+  clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
   objectiveText: text('objective_text'),
   proteinTargetPct: numeric('protein_target_pct', { precision: 6, scale: 3 }),
   targets: jsonb('targets').notNull().default('[]'),
@@ -28,4 +31,5 @@ export const projects = pgTable('projects', {
   index('projects_account_idx').on(t.accountId),
   index('projects_status_idx').on(t.status),
   index('projects_created_at_idx').on(t.createdAt),
+  index('projects_client_idx').on(t.clientId),
 ])

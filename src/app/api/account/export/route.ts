@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
-  accountMembers, batchRuns, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
+  accountMembers, batchRuns, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
   ingredientAllergens, ingredientCerts, ingredientDocs, ingredientNutrients, ingredientSuppliers,
   ingredients, intakeItems, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
   subIngredients, suppliers,
@@ -20,7 +20,8 @@ export async function GET() {
   const accountId = ctx.account.id
 
   const [
-    projectRows, formulationRows, ingredientRows, supplierRows, equipmentRows, memberRows, intakeRows,
+    projectRows, formulationRows, ingredientRows, supplierRows, equipmentRows, memberRows, intakeRows, clientRows,
+    contactRows,
   ] = await Promise.all([
     db.select().from(projects).where(eq(projects.accountId, accountId)),
     db.select().from(formulations).where(eq(formulations.accountId, accountId)),
@@ -33,6 +34,10 @@ export async function GET() {
       .leftJoin(profiles, eq(profiles.userId, accountMembers.userId))
       .where(eq(accountMembers.accountId, accountId)),
     db.select().from(intakeItems).where(eq(intakeItems.accountId, accountId)),
+    db.select().from(clients).where(eq(clients.accountId, accountId)),
+    db.select({ r: clientContacts }).from(clientContacts)
+      .innerJoin(clients, eq(clientContacts.clientId, clients.id))
+      .where(eq(clients.accountId, accountId)),
   ])
 
   const [
@@ -116,6 +121,8 @@ export async function GET() {
         }
       : { email: ctx.user.email ?? null },
     members: memberRows,
+    clients: clientRows,
+    clientContacts: contactRows.map(x => x.r),
     projects: projectRows,
     formulations: formulationRows,
     formulationLines: lineRows.map(x => x.r),

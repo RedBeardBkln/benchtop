@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   accessForRole, canCreateAnyProject, canCreateProject, canEditLibrary, DEFAULT_MEMBER_ACCESS,
-  memberAccessSchema, projectAccess, summarizeAccess, type MemberAccess,
+  memberAccessSchema, projectAccess, renameClientGrants, summarizeAccess, type MemberAccess,
 } from './team-access'
 
 const P1 = '11111111-1111-4111-8111-111111111111'
@@ -102,5 +102,16 @@ describe('summarizeAccess', () => {
         projects: [{ projectId: P1, level: 'edit' }],
       })),
     ).toBe('All projects: view · 2 clients · 1 project · Library: edit')
+  })
+})
+
+describe('renameClientGrants', () => {
+  it('follows a client rename, case-insensitively, and reports no-ops', () => {
+    const a = access({ clients: [{ client: 'acme ', level: 'edit' }, { client: 'Beta', level: 'view' }] })
+    expect(renameClientGrants(a, 'ACME', 'Acme Foods')?.clients).toEqual([
+      { client: 'Acme Foods', level: 'edit' },
+      { client: 'Beta', level: 'view' },
+    ])
+    expect(renameClientGrants(a, 'Gamma', 'Delta')).toBeNull()
   })
 })

@@ -9,6 +9,7 @@ export * from './nutrients'
 export * from './ingredients'
 export * from './suppliers'
 export * from './equipment'
+export * from './clients'
 export * from './projects'
 export * from './formulations'
 export * from './reverse'
@@ -27,6 +28,7 @@ import {
 } from './ingredients'
 import { suppliers, ingredientSuppliers } from './suppliers'
 import { projects } from './projects'
+import { clients, clientContacts } from './clients'
 import {
   formulations,
   formulationLines,
@@ -113,7 +115,17 @@ export const ingredientDocsRelations = relations(ingredientDocs, ({ one }) => ({
   }),
 }))
 
-export const projectsRelations = relations(projects, ({ many }) => ({
+export const clientsRelations = relations(clients, ({ many }) => ({
+  contacts: many(clientContacts),
+  projects: many(projects),
+}))
+
+export const clientContactsRelations = relations(clientContacts, ({ one }) => ({
+  client: one(clients, { fields: [clientContacts.clientId], references: [clients.id] }),
+}))
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  clientRecord: one(clients, { fields: [projects.clientId], references: [clients.id] }),
   formulations: many(formulations),
   reverseTargets: many(reverseTargets),
 }))

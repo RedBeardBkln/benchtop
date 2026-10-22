@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
+import { ClientSelect, useClientOptions } from '@/components/clients/client-select'
 
 export function NewProjectDialog({
   open,
@@ -16,7 +17,10 @@ export function NewProjectDialog({
   const router = useRouter()
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
-  const [client, setClient] = useState('')
+  const [clientId, setClientId] = useState<string | null>(null)
+  const { data: clientOptions } = useClientOptions()
+  // Members limited to certain clients must pick one of them
+  const needsClient = clientOptions?.canChooseNone === false && !clientId
   const [objectiveText, setObjectiveText] = useState('')
 
   const mutation = useMutation({
@@ -24,7 +28,7 @@ export function NewProjectDialog({
       fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), client: client.trim(), objectiveText: objectiveText.trim() }),
+        body: JSON.stringify({ name: name.trim(), clientId, objectiveText: objectiveText.trim() }),
       }).then(async r => {
         const body = await r.json()
         if (!r.ok) throw new Error(body.error ?? 'Create failed')
@@ -41,7 +45,7 @@ export function NewProjectDialog({
 
   function handleClose() {
     setName('')
-    setClient('')
+    setClientId(null)
     setObjectiveText('')
     onClose()
   }
@@ -60,7 +64,7 @@ export function NewProjectDialog({
 
         <form
           className="px-6 py-5 space-y-4"
-          onSubmit={e => { e.preventDefault(); if (name.trim()) mutation.mutate() }}
+          onSubmit={e => { e.preventDefault(); if (name.trim() && !needsClient) mutation.mutate() }}
         >
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -77,17 +81,13 @@ export function NewProjectDialog({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Client / customer
-              <span className="font-normal text-gray-400 ml-1">(optional)</span>
+            <label htmlFor="new-project-client" className="block text-xs font-medium text-gray-600 mb-1">
+              Client
+              {clientOptions?.canChooseNone !== false && (
+                <span className="font-normal text-gray-400 ml-1">(optional)</span>
+              )}
             </label>
-            <input
-              value={client}
-              onChange={e => setClient(e.target.value)}
-              placeholder="e.g. High-protein snack bar"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md
-                         focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <ClientSelect id="new-project-client" value={clientId} onChange={setClientId} />
           </div>
 
           <div>
@@ -115,7 +115,7 @@ export function NewProjectDialog({
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || mutation.isPending}
+              disabled={!name.trim() || needsClient || mutation.isPending}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md
                          hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >

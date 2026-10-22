@@ -7,6 +7,9 @@ import { toast } from 'sonner'
 import { ArrowLeft, Plus, FlaskConical, Lock, FileEdit, Target, Archive, RotateCcw, Edit2, Save, X } from 'lucide-react'
 import type { Project, Formulation, ProjectTarget } from '@/lib/types'
 import { ProjectTargets } from './project-targets'
+import Link from 'next/link'
+import { ClientSelect, useClientOptions } from '@/components/clients/client-select'
+import { readErrorMessage } from '@/lib/utils'
 
 // formulations holds the latest iteration of each formulation
 type ProjectWithFormulations = Project & {
@@ -114,6 +117,9 @@ export function ProjectDetail({ id }: { id: string }) {
   const [showArchived, setShowArchived] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameEdit, setNameEdit] = useState('')
+  const [editingClient, setEditingClient] = useState(false)
+  const [clientEdit, setClientEdit] = useState<string | null>(null)
+  const { data: clientOptions } = useClientOptions()
 
   const { data, isLoading, error } = useQuery<ProjectWithFormulations>({
     queryKey: ['project', id],
@@ -140,6 +146,26 @@ export function ProjectDetail({ id }: { id: string }) {
       toast.success('Project renamed')
     },
     onError: () => toast.error('Failed to rename project'),
+  })
+
+  const clientMutation = useMutation({
+    mutationFn: async (clientId: string | null) => {
+      const r = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId }),
+      })
+      if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to change client'))
+      return r.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['formulation'] })
+      setEditingClient(false)
+      toast.success('Client updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
   })
 
   const archiveMutation = useMutation({
@@ -232,8 +258,42 @@ export function ProjectDetail({ id }: { id: string }) {
                 )}
               </div>
             )}
-            <div className="flex items-center gap-2 mt-1.5">
-              {data.client && <span className="text-sm text-gray-500">{data.client}</span>}
+            {editingClient && (
+              <form
+                className="flex items-center gap-2 mt-2 max-w-md"
+                onSubmit={e => { e.preventDefault(); clientMutation.mutate(clientEdit) }}
+              >
+                <ClientSelect
+                  autoFocus
+                  value={clientEdit}
+                  onChange={setClientEdit}
+                  current={data.clientId && data.client ? { id: data.clientId, name: data.client } : null}
+                />
+                <button type="submit" disabled={clientMutation.isPending || clientEdit === data.clientId}
+                  className="flex items-center gap-1 px-3 py-2 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 shrink-0">
+                  <Save size={12} /> Save
+                </button>
+                <button type="button" onClick={() => setEditingClient(false)} aria-label="Cancel"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded shrink-0">
+                  <X size={14} />
+                </button>
+              </form>
+            )}
+            <div className="flex items-center gap-2 mt-1.5 group/client">
+              {data.client && !editingClient && (
+                clientOptions?.canManage && data.clientId
+                  ? <Link href={`/clients/${data.clientId}`} className="text-sm text-gray-500 hover:text-blue-700 hover:underline">{data.client}</Link>
+                  : <span className="text-sm text-gray-500">{data.client}</span>
+              )}
+              {canEdit && !editingClient && (
+                <button
+                  onClick={() => { setClientEdit(data.clientId ?? null); setEditingClient(true) }}
+                  className="text-xs text-gray-400 hover:text-blue-700"
+                  title="Change client"
+                >
+                  {data.client ? <Edit2 size={12} /> : '+ Add client'}
+                </button>
+              )}
               <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                 data.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
               }`}>

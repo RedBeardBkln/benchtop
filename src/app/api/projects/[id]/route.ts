@@ -5,6 +5,7 @@ import { projects, formulations } from '@/lib/db/schema'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { getOwnedProject, loadProjectForEdit, notFoundResponse, projectLevel } from '@/lib/tenancy'
 import { z } from 'zod'
+import { getOwnedClient } from '@/lib/clients-server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -21,7 +22,7 @@ const targetSchema = z.object({
 
 const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  client: z.string().max(255).nullable().optional(),
+  clientId: z.string().uuid().nullable().optional(),
   objectiveText: z.string().max(5000).nullable().optional(),
   status: z.enum(['active', 'archived']).optional(),
   targets: z.array(targetSchema).optional(),
@@ -64,8 +65,15 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (!loaded.ok) return loaded.res
   const parsed = patchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  // The project's client name follows the linked client record (team access matches on it)
+  let client: string | null | undefined
+  if (parsed.data.clientId !== undefined) {
+    const clientRow = parsed.data.clientId ? await getOwnedClient(ctx.account.id, parsed.data.clientId) : null
+    if (parsed.data.clientId && !clientRow) return NextResponse.json({ error: 'Client not found' }, { status: 400 })
+    client = clientRow?.name ?? null
+  }
   // A member can't move a project to a client they couldn't edit it under
-  if (parsed.data.client !== undefined && projectLevel(ctx, { id, client: parsed.data.client }) !== 'edit') {
+  if (client !== undefined && projectLevel(ctx, { id, client }) !== 'edit') {
     return NextResponse.json(
       { error: "You don't have edit access to that client's projects", code: 'forbidden' },
       { status: 403 },
@@ -75,7 +83,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const updates: Record<string, unknown> = { updatedAt: new Date() }
   const d = parsed.data
   if (d.name !== undefined) updates.name = d.name
-  if (d.client !== undefined) updates.client = d.client
+  if (client !== undefined) {
+    updates.client = client
+    updates.clientId = d.clientId ?? null
+  }
   if (d.objectiveText !== undefined) updates.objectiveText = d.objectiveText
   if (d.status !== undefined) updates.status = d.status
   if (d.targets !== undefined) updates.targets = d.targets
