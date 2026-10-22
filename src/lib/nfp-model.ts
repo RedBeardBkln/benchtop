@@ -40,8 +40,32 @@ const rowSchema = z.object({
   dvRule: appliedRuleSchema.optional(),
 })
 
+// FDA-permitted Nutrition Facts formats (21 CFR 101.9(d)(11)(iii), 101.9(j)(13)(ii)(A))
+export const NFP_LAYOUTS = ['standard', 'tabular', 'linear'] as const
+export type NfpLayout = (typeof NFP_LAYOUTS)[number]
+
+export const NFP_LAYOUT_INFO: Record<NfpLayout, { label: string; description: string; citation: string }> = {
+  standard: {
+    label: 'Standard (vertical)',
+    description: 'The default vertical format.',
+    citation: '21 CFR 101.9(d)(12)',
+  },
+  tabular: {
+    label: 'Tabular',
+    description: 'Side-by-side columns, for packages without room for the vertical format.',
+    citation: '21 CFR 101.9(d)(11)(iii)',
+  },
+  linear: {
+    label: 'Linear',
+    description: 'One running paragraph with permitted abbreviations, for small packages (under 40 sq in) without room for the tabular format.',
+    citation: '21 CFR 101.9(j)(13)(ii)(A)(2)',
+  },
+}
+
 export const nfpModelSchema = z.object({
   rulesVersion: str(32),
+  // Absent on panels saved before layouts existed, which were all standard
+  layout: z.enum(NFP_LAYOUTS).optional(),
   perServing: z.boolean(),
   basisLabel: str(64),
   servingsText: str(120),
@@ -80,6 +104,7 @@ export const nfpOptionsSchema = z.object({
   ingredientItems: z.array(statementItemSchema).max(300).optional(),
   // True when the statement was typed by hand instead of arranged as a list
   ingredientCustomText: z.boolean().optional(),
+  layout: z.enum(NFP_LAYOUTS).default('standard'),
 })
 export type NfpOptions = z.infer<typeof nfpOptionsSchema>
 
@@ -98,6 +123,7 @@ export type BuildNfpInput = {
   servingsPerContainer: number | undefined
   results: NutrientResult[]
   hideZeros?: boolean
+  layout?: NfpLayout
   extras?: ExtraNutrientInput[]
   allergenStatement?: string
   ingredientStatement?: string
@@ -144,6 +170,32 @@ export function formatExtraAmount(value: number, unit: string): string {
   if (value < 0.1) return value.toFixed(2)
   if (value < 10) return value.toFixed(1)
   return Math.round(value).toString()
+}
+
+/** The panel prints its own "Contains:", so drop one typed (or saved) at the start of the statement. */
+export function allergenBody(statement: string): string {
+  return statement.replace(/^\s*contains\s*:?\s*/i, '')
+}
+
+// Abbreviations FDA permits in the tabular and linear formats (21 CFR 101.9(j)(13)(ii)(B))
+const ABBREVIATIONS: Record<string, string> = {
+  'Saturated Fat': 'Sat. Fat',
+  'Polyunsaturated Fat': 'Polyunsat. Fat',
+  'Monounsaturated Fat': 'Monounsat. Fat',
+  'Cholesterol': 'Cholest.',
+  'Total Carbohydrate': 'Total Carb.',
+  'Dietary Fiber': 'Fiber',
+  'Vitamin D': 'Vit. D',
+  'Potassium': 'Potas.',
+}
+export const abbreviate = (label: string) => ABBREVIATIONS[label] ?? label
+
+/** The tabular format's two nutrient columns: fats, cholesterol and sodium, then carbohydrates and protein. */
+export function splitTabularRows(main: NfpRow[]): [NfpRow[], NfpRow[]] {
+  const at = main.findIndex(r => r.key === 'Total Carbohydrate')
+  if (at > 0) return [main.slice(0, at), main.slice(at)]
+  const half = Math.ceil(main.length / 2)
+  return [main.slice(0, half), main.slice(half)]
 }
 
 const sig = (n: number) => String(Number(n.toPrecision(4)))
@@ -291,6 +343,7 @@ export function buildNfpModel(input: BuildNfpInput): NfpModel {
 
   return {
     rulesVersion: RULES_VERSION,
+    layout: input.layout ?? 'standard',
     perServing,
     basisLabel: perServing ? 'Amount per serving' : 'Amount per 100g',
     servingsText,

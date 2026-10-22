@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { NutrientResult } from './formulation-calc'
-import { buildNfpModel, nfpModelSchema } from './nfp-model'
+import { abbreviate, allergenBody, buildNfpModel, nfpModelSchema, nfpOptionsSchema, splitTabularRows } from './nfp-model'
 
 const n = (name: string, unit: string, perServing: number, dv: number | null = null, category = 'macros'): NutrientResult => ({
   nutrientId: name, name, unit, category, perFinished100g: perServing * 2, perServing, dailyValueAmount: dv,
@@ -114,5 +114,37 @@ describe('buildNfpModel', () => {
   it('produces JSON that satisfies the persistence schema and survives a round trip', () => {
     const parsed = nfpModelSchema.safeParse(JSON.parse(JSON.stringify(build({ allergenStatement: 'Milk', ingredientStatement: 'Oats' }))))
     expect(parsed.success).toBe(true)
+  })
+})
+
+describe('layouts', () => {
+  it('records the chosen layout, standard by default, and old saved panels still validate', () => {
+    expect(build().layout).toBe('standard')
+    expect(build({ layout: 'tabular' }).layout).toBe('tabular')
+    const { layout: _omit, ...legacy } = build()
+    void _omit
+    expect(nfpModelSchema.safeParse(legacy).success).toBe(true)
+    expect(nfpOptionsSchema.parse({}).layout).toBe('standard')
+  })
+
+  it('splits the tabular columns at Total Carbohydrate', () => {
+    const [left, right] = splitTabularRows(build().rows.filter(r => r.section === 'main'))
+    expect(left.at(-1)?.key).toBe('Sodium')
+    expect(right[0].key).toBe('Total Carbohydrate')
+    expect(right.at(-1)?.key).toBe('Protein')
+  })
+
+  it('uses FDA-permitted abbreviations and leaves other labels alone', () => {
+    expect(abbreviate('Total Carbohydrate')).toBe('Total Carb.')
+    expect(abbreviate('Cholesterol')).toBe('Cholest.')
+    expect(abbreviate('Protein')).toBe('Protein')
+  })
+})
+
+describe('allergenBody', () => {
+  it('drops a leading "Contains:" because the panel prints its own', () => {
+    expect(allergenBody('Contains: Milk, Wheat.')).toBe('Milk, Wheat.')
+    expect(allergenBody('  CONTAINS Milk')).toBe('Milk')
+    expect(allergenBody('Milk. May contain peanuts.')).toBe('Milk. May contain peanuts.')
   })
 })

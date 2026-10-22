@@ -131,7 +131,7 @@ export function renameItem(items: StatementItem[], id: string, name: string): St
   })
 }
 
-/** "Contains: Milk, Soybeans." from every declared allergen of the ingredients in use; empty when none. */
+/** "Milk, Soybeans." from every declared allergen of the ingredients in use (the panel prints "Contains:"); empty when none. */
 export function allergenStatement(lines: StatementLine[], info: Map<string, LabelInfo>): string {
   const byKey = new Map<string, string>()
   for (const l of lines) {
@@ -142,5 +142,5 @@ export function allergenStatement(lines: StatementLine[], info: Map<string, Labe
     }
   }
   const all = [...byKey.values()].sort((a, b) => a.localeCompare(b))
-  return all.length > 0 ? `Contains: ${all.join(', ')}.` : ''
+  return all.length > 0 ? `${all.join(', ')}.` : ''
 }

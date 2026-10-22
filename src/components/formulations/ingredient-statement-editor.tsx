@@ -20,17 +20,21 @@ function NameEditor({ item, editing, onEdit, onRename, onDone }: {
   onDone: () => void
 }) {
   if (editing) {
+    // Full width and wrapping, so long names stay readable while they're edited
     return (
-      <input
+      <textarea
         autoFocus
         value={item.name}
-        onChange={e => onRename(e.target.value)}
+        rows={Math.min(4, Math.max(1, Math.ceil(item.name.length / 45)))}
+        onChange={e => onRename(e.target.value.replace(/\n/g, ' '))}
         onFocus={e => e.target.select()}
         onBlur={onDone}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') onDone() }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); onDone() }
+        }}
         placeholder={item.children.length > 0 ? 'Name this ingredient' : 'Label name'}
         aria-label="Name on the label"
-        className="min-w-0 flex-1 px-1.5 py-0.5 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="block w-full px-1.5 py-1 text-sm border border-blue-300 rounded resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
     )
   }
@@ -39,12 +43,12 @@ function NameEditor({ item, editing, onEdit, onRename, onDone }: {
       type="button"
       onClick={onEdit}
       title="Rename on this label"
-      className="group/name inline-flex items-center gap-1 min-w-0 text-left text-sm text-gray-900 hover:text-blue-700"
+      className="group/name max-w-full text-left text-sm text-gray-900 hover:text-blue-700 break-words"
     >
-      <span className={`truncate ${item.name.trim() ? '' : 'italic text-gray-400'}`}>
+      <span className={item.name.trim() ? '' : 'italic text-gray-400'}>
         {item.name.trim() || 'Unnamed'}
       </span>
-      <Pencil size={11} className="shrink-0 text-gray-300 group-hover/name:text-blue-500" />
+      <Pencil size={11} className="inline ml-1 align-baseline text-gray-300 group-hover/name:text-blue-500" />
     </button>
   )
 }
@@ -115,9 +119,9 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
                 isTarget && hover?.zone === 'after' ? 'border-b-2 !border-b-blue-500' : ''
               }`}
             >
-              <div className="flex items-center gap-2">
-                <GripVertical size={14} className="shrink-0 text-gray-300 cursor-grab active:cursor-grabbing" />
-                <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
+              <div className="flex items-start gap-2">
+                <GripVertical size={14} className="shrink-0 mt-0.5 text-gray-300 cursor-grab active:cursor-grabbing" />
+                <div className="flex-1 min-w-0">
                   <NameEditor
                     item={item}
                     editing={editingId === item.id}
@@ -126,7 +130,7 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
                     onDone={() => setEditingId(null)}
                   />
                   {!isGroup && item.subs.length > 0 && (
-                    <span className="truncate text-xs text-gray-400">({item.subs.join(', ')})</span>
+                    <div className="text-xs text-gray-400 break-words">({item.subs.join(', ')})</div>
                   )}
                 </div>
                 {isTarget && hover?.zone === 'combine' && (
@@ -149,8 +153,8 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
               {isGroup && (
                 <ul className="mt-1 ml-6 pl-2 border-l-2 border-gray-100 space-y-0.5">
                   {item.children.map(child => (
-                    <li key={child.id} className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
+                    <li key={child.id} className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
                         <NameEditor
                           item={child}
                           editing={editingId === child.id}
@@ -159,9 +163,9 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
                           onDone={() => setEditingId(null)}
                         />
                         {(child.children.length > 0 || child.subs.length > 0) && (
-                          <span className="truncate text-xs text-gray-400">
+                          <div className="text-xs text-gray-400 break-words">
                             ({(child.children.length > 0 ? child.children.map(c => c.name) : child.subs).join(', ')})
-                          </span>
+                          </div>
                         )}
                       </div>
                       <span className="shrink-0 font-mono text-xs text-gray-400 tabular-nums">{pct(child.weightG)}</span>

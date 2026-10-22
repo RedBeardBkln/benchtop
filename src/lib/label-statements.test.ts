@@ -88,7 +88,7 @@ describe('allergenStatement', () => {
       { ingredientId: 'milk', ingredientName: 'Milk', weightG: 30 },
       { ingredientId: 'soy', ingredientName: 'Lecithin', weightG: 1 },
       { ingredientId: 'milk', ingredientName: 'Milk', weightG: 2 },
-    ], info)).toBe('Contains: Celery, Gluten, Milk, soybeans, Wheat.')
+    ], info)).toBe('Celery, Gluten, Milk, soybeans, Wheat.')
   })
 
   it('is empty without allergens and ignores unused lines', () => {

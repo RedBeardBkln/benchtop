@@ -7,7 +7,10 @@ import { toast } from 'sonner'
 import { format as formatDate } from 'date-fns'
 import { NfpPanel } from './nfp-panel'
 import type { NutrientResult } from '@/lib/formulation-calc'
-import { buildNfpModel, STANDARD_NFP_NAMES, type ExtraNutrientInput, type NfpModel, type NfpOptions } from '@/lib/nfp-model'
+import {
+  buildNfpModel, NFP_LAYOUT_INFO, NFP_LAYOUTS, STANDARD_NFP_NAMES,
+  type ExtraNutrientInput, type NfpLayout, type NfpModel, type NfpOptions,
+} from '@/lib/nfp-model'
 import { declareDvPct, isDvTiered, ruleReferences } from '@/lib/fda-rounding'
 import { nfpFileName } from '@/lib/download-name'
 import {
@@ -116,6 +119,7 @@ export function NfpDialog({
   const [saveName, setSaveName] = useState('')
   const [rulesOpen, setRulesOpen] = useState(false)
   const [format, setFormat] = useState<Format>('png')
+  const [layout, setLayout] = useState<NfpLayout>('standard')
   const [includeAllergen, setIncludeAllergen] = useState(false)
   const [includeIngredients, setIncludeIngredients] = useState(false)
   // null until the user edits (or a saved panel is restored), so the defaults can fill in once label info loads
@@ -196,11 +200,12 @@ export function NfpDialog({
       servingsPerContainer,
       results,
       hideZeros,
+      layout,
       extras: showExtras ? extraInputs : undefined,
       allergenStatement: includeAllergen ? allergenText : undefined,
       ingredientStatement: includeIngredients ? ingredientText : undefined,
     }),
-    [servingSizeG, servingsPerContainer, results, hideZeros, showExtras, extraInputs,
+    [servingSizeG, servingsPerContainer, results, hideZeros, layout, showExtras, extraInputs,
       includeAllergen, allergenText, includeIngredients, ingredientText],
   )
   const activeModel = viewing ? viewing.model : liveModel
@@ -208,11 +213,12 @@ export function NfpDialog({
   const currentOptions = (): NfpOptions => ({
     hideZeros, showExtras, selectedExtras: [...selectedExtras],
     includeAllergen, allergenText, includeIngredients, ingredientText,
-    ingredientItems: statementItems, ingredientCustomText: customIngredientText !== null,
+    ingredientItems: statementItems, ingredientCustomText: customIngredientText !== null, layout,
   })
 
   function restoreOptions(o: NfpOptions) {
     setHideZeros(o.hideZeros)
+    setLayout(o.layout)
     setShowExtras(o.showExtras)
     setExtrasOpen(false)
     setSelectedExtras(new Set(o.selectedExtras))
@@ -323,12 +329,14 @@ export function NfpDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-8 px-4 print:static print:bg-white print:p-0 print:overflow-visible">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl print:shadow-none print:rounded-none print:max-w-none">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl print:shadow-none print:rounded-none print:max-w-none">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 print:hidden">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Nutrition Facts Panel</h2>
-            <p className="text-xs text-gray-400 mt-0.5">FDA 2020 standard format · rounded per 21 CFR 101.9</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              FDA 2020 {NFP_LAYOUT_INFO[(viewing?.model.layout ?? layout)].label.toLowerCase()} format · rounded per 21 CFR 101.9
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -341,6 +349,26 @@ export function NfpDialog({
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 p-4 sm:p-6">
           {/* Left: options — scrollable independently so the preview is never inside an overflow container */}
           <div className="flex-1 space-y-5 min-w-0 overflow-y-auto max-h-[80vh] pr-1 print:hidden">
+
+            {/* FDA layout */}
+            <div>
+              <label htmlFor="nfp-layout" className="block text-xs font-medium text-gray-600 mb-2">
+                Layout
+              </label>
+              <select
+                id="nfp-layout"
+                value={layout}
+                onChange={e => setLayout(e.target.value as NfpLayout)}
+                className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {NFP_LAYOUTS.map(l => (
+                  <option key={l} value={l}>{NFP_LAYOUT_INFO[l].label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                {NFP_LAYOUT_INFO[layout].description} ({NFP_LAYOUT_INFO[layout].citation})
+              </p>
+            </div>
 
             {/* Format selector */}
             <div>
@@ -486,8 +514,12 @@ export function NfpDialog({
                   onChange={e => setAllergenText(e.target.value)}
                   placeholder="e.g. Milk, Wheat, Soy. May contain traces of Tree Nuts and Peanuts."
                   rows={2}
+                  aria-label="Allergen statement"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
                 />
+              )}
+              {includeAllergen && (
+                <p className="text-xs text-gray-400 mt-1">Printed after &ldquo;Contains:&rdquo; on the panel.</p>
               )}
             </div>
 
