@@ -42,12 +42,7 @@ export default function LoginForm() {
           </h1>
           <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-700 mt-3">Weigh it. Tweak it.</p>
         </div>
-        <img
-          src="/LaunchTime logo-transparent.png"
-          alt="LaunchTime Solutions"
-          className="w-32 object-contain mb-2"
-        />
-        <p className="text-xs text-gray-500 mt-2">Access is by invitation only.</p>
+        <p className="text-xs text-gray-500">Access is by invitation only.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
