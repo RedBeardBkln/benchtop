@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { ArrowDownWideNarrow, CornerUpLeft, GripVertical, Pencil, RotateCcw, Ungroup } from 'lucide-react'
 import {
-  combineItems, isDescendingByWeight, moveItem, removeFromGroup, renameItem, separateGroup, sortByWeight,
-  type StatementItem,
+  combineItems, isDescendingByWeight, moveItem, removeFromGroup, renameItem, separateGroup, setSubIngredients,
+  sortByWeight, splitIngredientList, type StatementItem,
 } from '@/lib/label-statements'
 
 // Arrange the NFP ingredient statement: drag an entry near the top or bottom edge of another to move it,
@@ -12,37 +12,74 @@ import {
 
 type Zone = 'before' | 'after' | 'combine'
 
-function NameEditor({ item, editing, onEdit, onRename, onDone }: {
+const rowsFor = (text: string) => Math.min(4, Math.max(1, Math.ceil(text.length / 45)))
+const fieldCls =
+  'block w-full px-1.5 py-1 text-sm border border-blue-300 rounded resize-y focus:outline-none focus:ring-2 focus:ring-blue-500'
+
+function NameEditor({ item, editing, onEdit, onRename, onSubs, onDone }: {
   item: StatementItem
   editing: boolean
   onEdit: () => void
   onRename: (name: string) => void
+  onSubs: (subs: string[]) => void
   onDone: () => void
 }) {
+  // The typed list is kept as text so separators can be typed freely; the entry gets the parsed list
+  const [subsDraft, setSubsDraft] = useState(item.subs.join(', '))
+  const [wasEditing, setWasEditing] = useState(editing)
+  if (editing !== wasEditing) {
+    setWasEditing(editing)
+    if (editing) setSubsDraft(item.subs.join(', '))
+  }
+
   if (editing) {
-    // Full width and wrapping, so long names stay readable while they're edited
+    const finishKeys = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); onDone() }
+    }
+    // Full width and wrapping, so long names stay readable while they're edited.
+    // Editing ends when focus leaves both fields, not when it moves between them.
     return (
-      <textarea
-        autoFocus
-        value={item.name}
-        rows={Math.min(4, Math.max(1, Math.ceil(item.name.length / 45)))}
-        onChange={e => onRename(e.target.value.replace(/\n/g, ' '))}
-        onFocus={e => e.target.select()}
-        onBlur={onDone}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); onDone() }
-        }}
-        placeholder={item.children.length > 0 ? 'Name this ingredient' : 'Label name'}
-        aria-label="Name on the label"
-        className="block w-full px-1.5 py-1 text-sm border border-blue-300 rounded resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+      <div
+        className="space-y-1"
+        onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onDone() }}
+      >
+        <textarea
+          autoFocus
+          value={item.name}
+          rows={rowsFor(item.name)}
+          onChange={e => onRename(e.target.value.replace(/\n/g, ' '))}
+          onFocus={e => e.target.select()}
+          onKeyDown={finishKeys}
+          placeholder={item.children.length > 0 ? 'Name this ingredient' : 'Label name'}
+          aria-label="Name on the label"
+          className={fieldCls}
+        />
+        {item.children.length === 0 && (
+          <div>
+            <textarea
+              value={subsDraft}
+              rows={rowsFor(subsDraft)}
+              onChange={e => {
+                const v = e.target.value.replace(/\n/g, ' ')
+                setSubsDraft(v)
+                onSubs(splitIngredientList(v))
+              }}
+              onKeyDown={finishKeys}
+              placeholder="Ingredients in parentheses, separated by commas (optional)"
+              aria-label={`Ingredients in parentheses after ${item.name || 'this ingredient'}`}
+              className={`${fieldCls} text-xs`}
+            />
+            <p className="mt-0.5 text-[11px] text-gray-400">In parentheses, separated by commas. Changes this label only.</p>
+          </div>
+        )}
+      </div>
     )
   }
   return (
     <button
       type="button"
       onClick={onEdit}
-      title="Rename on this label"
+      title="Edit on this label"
       className="group/name max-w-full text-left text-sm text-gray-900 hover:text-blue-700 break-words"
     >
       <span className={item.name.trim() ? '' : 'italic text-gray-400'}>
@@ -86,6 +123,7 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
   }
 
   const rename = (id: string) => (name: string) => onChange(renameItem(items, id, name))
+  const editSubs = (id: string) => (subs: string[]) => onChange(setSubIngredients(items, id, subs))
 
   return (
     <div className="space-y-2">
@@ -127,9 +165,10 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
                     editing={editingId === item.id}
                     onEdit={() => setEditingId(item.id)}
                     onRename={rename(item.id)}
+                    onSubs={editSubs(item.id)}
                     onDone={() => setEditingId(null)}
                   />
-                  {!isGroup && item.subs.length > 0 && (
+                  {!isGroup && item.subs.length > 0 && editingId !== item.id && (
                     <div className="text-xs text-gray-400 break-words">({item.subs.join(', ')})</div>
                   )}
                 </div>
@@ -160,9 +199,10 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
                           editing={editingId === child.id}
                           onEdit={() => setEditingId(child.id)}
                           onRename={rename(child.id)}
+                          onSubs={editSubs(child.id)}
                           onDone={() => setEditingId(null)}
                         />
-                        {(child.children.length > 0 || child.subs.length > 0) && (
+                        {(child.children.length > 0 || child.subs.length > 0) && editingId !== child.id && (
                           <div className="text-xs text-gray-400 break-words">
                             ({(child.children.length > 0 ? child.children.map(c => c.name) : child.subs).join(', ')})
                           </div>

@@ -131,6 +131,30 @@ export function renameItem(items: StatementItem[], id: string, name: string): St
   })
 }
 
+/** Replace an entry's parenthetical sub-ingredients (on this label only). */
+export function setSubIngredients(items: StatementItem[], id: string, subs: string[]): StatementItem[] {
+  return items.map(i => {
+    if (i.id === id) return { ...i, subs }
+    if (i.children.some(c => c.id === id)) return { ...i, children: setSubIngredients(i.children, id, subs) }
+    return i
+  })
+}
+
+/** Split a typed ingredient list on commas that aren't inside parentheses or brackets; drops empty entries. */
+export function splitIngredientList(text: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let current = ''
+  for (const ch of text) {
+    if (ch === '(' || ch === '[') depth++
+    else if ((ch === ')' || ch === ']') && depth > 0) depth--
+    if (ch === ',' && depth === 0) { parts.push(current); current = '' }
+    else current += ch
+  }
+  parts.push(current)
+  return parts.map(p => p.trim()).filter(Boolean)
+}
+
 /** "Milk, Soybeans." from every declared allergen of the ingredients in use (the panel prints "Contains:"); empty when none. */
 export function allergenStatement(lines: StatementLine[], info: Map<string, LabelInfo>): string {
   const byKey = new Map<string, string>()

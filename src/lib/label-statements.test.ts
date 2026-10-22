@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   allergenStatement, buildStatementItems, combineItems, ingredientStatement, isDescendingByWeight,
-  moveItem, removeFromGroup, renameItem, renderStatement, separateGroup, sortByWeight, type LabelInfo,
+  moveItem, removeFromGroup, renameItem, renderStatement, separateGroup, setSubIngredients, sortByWeight,
+  splitIngredientList, type LabelInfo,
 } from './label-statements'
 
 const info = new Map<string, LabelInfo>([
@@ -78,6 +79,31 @@ describe('arranging the statement', () => {
   it('renames an entry inside a group', () => {
     const grouped = combineItems(items, 'almonds', 'water', 'g1', 'Almond Milk')
     expect(renderStatement(renameItem(grouped, 'almonds', 'almonds'))).toContain('Almond Milk (Water, almonds)')
+  })
+})
+
+describe('editing sub-ingredients', () => {
+  it('splits only on top-level commas', () => {
+    expect(splitIngredientList('Wheat Flour, Niacin (Vitamin B3, Folate), , Iron ')).toEqual([
+      'Wheat Flour', 'Niacin (Vitamin B3, Folate)', 'Iron',
+    ])
+    expect(splitIngredientList('  ')).toEqual([])
+  })
+
+  it('replaces the parenthetical of a top-level or grouped entry', () => {
+    const items = buildStatementItems([
+      { ingredientId: 'flour', ingredientName: 'Flour', weightG: 50 },
+      { ingredientId: 'milk', ingredientName: 'Milk', weightG: 30 },
+      { ingredientId: 'salt', ingredientName: 'Salt', weightG: 1 },
+    ], info)
+    expect(renderStatement(setSubIngredients(items, 'flour', ['Wheat Flour', 'Iron']))).toBe(
+      'Enriched Wheat Flour (Wheat Flour, Iron), Milk, Salt',
+    )
+    const grouped = combineItems(items, 'salt', 'milk', 'g1', 'Mix')
+    expect(renderStatement(setSubIngredients(grouped, 'salt', ['Sea Salt']))).toBe(
+      'Enriched Wheat Flour (Wheat Flour, Niacin), Mix (Milk, Salt (Sea Salt))',
+    )
+    expect(renderStatement(setSubIngredients(items, 'flour', []))).toBe('Enriched Wheat Flour, Milk, Salt')
   })
 })
 
