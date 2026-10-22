@@ -5,6 +5,7 @@
 
 import { z } from 'zod'
 import type { NutrientResult } from '@/lib/formulation-calc'
+import type { StatementItem } from '@/lib/label-statements'
 import {
   AMOUNT_RULES, DV_CALC_NOTE, DV_RULES, RULES_VERSION, SERVINGS_PER_CONTAINER_RULE, SERVING_SIZE_RULE,
   declareAmount, declareDvPct, declareServingSize, declareServings, describeBands, isDvTiered,
@@ -58,6 +59,14 @@ export type AppliedRule = z.infer<typeof appliedRuleSchema>
 export type NfpRow = z.infer<typeof rowSchema>
 export type NfpModel = z.infer<typeof nfpModelSchema>
 
+const statementItemSchema: z.ZodType<StatementItem> = z.lazy(() => z.object({
+  id: str(64),
+  name: str(500),
+  weightG: z.number().finite(),
+  subs: z.array(str(500)).max(100),
+  children: z.array(statementItemSchema).max(100),
+}))
+
 /** Panel options remembered with a saved panel so the dialog can restore its settings. */
 export const nfpOptionsSchema = z.object({
   hideZeros: z.boolean().default(false),
@@ -67,6 +76,10 @@ export const nfpOptionsSchema = z.object({
   allergenText: str(2000).default(''),
   includeIngredients: z.boolean().default(false),
   ingredientText: str(6000).default(''),
+  // The arranged ingredient statement (order and combined groups); absent on panels saved before it existed
+  ingredientItems: z.array(statementItemSchema).max(300).optional(),
+  // True when the statement was typed by hand instead of arranged as a list
+  ingredientCustomText: z.boolean().optional(),
 })
 export type NfpOptions = z.infer<typeof nfpOptionsSchema>
 

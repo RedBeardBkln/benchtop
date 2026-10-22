@@ -10,7 +10,11 @@ import type { NutrientResult } from '@/lib/formulation-calc'
 import { buildNfpModel, STANDARD_NFP_NAMES, type ExtraNutrientInput, type NfpModel, type NfpOptions } from '@/lib/nfp-model'
 import { declareDvPct, isDvTiered, ruleReferences } from '@/lib/fda-rounding'
 import { nfpFileName } from '@/lib/download-name'
-import { allergenStatement, ingredientStatement, type LabelInfo, type StatementLine } from '@/lib/label-statements'
+import {
+  allergenStatement, buildStatementItems, renderStatement,
+  type LabelInfo, type StatementItem, type StatementLine,
+} from '@/lib/label-statements'
+import { IngredientStatementEditor } from './ingredient-statement-editor'
 
 type Format = 'png' | 'jpg' | 'pdf'
 
@@ -116,7 +120,9 @@ export function NfpDialog({
   const [includeIngredients, setIncludeIngredients] = useState(false)
   // null until the user edits (or a saved panel is restored), so the defaults can fill in once label info loads
   const [allergenEdit, setAllergenText] = useState<string | null>(null)
-  const [ingredientEdit, setIngredientText] = useState<string | null>(null)
+  const [itemsEdit, setItemsEdit] = useState<StatementItem[] | null>(null)
+  // Set when the ingredient statement is typed by hand instead of arranged as a list
+  const [customIngredientText, setCustomIngredientText] = useState<string | null>(null)
 
   const ingredientIds = [...new Set(lines.map(l => l.ingredientId))].sort()
   const { data: labelInfo } = useQuery<Map<string, LabelInfo>>({
@@ -131,7 +137,8 @@ export function NfpDialog({
   })
   const info = useMemo(() => labelInfo ?? new Map<string, LabelInfo>(), [labelInfo])
   const allergenText = allergenEdit ?? allergenStatement(lines, info)
-  const ingredientText = ingredientEdit ?? ingredientStatement(lines, info)
+  const statementItems = useMemo(() => itemsEdit ?? buildStatementItems(lines, info), [itemsEdit, lines, info])
+  const ingredientText = customIngredientText ?? renderStatement(statementItems)
   const [hideZeros, setHideZeros] = useState(false)
   const [showExtras, setShowExtras] = useState(false)
   const [extrasOpen, setExtrasOpen] = useState(false)
@@ -201,6 +208,7 @@ export function NfpDialog({
   const currentOptions = (): NfpOptions => ({
     hideZeros, showExtras, selectedExtras: [...selectedExtras],
     includeAllergen, allergenText, includeIngredients, ingredientText,
+    ingredientItems: statementItems, ingredientCustomText: customIngredientText !== null,
   })
 
   function restoreOptions(o: NfpOptions) {
@@ -211,7 +219,9 @@ export function NfpDialog({
     setIncludeAllergen(o.includeAllergen)
     setAllergenText(o.allergenText)
     setIncludeIngredients(o.includeIngredients)
-    setIngredientText(o.ingredientText)
+    // Panels saved before the arranged list only have the text, so they reopen as hand-typed text
+    setItemsEdit(o.ingredientItems ?? null)
+    setCustomIngredientText(!o.ingredientItems || o.ingredientCustomText ? o.ingredientText : null)
   }
 
   const { data: saved, isError: savedError } = useQuery<{ panels: SavedPanel[] }>({
@@ -494,19 +504,42 @@ export function NfpDialog({
                   Include ingredient statement
                 </span>
               </label>
-              {includeIngredients && (
+              {includeIngredients && (customIngredientText !== null ? (
                 <>
                   <textarea
-                    value={ingredientText}
-                    onChange={e => setIngredientText(e.target.value)}
+                    value={customIngredientText}
+                    onChange={e => setCustomIngredientText(e.target.value)}
                     rows={4}
+                    aria-label="Ingredient statement"
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
                   />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Pre-populated by weight (descending), using each ingredient&apos;s label name and sub-ingredients. Edit as needed.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCustomIngredientText(null)}
+                    className="mt-1 text-xs text-blue-600 hover:underline"
+                  >
+                    Back to the arranged list (discards typed changes)
+                  </button>
                 </>
-              )}
+              ) : (
+                <>
+                  <IngredientStatementEditor
+                    items={statementItems}
+                    onChange={setItemsEdit}
+                    onReset={() => setItemsEdit(null)}
+                  />
+                  <div className="mt-2 px-3 py-2 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-md">
+                    <span className="font-semibold">Ingredients:</span> {ingredientText || '—'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCustomIngredientText(ingredientText)}
+                    className="mt-1 text-xs text-blue-600 hover:underline"
+                  >
+                    Edit as text
+                  </button>
+                </>
+              ))}
             </div>
 
             {/* Serving size warning */}
