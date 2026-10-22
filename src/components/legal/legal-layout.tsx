@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { LEGAL_DRAFT_NOTICE } from '@/lib/legal'
+import { Logo } from '@/components/logo'
 
 // Plain public layout for /legal/* (no AppShell, no session needed).
 export function LegalLayout({
@@ -17,7 +18,9 @@ export function LegalLayout({
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-sm font-semibold text-gray-900">Benchtop</Link>
+          <Link href="/" className="text-gray-900">
+            <Logo variant="wordmark" height={22} />
+          </Link>
           <nav className="flex gap-4 text-sm">
             <Link href="/legal/terms" className="text-blue-600 hover:underline">Terms</Link>
             <Link href="/legal/privacy" className="text-blue-600 hover:underline">Privacy</Link>

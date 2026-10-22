@@ -71,10 +71,10 @@ export function BillingPanel(props: Props) {
   return (
     <>
       {props.reason === 'subscription_required' && !props.entitled && (
-        <Notice tone="warning">A subscription is required to use Benchtop. Subscribe below to get access.</Notice>
+        <Notice tone="warning">A subscription is required to use benchtop. Subscribe below to get access.</Notice>
       )}
       {props.welcome && !props.entitled && (
-        <Notice tone="info">Welcome to Benchtop! Your account is ready. Start your subscription to unlock all features.</Notice>
+        <Notice tone="info">Welcome to benchtop. Your account is ready. Start your subscription to unlock all features.</Notice>
       )}
       {props.checkout === 'cancelled' && <Notice tone="info">Checkout was cancelled. You have not been charged.</Notice>}
       {syncing && <Notice tone="info">Confirming your payment…</Notice>}
@@ -111,7 +111,7 @@ export function BillingPanel(props: Props) {
               </div>
               <div>
                 <dt className="text-gray-500">Plan</dt>
-                <dd className="text-gray-900">Benchtop (all features)</dd>
+                <dd className="text-gray-900">benchtop (all features)</dd>
               </div>
               {sub?.currentPeriodEnd && (
                 <div>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { Logo } from '@/components/logo'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -33,15 +34,19 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+    <div className="w-full max-w-sm bg-white rounded-lg shadow-sm border border-gray-200 p-8 overflow-hidden">
       <div className="mb-6">
+        <div className="-mx-8 -mt-8 mb-6 rounded-t-lg bg-lcd-300 px-8 py-7 shadow-[inset_0_2px_0_rgba(22,32,14,.12),inset_0_0_24px_rgba(111,140,18,.35)]">
+          <h1 className="text-ink-900">
+            <Logo variant="wordmark" height={40} />
+          </h1>
+          <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-700 mt-3">Weigh it. Tweak it.</p>
+        </div>
         <img
           src="/LaunchTime logo-transparent.png"
           alt="LaunchTime Solutions"
-          className="w-40 object-contain mb-4"
+          className="w-32 object-contain mb-2"
         />
-        <h1 className="text-2xl font-semibold text-gray-900">Benchtop</h1>
-        <p className="text-sm text-gray-500 mt-1">Launchtime Solutions</p>
         <p className="text-xs text-gray-500 mt-2">Access is by invitation only.</p>
       </div>
 

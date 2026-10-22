@@ -1,0 +1,22 @@
+:root{
+/* LCD backlight — the neon of a lit-up scale/clock screen */
+--lcd-50:#FAFFE0;--lcd-100:#F1FFB3;--lcd-200:#E6FA84;--lcd-300:#D6F55A;--lcd-400:#BDE03A;--lcd-500:#98BA1E;--lcd-600:#6F8C12;
+/* Ink — the dark of a lit segment (green-black, never pure black) */
+--ink-950:#0E1509;--ink-900:#16200E;--ink-800:#243319;--ink-700:#384D28;--ink-600:#52683F;--ink-500:#71865C;--ink-400:#98A988;--ink-300:#C3CDB7;--ink-200:#E1E7D9;--ink-100:#EFF2E9;
+/* Paper — warm lab-notebook cream */
+--paper-50:#FFFDF6;--paper-100:#FBF8EC;--paper-200:#F3EEDC;--paper-300:#E8E1C8;
+/* Warm accent — tangerine, the "AI" / human-touch highlight */
+--tang-100:#FFE6D1;--tang-300:#FFB877;--tang-500:#FF8A3D;--tang-700:#C9561A;
+/* Semantic */
+--ok-100:#D9F2E1;--ok-500:#2F9E5B;--ok-700:#1B6B3A;
+--warn-100:#FFF0C2;--warn-500:#F2A81D;--warn-700:#8A5A00;
+--danger-100:#FFDDD5;--danger-500:#D6452D;--danger-700:#8F2514;
+--info-100:#D8EAF7;--info-500:#2F7FB8;--info-700:#1B4F7A;
+
+/* Semantic aliases */
+--bg-screen:var(--lcd-300);--bg-page:var(--paper-100);--bg-surface:var(--paper-50);--bg-sunken:var(--paper-200);--bg-inverse:var(--ink-900);
+--fg-1:var(--ink-900);--fg-2:var(--ink-600);--fg-3:var(--ink-500);--fg-inverse:var(--lcd-300);--fg-on-lcd:var(--ink-900);
+--border-1:var(--ink-200);--border-2:var(--ink-300);--border-strong:var(--ink-900);
+--accent:var(--lcd-300);--accent-warm:var(--tang-500);--focus-ring:var(--ink-900);
+--link:var(--ink-900);--link-hover:var(--tang-700);
+}

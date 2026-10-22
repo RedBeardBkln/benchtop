@@ -1,0 +1,1 @@
+benchtop app recreation. **Invented** — no product source was supplied; screens are illustrative of the brand applied to a formulation-tracking UI. Opens on the formulation editor; click sidebar items for the list, trials and assistant.

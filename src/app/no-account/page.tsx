@@ -15,9 +15,9 @@ export default async function NoAccountPage() {
       <div className="w-full max-w-md bg-white rounded-lg shadow-sm border border-gray-200 p-8 space-y-4">
         <h1 className="text-2xl font-semibold text-gray-900">No account found</h1>
         <p className="text-sm text-gray-600">
-          You are signed in, but this login is not linked to a Benchtop account. Access is by invitation only. If you
+          You are signed in, but this login is not linked to a benchtop account. Access is by invitation only. If you
           were invited, open the invitation link you were sent. Otherwise, please contact the person who manages
-          Benchtop access.
+          benchtop access.
         </p>
         <SignOutButton />
       </div>

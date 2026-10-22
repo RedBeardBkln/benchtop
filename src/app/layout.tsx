@@ -1,21 +1,22 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Bricolage_Grotesque, DM_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { Providers } from '@/lib/providers'
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const bricolage = Bricolage_Grotesque({
+  variable: '--font-bricolage',
   subsets: ['latin'],
 })
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const dmMono = DM_Mono({
+  variable: '--font-dm-mono',
   subsets: ['latin'],
+  weight: ['300', '400', '500'],
 })
 
 export const metadata: Metadata = {
-  title: 'Benchtop — Food Formulation Platform',
+  title: 'benchtop — Food formulation R&D',
   description: 'Formulation R&D workspace',
   appleWebApp: {
     capable: true,
@@ -25,10 +26,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#17253A' },
-    { media: '(prefers-color-scheme: dark)', color: '#17253A' },
-  ],
+  themeColor: '#16200E',
   viewportFit: 'cover',
 }
 
@@ -37,7 +35,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${bricolage.variable} ${dmMono.variable} antialiased`}>
         <Providers>
           {children}
         </Providers>

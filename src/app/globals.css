@@ -1,40 +1,204 @@
 @import "tailwindcss";
 
+/* benchtop brand tokens, from design_system/tokens. LCD lime is the hero (the lit
+   backlight), ink is every lit segment (text, borders, dark surfaces), paper is the page,
+   tangerine is the one warm accent (AI and human touches). Never pure black or white. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FBF8EC;
+  --foreground: #16200E;
+}
+
+@theme {
+  --color-lcd-50: #FAFFE0;
+  --color-lcd-100: #F1FFB3;
+  --color-lcd-200: #E6FA84;
+  --color-lcd-300: #D6F55A;
+  --color-lcd-400: #BDE03A;
+  --color-lcd-500: #98BA1E;
+  --color-lcd-600: #6F8C12;
+
+  --color-ink-50: #F6F8F2;
+  --color-ink-100: #EFF2E9;
+  --color-ink-200: #E1E7D9;
+  --color-ink-300: #C3CDB7;
+  --color-ink-400: #98A988;
+  --color-ink-500: #71865C;
+  --color-ink-600: #52683F;
+  --color-ink-700: #384D28;
+  --color-ink-800: #243319;
+  --color-ink-900: #16200E;
+  --color-ink-950: #0E1509;
+
+  --color-paper-50: #FFFDF6;
+  --color-paper-100: #FBF8EC;
+  --color-paper-200: #F3EEDC;
+  --color-paper-300: #E8E1C8;
+
+  --color-tang-100: #FFE6D1;
+  --color-tang-300: #FFB877;
+  --color-tang-500: #FF8A3D;
+  --color-tang-700: #C9561A;
+
+  /* Remap Tailwind's stock families onto the brand so existing utility classes pick it up:
+     gray → ink neutrals on paper, blue (primary actions/links) → ink + lime tints,
+     violet (AI features) → tangerine, white/black → paper/ink. The mid and dark steps are
+     kept dark enough for text contrast on paper. */
+  --color-white: #FFFDF6;
+  --color-black: #0E1509;
+
+  --color-gray-50: #FBF8EC;
+  --color-gray-100: #EFF2E9;
+  --color-gray-200: #E1E7D9;
+  --color-gray-300: #C3CDB7;
+  --color-gray-400: #98A988;
+  --color-gray-500: #52683F;
+  --color-gray-600: #384D28;
+  --color-gray-700: #2B3C1F;
+  --color-gray-800: #243319;
+  --color-gray-900: #16200E;
+  --color-gray-950: #0E1509;
+
+  --color-blue-50: #FAFFE0;
+  --color-blue-100: #F1FFB3;
+  --color-blue-200: #E6FA84;
+  --color-blue-300: #D6F55A;
+  --color-blue-400: #6F8C12;
+  --color-blue-500: #4F6A0C;
+  --color-blue-600: #16200E;
+  --color-blue-700: #384D28;
+  --color-blue-800: #243319;
+  --color-blue-900: #16200E;
+  --color-blue-950: #0E1509;
+
+  --color-violet-50: #FFF5EB;
+  --color-violet-100: #FFE6D1;
+  --color-violet-200: #FFD0A8;
+  --color-violet-300: #FFB877;
+  --color-violet-400: #FF8A3D;
+  --color-violet-500: #C9561A;
+  --color-violet-600: #B04A14;
+  --color-violet-700: #8F3B0E;
+  --color-violet-800: #74300B;
+  --color-violet-900: #5A2508;
+  --color-violet-950: #3D1905;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-bricolage), "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-bricolage), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: var(--color-lcd-300);
+  color: var(--color-ink-900);
+}
+
+/* Brand links: ink/olive text with a lime underline that turns tangerine on hover */
+a[class^='text-blue-'],
+a[class*=' text-blue-'] {
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-lcd-400);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+a[class^='text-blue-']:hover,
+a[class*=' text-blue-']:hover {
+  text-decoration-color: var(--color-tang-500);
+}
+
+/* Anything lit in ink (primary buttons, selected toggles, ink badges) shows lime "segments" */
+.bg-blue-600 {
+  color: var(--color-lcd-300);
+}
+
+/* Brand buttons. There is no shared Button component, so action buttons are recognised by
+   their hover class: primary is ink with lime text, AI actions are tangerine; both get the
+   "keycap" hard shadow, lift 1px on hover and sink into the shadow when pressed.
+   Selected toggles share bg-blue-600 but have no hover class, so they stay flat. */
+:is(button, a)[class*='hover:bg-blue-700'],
+:is(button, a)[class*='hover:bg-violet-700'] {
+  border: 1.5px solid var(--color-ink-900);
+  box-shadow: 3px 3px 0 var(--color-ink-900);
+  transition:
+    transform 90ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 90ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 160ms;
+}
+
+:is(button, a)[class*='hover:bg-blue-700'] {
+  font-weight: 600;
+}
+
+:is(button, a)[class*='hover:bg-blue-700']:hover {
+  background-color: var(--color-ink-900);
+}
+
+:is(button, a)[class*='hover:bg-violet-700'] {
+  background-color: var(--color-tang-500);
+  color: var(--color-ink-900);
+  font-weight: 600;
+}
+
+:is(button, a)[class*='hover:bg-violet-700']:hover {
+  background-color: var(--color-tang-300);
+}
+
+:is(button, a)[class*='hover:bg-blue-700']:hover:not(:disabled),
+:is(button, a)[class*='hover:bg-violet-700']:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--color-ink-900);
+}
+
+:is(button, a)[class*='hover:bg-blue-700']:active:not(:disabled),
+:is(button, a)[class*='hover:bg-violet-700']:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--color-ink-900);
+}
+
+:is(button, a)[class*='hover:bg-blue-700']:disabled,
+:is(button, a)[class*='hover:bg-violet-700']:disabled {
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--color-tang-500);
+  outline-offset: 2px;
 }
 
 input:not([type='file']):not([type='checkbox']):not([type='radio']),
 textarea,
 select {
-  color: #111827;
+  color: var(--color-ink-900);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #6b7280;
+  color: var(--color-ink-500);
   opacity: 1;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--color-ink-900);
 }
 
 @media print {
@@ -45,6 +209,7 @@ textarea::placeholder {
   :root {
     --background: #ffffff !important;
     --foreground: #171717 !important;
+    --color-white: #ffffff;
   }
 
   /* Tables wrapped for mobile horizontal scroll would otherwise clip content

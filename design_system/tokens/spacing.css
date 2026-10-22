@@ -1,0 +1,14 @@
+:root{
+--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;--space-9:96px;
+--radius-xs:4px;--radius-sm:8px;--radius-md:12px;--radius-lg:20px;--radius-pill:999px;
+--border-w:1.5px;
+--shadow-1:0 1px 0 rgba(22,32,14,.08),0 1px 2px rgba(22,32,14,.06);
+--shadow-2:0 2px 0 rgba(22,32,14,.10),0 8px 20px -6px rgba(22,32,14,.18);
+--shadow-3:0 4px 0 rgba(22,32,14,.12),0 24px 48px -12px rgba(22,32,14,.28);
+--shadow-inset-screen:inset 0 2px 0 rgba(22,32,14,.12),inset 0 0 24px rgba(111,140,18,.35);
+--shadow-pop:3px 3px 0 var(--ink-900);
+--glow-lcd:0 0 28px rgba(214,245,90,.65);
+--ease-out:cubic-bezier(.2,.8,.2,1);/* @kind other */--ease-tick:steps(4,end);/* @kind other */
+--dur-fast:90ms;/* @kind other */--dur-base:160ms;/* @kind other */--dur-slow:280ms;/* @kind other */
+--ghost-segments:url("../assets/ghost-segments.svg");/* @kind other */
+}

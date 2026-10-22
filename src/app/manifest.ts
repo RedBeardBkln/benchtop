@@ -4,11 +4,11 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'benchtop',
     short_name: 'benchtop',
-    description: 'Food Formulation Platform',
+    description: 'Food formulation R&D',
     start_url: '/',
     display: 'standalone',
-    background_color: '#17253A',
-    theme_color: '#17253A',
+    background_color: '#D6F55A',
+    theme_color: '#16200E',
     icons: [
       {
         src: '/icons/192',
