@@ -1869,10 +1869,7 @@ export function FormulationGrid({ id }: { id: string }) {
           servingSizeG={servingSizeG ? parseFloat(servingSizeG) : undefined}
           batchSizeG={totalWeightG}
           results={calcResult.results}
-          defaultIngredients={[...lines]
-            .sort((a, b) => b.weightG - a.weightG)
-            .map(l => l.ingredientName)
-            .join(', ')}
+          lines={lines}
           onClose={() => setShowNfpDialog(false)}
         />
       )}

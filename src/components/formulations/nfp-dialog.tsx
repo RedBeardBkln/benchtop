@@ -10,6 +10,7 @@ import type { NutrientResult } from '@/lib/formulation-calc'
 import { buildNfpModel, STANDARD_NFP_NAMES, type ExtraNutrientInput, type NfpModel, type NfpOptions } from '@/lib/nfp-model'
 import { declareDvPct, isDvTiered, ruleReferences } from '@/lib/fda-rounding'
 import { nfpFileName } from '@/lib/download-name'
+import { allergenStatement, ingredientStatement, type LabelInfo, type StatementLine } from '@/lib/label-statements'
 
 type Format = 'png' | 'jpg' | 'pdf'
 
@@ -90,7 +91,7 @@ type Props = {
   servingSizeG: number | undefined
   batchSizeG: number
   results: NutrientResult[]
-  defaultIngredients: string
+  lines: StatementLine[]
   onClose: () => void
 }
 
@@ -102,7 +103,7 @@ export function NfpDialog({
   servingSizeG,
   batchSizeG,
   results,
-  defaultIngredients,
+  lines,
   onClose,
 }: Props) {
   const queryClient = useQueryClient()
@@ -112,9 +113,25 @@ export function NfpDialog({
   const [rulesOpen, setRulesOpen] = useState(false)
   const [format, setFormat] = useState<Format>('png')
   const [includeAllergen, setIncludeAllergen] = useState(false)
-  const [allergenText, setAllergenText] = useState('')
   const [includeIngredients, setIncludeIngredients] = useState(false)
-  const [ingredientText, setIngredientText] = useState(defaultIngredients)
+  // null until the user edits (or a saved panel is restored), so the defaults can fill in once label info loads
+  const [allergenEdit, setAllergenText] = useState<string | null>(null)
+  const [ingredientEdit, setIngredientText] = useState<string | null>(null)
+
+  const ingredientIds = [...new Set(lines.map(l => l.ingredientId))].sort()
+  const { data: labelInfo } = useQuery<Map<string, LabelInfo>>({
+    queryKey: ['ingredient-label-info', ingredientIds],
+    enabled: ingredientIds.length > 0,
+    queryFn: async () => {
+      const r = await fetch(`/api/ingredients/label-info?ids=${ingredientIds.join(',')}`)
+      if (!r.ok) throw new Error('Could not load ingredient label info')
+      const body: { ingredients: Array<LabelInfo & { id: string }> } = await r.json()
+      return new Map(body.ingredients.map(i => [i.id, i]))
+    },
+  })
+  const info = useMemo(() => labelInfo ?? new Map<string, LabelInfo>(), [labelInfo])
+  const allergenText = allergenEdit ?? allergenStatement(lines, info)
+  const ingredientText = ingredientEdit ?? ingredientStatement(lines, info)
   const [hideZeros, setHideZeros] = useState(false)
   const [showExtras, setShowExtras] = useState(false)
   const [extrasOpen, setExtrasOpen] = useState(false)
@@ -486,7 +503,7 @@ export function NfpDialog({
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    Pre-populated by weight (descending). Edit label names as needed.
+                    Pre-populated by weight (descending), using each ingredient&apos;s label name and sub-ingredients. Edit as needed.
                   </p>
                 </>
               )}
