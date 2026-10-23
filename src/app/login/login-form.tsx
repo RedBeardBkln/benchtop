@@ -11,6 +11,8 @@ export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/projects'
+  // Set by /auth/confirm when a password reset link can't be used
+  const linkError = searchParams.get('error') === 'invalid-reset-link'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -44,6 +46,14 @@ export default function LoginForm() {
         </div>
         <p className="text-xs text-gray-500">Access is by invitation only.</p>
       </div>
+
+      {linkError && (
+        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+          That reset link has expired or was already used. Reset links only work once, in the browser
+          you requested them from.{' '}
+          <Link href="/forgot-password" className="font-medium underline">Send a new one</Link>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
