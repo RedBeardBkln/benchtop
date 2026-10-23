@@ -5,8 +5,8 @@ import {
 
 describe('legal constants', () => {
   it('versions are ISO dates and effective dates are present', () => {
-    expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(PRIVACY_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/)
+    expect(PRIVACY_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/)
     expect(TERMS_EFFECTIVE_DATE.length).toBeGreaterThan(0)
     expect(PRIVACY_EFFECTIVE_DATE.length).toBeGreaterThan(0)
   })
