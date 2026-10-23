@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { memberAccessSchema } from './team-access'
+import { ACCOUNT_PLANS, MAX_FREE_PERIOD_DAYS, MAX_USER_CAP, MIN_FREE_PERIOD_DAYS } from './billing/plans'
 
 // Shared (client + server) validation for profile and invite-redemption inputs.
 
@@ -58,6 +59,15 @@ export const createInviteSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   note: z.string().trim().max(500).optional(),
   expiresInDays: z.number().int().min(1).max(60).optional(),
+  plan: z.enum(ACCOUNT_PLANS).default('paid'),
+  // Required for 'free_period' (how long it stays free from signup); ignored otherwise
+  freeDays: z.number().int().max(MAX_FREE_PERIOD_DAYS).optional(),
+  // 'free_lifetime' only: cap on additional users; omitted or null = no cap
+  maxUsers: z.number().int().min(0).max(MAX_USER_CAP).nullable().optional(),
+}).superRefine((v, c) => {
+  if (v.plan === 'free_period' && (v.freeDays == null || v.freeDays < MIN_FREE_PERIOD_DAYS)) {
+    c.addIssue({ code: 'custom', path: ['freeDays'], message: `A free period must be at least ${MIN_FREE_PERIOD_DAYS} days` })
+  }
 })
 
 export const accountNameSchema = z.object({
@@ -78,4 +88,21 @@ export const teamInviteSchema = z.object({
 export const teamMemberUpdateSchema = z.object({
   role: z.enum(['admin', 'member']),
   access: memberAccessSchema.optional(),
+})
+
+// Platform admin: change an existing account's plan.
+//   paid          freeUntil = optional trial end (null = subscription needed now)
+//   free_period   freeUntil = required end date, in the future
+//   free_lifetime maxUsers  = optional cap on additional users
+export const accountPlanUpdateSchema = z.object({
+  plan: z.enum(ACCOUNT_PLANS),
+  freeUntil: z.string().datetime({ offset: true }).nullable().optional(),
+  maxUsers: z.number().int().min(0).max(MAX_USER_CAP).nullable().optional(),
+}).superRefine((v, c) => {
+  if (v.plan === 'free_period') {
+    if (!v.freeUntil) c.addIssue({ code: 'custom', path: ['freeUntil'], message: 'Choose when the free period ends' })
+    else if (new Date(v.freeUntil).getTime() <= Date.now()) {
+      c.addIssue({ code: 'custom', path: ['freeUntil'], message: 'The free period must end in the future' })
+    }
+  }
 })

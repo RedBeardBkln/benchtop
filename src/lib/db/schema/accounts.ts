@@ -15,10 +15,20 @@ export const accounts = pgTable('accounts', {
   name: text('name').notNull(),
   // Internal/legacy accounts are never gated on a subscription
   billingExempt: boolean('billing_exempt').notNull().default(false),
+  // How the platform admin invited the account (see lib/billing/plans.ts):
+  //   'paid'           subscribes after a free trial that ends at free_until
+  //   'free_lifetime'  never needs a subscription
+  //   'free_period'    free until free_until, then needs a subscription
+  plan: text('plan').notNull().default('paid'),
+  freeUntil: timestamp('free_until', { withTimezone: true }),
+  // 'free_lifetime' only: most additional users (besides the owner) the account may have; null = no cap
+  maxUsers: integer('max_users'),
   stripeCustomerId: text('stripe_customer_id').unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
-})
+}, (t) => [
+  check('accounts_plan_chk', sql`${t.plan} in ('paid', 'free_lifetime', 'free_period')`),
+])
 
 // Membership. One user belongs to exactly one account (user_id UNIQUE); every member besides the
 // owner is a paid team seat. user_id is a Supabase auth uid with no FK to auth.users (the local
@@ -62,6 +72,11 @@ export const invitations = pgTable('invitations', {
   accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'cascade' }),
   role: text('role'), // team invitations only: 'admin' | 'member'
   access: jsonb('access').$type<MemberAccess>(),
+  // New-account invitations only: the plan the account is created on, and for 'free_period' how
+  // many days it stays free from signup
+  plan: text('plan'),
+  freeDays: integer('free_days'),
+  maxUsers: integer('max_users'), // 'free_lifetime' only; copied to the new account
   email: text('email').notNull(), // stored lowercased
   tokenHash: text('token_hash').notNull().unique(),
   note: text('note'),

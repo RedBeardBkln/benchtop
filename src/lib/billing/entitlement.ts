@@ -8,11 +8,14 @@ export const ENTITLED_STATUSES: readonly string[] = ['active', 'trialing', 'past
 
 export function isEntitled(input: {
   billingExempt: boolean
+  // Free for life, or inside a free period or the paid trial (see plans.ts)
+  freeAccess?: boolean
   status?: string | null
   // Dev-only escape hatch; only ever true via isDevBypassActive()
   devBypass?: boolean
 }): boolean {
   if (input.billingExempt) return true
+  if (input.freeAccess) return true
   if (input.devBypass) return true
   return input.status != null && ENTITLED_STATUSES.includes(input.status)
 }

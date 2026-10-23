@@ -4,28 +4,35 @@ import { accountMembers, accounts, subscriptions } from '@/lib/db/schema'
 import { ENTITLED_STATUSES, isDevBypassActive } from './entitlement'
 import { getPriceId, getSeatPriceId, getSeatPriceIds, getStripe, isSeatBillingConfigured } from './stripe'
 import { billableSeats, seatInterval, seatItemChanges, type SeatInterval } from './seats'
+import { hasFreeAccess } from './plans'
 
 // Can this account add team members right now, and how would they be billed?
 //   exempt          internal account; seats are free
+//   free            free for life, or in a free period / trial without a subscription yet; seats
+//                   are free until the account subscribes (checkout then bills them)
 //   dev_bypass      local development without Stripe; seats are free
 //   ready           active subscription and seat prices configured
 //   not_configured  the seat prices (or Stripe itself) are not configured
 //   no_subscription no subscription that grants access
-export type SeatBillingState = 'exempt' | 'dev_bypass' | 'ready' | 'not_configured' | 'no_subscription'
+export type SeatBillingState = 'exempt' | 'free' | 'dev_bypass' | 'ready' | 'not_configured' | 'no_subscription'
 
 export function seatBillingState(input: {
   billingExempt: boolean
+  plan?: string
+  freeAccess?: boolean
   subscription: { stripeSubscriptionId: string | null; status: string } | null
 }): SeatBillingState {
   if (input.billingExempt) return 'exempt'
+  if (input.plan === 'free_lifetime') return 'free'
   const sub = input.subscription
   const subscribed = Boolean(sub?.stripeSubscriptionId) && ENTITLED_STATUSES.includes(sub!.status)
+  if (!subscribed && input.freeAccess) return 'free'
   if (!subscribed) return isDevBypassActive() ? 'dev_bypass' : 'no_subscription'
   return isSeatBillingConfigured() ? 'ready' : 'not_configured'
 }
 
 export function canAddSeats(state: SeatBillingState): boolean {
-  return state === 'exempt' || state === 'dev_bypass' || state === 'ready'
+  return state === 'exempt' || state === 'free' || state === 'dev_bypass' || state === 'ready'
 }
 
 // The plan price's interval (month/year); falls back to month when Stripe can't be reached
@@ -55,13 +62,18 @@ export type SeatSyncResult =
 export async function syncSeats(accountId: string): Promise<SeatSyncResult> {
   const seats = await countSeats(accountId)
   const [[account], [sub]] = await Promise.all([
-    db.select({ billingExempt: accounts.billingExempt }).from(accounts).where(eq(accounts.id, accountId)).limit(1),
+    db.select({ billingExempt: accounts.billingExempt, plan: accounts.plan, freeUntil: accounts.freeUntil }).from(accounts).where(eq(accounts.id, accountId)).limit(1),
     db.select().from(subscriptions).where(eq(subscriptions.accountId, accountId)).limit(1),
   ])
   if (!account) return { ok: false, seats, error: 'Account not found' }
 
-  const state = seatBillingState({ billingExempt: account.billingExempt, subscription: sub ?? null })
-  if (state === 'exempt' || state === 'dev_bypass') return { ok: true, seats, billed: false }
+  const state = seatBillingState({
+    billingExempt: account.billingExempt,
+    plan: account.plan,
+    freeAccess: hasFreeAccess(account),
+    subscription: sub ?? null,
+  })
+  if (state === 'exempt' || state === 'free' || state === 'dev_bypass') return { ok: true, seats, billed: false }
   if (state === 'not_configured') return { ok: false, seats, error: 'Team seat billing is not configured' }
   if (state === 'no_subscription' || !sub?.stripeSubscriptionId) {
     // Nothing to bill against; the seats are added when the account subscribes (see checkout)

@@ -9,6 +9,8 @@ import { getSupabaseAdmin, isAdminConfigured } from '@/lib/supabase/admin'
 import { PRIVACY_VERSION, TERMS_VERSION } from '@/lib/legal'
 import { syncSeats } from '@/lib/billing/seat-sync'
 import { accessForRole, memberAccessSchema } from '@/lib/team-access'
+import { asAccountPlan, capReached, freeUntilFor, userCap } from '@/lib/billing/plans'
+import { billableSeats } from '@/lib/billing/seats'
 
 // PUBLIC route (no session): authenticated by possession of a valid invite token.
 // Order of operations: claim token (single conditional UPDATE, race-safe) -> create pre-confirmed
@@ -66,13 +68,25 @@ export async function POST(req: NextRequest) {
   let teamAccountId: string | null = null
   if (claimed.accountId) {
     const [account] = await db
-      .select({ id: accounts.id, deletedAt: accounts.deletedAt })
+      .select({ id: accounts.id, deletedAt: accounts.deletedAt, plan: accounts.plan, maxUsers: accounts.maxUsers })
       .from(accounts)
       .where(eq(accounts.id, claimed.accountId))
       .limit(1)
     if (!account || account.deletedAt) {
       await unclaim(tokenHash)
       return NextResponse.json({ error: INVITE_FAILURE_MESSAGES.invalid, code: 'invalid' }, { status: 410 })
+    }
+    // A free-for-life account's cap may have been lowered after this invitation was sent
+    const cap = userCap(account)
+    if (cap != null && capReached(cap, billableSeats(await db
+      .select({ role: accountMembers.role })
+      .from(accountMembers)
+      .where(eq(accountMembers.accountId, account.id))))) {
+      await unclaim(tokenHash)
+      return NextResponse.json(
+        { error: 'This team has reached its user limit. Please contact the person who invited you.', code: 'user_cap' },
+        { status: 409 },
+      )
     }
     teamAccountId = account.id
   }
@@ -113,9 +127,16 @@ export async function POST(req: NextRequest) {
           access: accessForRole(role, stored.success ? stored.data : undefined),
         })
       } else {
+        // The plan chosen on the invitation; free access (trial or free period) runs from signup
+        const plan = asAccountPlan(claimed.plan)
         const [account] = await tx
           .insert(accounts)
-          .values({ name: company || fullName })
+          .values({
+            name: company || fullName,
+            plan,
+            freeUntil: freeUntilFor(plan, claimed.freeDays, now),
+            maxUsers: plan === 'free_lifetime' ? claimed.maxUsers : null,
+          })
           .returning({ id: accounts.id })
         await tx.insert(accountMembers).values({ accountId: account.id, userId: newUserId, role: 'owner' })
       }

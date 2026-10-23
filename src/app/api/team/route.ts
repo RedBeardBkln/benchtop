@@ -40,7 +40,12 @@ export async function GET() {
   // Client records (names are unique per account, case-insensitively)
   const clients = clientRows.map(c => c.name).sort((a, b) => a.localeCompare(b))
 
-  const state = seatBillingState({ billingExempt: ctx.account.billingExempt, subscription: ctx.subscription })
+  const state = seatBillingState({
+    billingExempt: ctx.account.billingExempt,
+    plan: ctx.account.plan,
+    freeAccess: ctx.account.freeAccess,
+    subscription: ctx.subscription,
+  })
 
   return NextResponse.json({
     me: ctx.user.id,
@@ -73,6 +78,9 @@ export async function GET() {
       used: members.filter(m => m.role !== 'owner').length,
       billed: ctx.subscription?.seatQuantity ?? 0,
       interval: state === 'ready' ? await planInterval() : null,
+      // Free-for-life cap on additional users (pending invitations count toward it); null = none
+      cap: ctx.account.userCap,
+      pending: pending.length,
     },
   })
 }

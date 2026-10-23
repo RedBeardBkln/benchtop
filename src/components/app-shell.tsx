@@ -17,7 +17,7 @@ const NAV = [
 const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2 }
 
 // Only shown to platform admins
-const ADMIN_NAV = [{ href: '/admin/invitations', label: 'Invitations', icon: MailPlus }]
+const ADMIN_NAV = [{ href: '/admin/invitations', label: 'Invitations & accounts', icon: MailPlus }]
 
 export function AppShell({
   children,

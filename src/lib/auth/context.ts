@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { db } from '@/lib/db'
 import { accountMembers, accounts, profiles, subscriptions } from '@/lib/db/schema'
 import { isDevBypassActive, isEntitled } from '@/lib/billing/entitlement'
+import { asAccountPlan, hasFreeAccess, userCap, type AccountPlan } from '@/lib/billing/plans'
+import { needsLegalAcceptance } from '@/lib/legal'
 import {
   accessForRole, canEditLibrary, DEFAULT_MEMBER_ACCESS, isTeamAdmin, memberAccessSchema,
   type MemberAccess, type MemberRole,
@@ -18,6 +20,13 @@ export type AuthContext = {
     id: string
     name: string
     billingExempt: boolean
+    plan: AccountPlan
+    // End of the free period or paid trial; null for free for life or when there never was one
+    freeUntil: Date | null
+    // Free for life, or still inside the free period / trial
+    freeAccess: boolean
+    // Cap on additional users (free for life only); null = no cap
+    userCap: number | null
     stripeCustomerId: string | null
     createdAt: Date
   }
@@ -58,8 +67,10 @@ export async function getContext(): Promise<ContextResult> {
     db.select().from(subscriptions).where(eq(subscriptions.accountId, row.account.id)).limit(1),
   ])
 
+  const freeAccess = hasFreeAccess(row.account)
   const entitled = isEntitled({
     billingExempt: row.account.billingExempt,
+    freeAccess,
     status: subscription?.status ?? null,
     devBypass: isDevBypassActive(),
   })
@@ -75,6 +86,10 @@ export async function getContext(): Promise<ContextResult> {
       id: row.account.id,
       name: row.account.name,
       billingExempt: row.account.billingExempt,
+      plan: asAccountPlan(row.account.plan),
+      freeUntil: row.account.freeUntil,
+      freeAccess,
+      userCap: userCap(row.account),
       stripeCustomerId: row.account.stripeCustomerId,
       createdAt: row.account.createdAt,
     },
@@ -98,6 +113,8 @@ export type RequireOptions = {
   // Changes to the ingredient library, suppliers, equipment or lab intake
   libraryEdit?: boolean
   platformAdmin?: boolean
+  // Only for accepting the current Terms and Privacy Policy, which every other route requires first
+  allowWithoutTerms?: boolean
 }
 
 function forbidden(error: string) {
@@ -121,6 +138,15 @@ export async function requireApi(opts: RequireOptions = {}): Promise<ApiAuth> {
   }
 
   const ctx = result.ctx!
+  if (!opts.allowWithoutTerms && needsLegalAcceptance(ctx.profile)) {
+    return {
+      ok: false,
+      res: NextResponse.json(
+        { error: 'Please accept the current Terms of Service and Privacy Policy first', code: 'terms_required' },
+        { status: 403 },
+      ),
+    }
+  }
   if (!result.ok && !opts.allowUnentitled) {
     return {
       ok: false,
@@ -150,6 +176,7 @@ export async function requirePage(opts: RequireOptions = {}): Promise<AuthContex
   if (!result.ok && result.reason === 'no_account') redirect('/no-account')
 
   const ctx = result.ctx!
+  if (!opts.allowWithoutTerms && needsLegalAcceptance(ctx.profile)) redirect('/accept-terms')
   if (!result.ok && !opts.allowUnentitled) redirect('/settings/billing?reason=subscription_required')
   if (opts.role === 'owner' && ctx.role !== 'owner') notFound()
   if (opts.teamAdmin && !isTeamAdmin(ctx.role)) notFound()

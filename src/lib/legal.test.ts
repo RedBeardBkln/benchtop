@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  LEGAL_DRAFT_NOTICE, PRIVACY_EFFECTIVE_DATE, PRIVACY_VERSION, TERMS_EFFECTIVE_DATE, TERMS_VERSION,
+  LEGAL_DRAFT_NOTICE, needsLegalAcceptance, PRIVACY_EFFECTIVE_DATE, PRIVACY_VERSION, TERMS_EFFECTIVE_DATE, TERMS_VERSION,
 } from './legal'
 
 describe('legal constants', () => {
@@ -13,5 +13,13 @@ describe('legal constants', () => {
 
   it('keeps the draft notice', () => {
     expect(LEGAL_DRAFT_NOTICE).toMatch(/pending legal review/i)
+  })
+
+  it('requires acceptance of the current versions of both documents', () => {
+    expect(needsLegalAcceptance(null)).toBe(true)
+    expect(needsLegalAcceptance({ termsVersion: null, privacyVersion: null })).toBe(true)
+    expect(needsLegalAcceptance({ termsVersion: TERMS_VERSION, privacyVersion: '2020-01-01' })).toBe(true)
+    expect(needsLegalAcceptance({ termsVersion: '2020-01-01', privacyVersion: PRIVACY_VERSION })).toBe(true)
+    expect(needsLegalAcceptance({ termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION })).toBe(false)
   })
 })

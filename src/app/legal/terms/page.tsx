@@ -3,6 +3,7 @@ import { LegalLayout } from '@/components/legal/legal-layout'
 import {
   LEGAL_CONTACT_EMAIL, LEGAL_ENTITY_NAME, LEGAL_JURISDICTION, TERMS_EFFECTIVE_DATE, TERMS_VERSION,
 } from '@/lib/legal'
+import { PAID_TRIAL_DAYS } from '@/lib/billing/plans'
 
 export const metadata: Metadata = { title: 'Terms of Service | Benchtop' }
 
@@ -32,6 +33,7 @@ export default function TermsPage() {
         <ul>
           <li>Each account is a private workspace. Your projects, formulations, ingredients, inventory, suppliers, equipment and documents are not visible to other accounts.</li>
           <li>You keep ownership of everything you put into Benchtop. You grant us only the limited permission needed to store, process and display it to you in order to run the service.</li>
+          <li>We will not, under any circumstance, sell your data or your clients&apos; data, and we will not share it with any third party unless required or mandated by law. See the Privacy Policy for details.</li>
           <li>You are responsible for the accuracy of your data and for how you use the results. Benchtop assists with formulation and labelling work; it does not replace regulatory, safety or quality review.</li>
           <li>You can export your data and delete your account from Settings at any time.</li>
         </ul>
@@ -40,7 +42,8 @@ export default function TermsPage() {
       <section>
         <h2>4. Subscription, renewal and cancellation</h2>
         <ul>
-          <li>Access to Benchtop requires an active paid subscription, billed through our payment processor, Stripe. Card details are handled by Stripe and never touch Benchtop.</li>
+          <li>Access to Benchtop requires an active paid subscription, billed through our payment processor, Stripe, unless your invitation granted a free account. Card details are handled by Stripe and never touch Benchtop.</li>
+          <li>New paid accounts start with a {PAID_TRIAL_DAYS}-day free trial from signup. Some invitations instead grant a free account for a set period or for life; a free period ends on the date shown under Settings &rarr; Billing, after which a paid subscription is required to keep access. If you subscribe during a trial or free period, you are not charged until it ends.</li>
           <li>Subscriptions renew automatically for the same billing period until cancelled. You can cancel, update your payment method and view invoices at any time from Settings &rarr; Billing (Manage billing).</li>
           <li>If you cancel, you keep access until the end of the period you have paid for. If a payment fails we may retry it and may suspend access if it remains unpaid.</li>
           <li>Fees already paid are non-refundable except where required by law.</li>

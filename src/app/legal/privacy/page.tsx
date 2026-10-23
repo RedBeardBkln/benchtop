@@ -10,6 +10,22 @@ export default function PrivacyPage() {
   return (
     <LegalLayout title="Privacy Policy" version={PRIVACY_VERSION} effectiveDate={PRIVACY_EFFECTIVE_DATE}>
       <section>
+        <h2>Our commitment: we never sell or share your data or your clients&apos; data</h2>
+        <p>
+          <strong>
+            We will not, under any circumstance, sell your data or your clients&apos; data, and we will not share it with
+            any third party unless we are required or mandated by law.
+          </strong>{' '}
+          &quot;Your clients&apos; data&quot; means everything you store in Benchtop about the people and companies you
+          work for, including their names, contacts, accounting and shipping details, and the projects, formulations and
+          documents you create for them. The only parties that handle this data are the service providers listed in
+          section 5, which process it solely on our behalf to run the features you use and may not use it for any
+          purpose of their own. If we are legally compelled to disclose data, we will disclose only what is required and,
+          where the law allows, tell you first.
+        </p>
+      </section>
+
+      <section>
         <h2>1. Who is responsible</h2>
         <p>
           {LEGAL_ENTITY_NAME} (&quot;we&quot;) operates Benchtop and is responsible for the personal data described here.
@@ -21,7 +37,7 @@ export default function PrivacyPage() {
         <h2>2. What we collect</h2>
         <ul>
           <li><strong>Account and profile:</strong> your email address, password (stored only as a salted hash by our authentication provider), full name, company, job title, phone number and time zone (the last four are optional), and the versions and times at which you accepted the Terms and this Policy.</li>
-          <li><strong>Workspace content you create:</strong> projects, formulations, ingredient and nutrient data, inventory and stock levels, suppliers, equipment, process steps, batch records, and any documents, photos or labels you upload.</li>
+          <li><strong>Workspace content you create:</strong> clients and their contacts, accounting and shipping details, projects, formulations, ingredient and nutrient data, inventory and stock levels, suppliers, equipment, process steps, batch records, and any documents, photos or labels you upload.</li>
           <li><strong>Billing:</strong> handled by Stripe. We store a Stripe customer ID and your subscription status, plan and renewal date. Your card number never reaches Benchtop.</li>
           <li><strong>Technical data:</strong> session cookies needed to keep you signed in, and server logs.</li>
         </ul>
@@ -31,7 +47,8 @@ export default function PrivacyPage() {
         <h2>3. How we use it</h2>
         <p>
           To provide and secure the service, authenticate you, process your subscription, let you export or delete your
-          data, and communicate with you about your account. We do not sell personal data. TODO: confirm with the
+          data, and communicate with you about your account. We never sell personal data or workspace data, including
+          your clients&apos; data (see &quot;Our commitment&quot; above). TODO: confirm with the
           operator and the AI provider&apos;s terms what is stated here about use of content for model training.
         </p>
       </section>
@@ -46,6 +63,10 @@ export default function PrivacyPage() {
 
       <section>
         <h2>5. Service providers (processors)</h2>
+        <p>
+          These providers process data only on our instructions and only to deliver the service. They are not permitted
+          to sell it or use it for their own purposes.
+        </p>
         <ul>
           <li><strong>Supabase</strong> &ndash; database hosting, authentication and file storage for uploaded documents.</li>
           <li><strong>Stripe</strong> &ndash; payment processing and subscription management.</li>

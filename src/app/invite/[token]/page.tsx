@@ -5,6 +5,7 @@ import { accounts } from '@/lib/db/schema'
 import { InviteForm } from '@/components/invite/invite-form'
 import { INVITE_FAILURE_MESSAGES } from '@/lib/invitations'
 import { lookupInvite } from '@/lib/invitations-server'
+import { asAccountPlan, describePlan } from '@/lib/billing/plans'
 
 // Public page. The token is validated server-side; the form re-validates on submit.
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
@@ -30,6 +31,11 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           <p className="text-sm text-gray-500 mt-1">
             {teamName ? `You have been invited to join the ${teamName} team.` : 'You have been invited to create an account.'}
           </p>
+          {result.ok && !result.invite.accountId && (
+            <p className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2 text-sm text-green-800">
+              {describePlan(asAccountPlan(result.invite.plan), result.invite.freeDays)}, starting when you create your account.
+            </p>
+          )}
         </div>
 
         {result.ok ? (

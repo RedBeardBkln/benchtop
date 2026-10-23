@@ -9,6 +9,7 @@ import {
 } from '@/lib/billing/stripe'
 import { countSeats, planInterval } from '@/lib/billing/seat-sync'
 import { getAppOrigin } from '@/lib/app-url'
+import { checkoutTrialEnd } from '@/lib/billing/plans'
 
 // Starts a Stripe Checkout (subscription mode). Owner only; allowed while the account is unentitled.
 export async function POST(req: NextRequest) {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
-  if (ctx.account.billingExempt) {
+  if (ctx.account.billingExempt || ctx.account.plan === 'free_lifetime') {
     return NextResponse.json(
       { error: 'This account does not require a subscription', code: 'billing_exempt' },
       { status: 409 },
@@ -72,7 +73,11 @@ export async function POST(req: NextRequest) {
       customer: customerId ?? undefined,
       line_items: lineItems,
       client_reference_id: ctx.account.id,
-      subscription_data: { metadata: { account_id: ctx.account.id } },
+      // Subscribing during the free trial or free period: no charge until it ends
+      subscription_data: {
+        metadata: { account_id: ctx.account.id },
+        trial_end: checkoutTrialEnd(ctx.account),
+      },
       success_url: `${origin}/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/settings/billing?checkout=cancelled`,
     })

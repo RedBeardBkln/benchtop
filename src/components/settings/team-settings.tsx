@@ -10,7 +10,7 @@ import { AccessEditor, type ProjectOption } from './access-editor'
 import { btnPrimary, btnSecondary, Card, Field, formatDate, inputCls, Notice } from './ui'
 
 type TeamRole = 'owner' | 'admin' | 'member'
-type SeatState = 'exempt' | 'dev_bypass' | 'ready' | 'not_configured' | 'no_subscription'
+type SeatState = 'exempt' | 'free' | 'dev_bypass' | 'ready' | 'not_configured' | 'no_subscription'
 
 type Team = {
   me: string
@@ -32,7 +32,14 @@ type Team = {
   }>
   projects: ProjectOption[]
   clients: string[]
-  seats: { state: SeatState; used: number; billed: number; interval: SeatInterval | null }
+  seats: {
+    state: SeatState
+    used: number
+    billed: number
+    interval: SeatInterval | null
+    cap: number | null
+    pending: number
+  }
 }
 
 const ROLE_LABEL: Record<TeamRole, string> = { owner: 'Owner', admin: 'Admin', member: 'Member' }
@@ -155,7 +162,8 @@ export function TeamSettings() {
   }
 
   const { seats } = team
-  const canInvite = seats.state === 'exempt' || seats.state === 'dev_bypass' || seats.state === 'ready'
+  const atCap = seats.cap != null && seats.used + seats.pending >= seats.cap
+  const canInvite = (seats.state === 'exempt' || seats.state === 'free' || seats.state === 'dev_bypass' || seats.state === 'ready') && !atCap
   const seatPrice = seats.interval ? formatSeatPrice(seats.interval) : null
 
   return (
@@ -164,6 +172,18 @@ export function TeamSettings() {
         <div className="space-y-3 text-sm">
           {seats.state === 'exempt' && (
             <Notice tone="success">This is an internal account, so additional users are free.</Notice>
+          )}
+          {seats.state === 'free' && (
+            <Notice tone="success">
+              Additional users are free while your account is free or in its trial. Once you subscribe, they are billed as seats.
+            </Notice>
+          )}
+          {seats.cap != null && (
+            <Notice tone={atCap ? 'warning' : 'info'}>
+              Your plan allows up to {seats.cap} additional user{seats.cap === 1 ? '' : 's'}
+              {seats.pending > 0 ? `, counting ${seats.pending} pending invitation${seats.pending === 1 ? '' : 's'}` : ''}.
+              {atCap && ' Remove a user or revoke an invitation to invite someone else.'}
+            </Notice>
           )}
           {seats.state === 'dev_bypass' && (
             <Notice tone="info">Developer bypass is on (BILLING_DEV_BYPASS), so seats are not billed here. This has no effect in production.</Notice>

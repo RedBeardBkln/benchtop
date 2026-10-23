@@ -13,6 +13,7 @@ import {
   inviteUrl,
 } from '@/lib/invitations'
 import { getAppOrigin } from '@/lib/app-url'
+import { asAccountPlan } from '@/lib/billing/plans'
 import { findAuthUserIdByEmail } from '@/lib/supabase/admin'
 
 // Platform-admin only. Never returns a token: the plaintext link exists only in the POST response.
@@ -34,6 +35,9 @@ export async function GET() {
       id: r.id,
       email: r.email,
       note: r.note,
+      plan: asAccountPlan(r.plan),
+      freeDays: r.freeDays,
+      maxUsers: r.maxUsers,
       status: deriveStatus(r, now),
       createdAt: r.createdAt,
       expiresAt: r.expiresAt,
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid request' }, { status: 400 })
   }
-  const { email, note, expiresInDays } = parsed.data
+  const { email, note, expiresInDays, plan, freeDays, maxUsers } = parsed.data
 
   const now = new Date()
   const [pending] = await db
@@ -89,6 +93,9 @@ export async function POST(req: NextRequest) {
       email,
       tokenHash: hashToken(token),
       note: note || null,
+      plan,
+      freeDays: plan === 'free_period' ? freeDays : null,
+      maxUsers: plan === 'free_lifetime' ? maxUsers ?? null : null,
       invitedBy: ctx.user.id,
       expiresAt,
     })

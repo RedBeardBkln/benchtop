@@ -9,6 +9,9 @@ import { btnPrimary, btnSecondary, Card, formatDate, Notice } from './ui'
 type Props = {
   isOwner: boolean
   billingExempt: boolean
+  plan: 'paid' | 'free_lifetime' | 'free_period'
+  freeUntil: string | null
+  freeAccess: boolean
   configured: boolean
   devBypass: boolean
   entitled: boolean
@@ -66,7 +69,11 @@ export function BillingPanel(props: Props) {
     window.location.assign(url)
   }
 
-  const statusLabel = sub ? (STATUS_LABEL[sub.status] ?? sub.status) : 'No subscription'
+  const statusLabel = sub
+    ? (STATUS_LABEL[sub.status] ?? sub.status)
+    : props.freeAccess
+      ? (props.plan === 'free_period' ? 'Free period' : 'Free trial')
+      : 'No subscription'
 
   return (
     <>
@@ -87,10 +94,35 @@ export function BillingPanel(props: Props) {
       <Card title="Subscription">
         {props.billingExempt ? (
           <Notice tone="success">This is an internal account. It is billing exempt and never needs a subscription.</Notice>
+        ) : props.plan === 'free_lifetime' ? (
+          <div className="space-y-4">
+            <Notice tone="success">Your account is free for life. It never needs a subscription.</Notice>
+            {sub && ['active', 'trialing', 'past_due'].includes(sub.status) && !sub.cancelAtPeriodEnd && (
+              <Notice tone="warning">
+                You still have a paid subscription from before. You can cancel it under Manage billing; you keep free access either way.
+              </Notice>
+            )}
+            {props.isOwner && props.configured && props.hasCustomer && (
+              <button className={btnSecondary} disabled={busy !== null} onClick={() => go('portal')}>
+                {busy === 'portal' ? 'Opening…' : 'Manage billing'}
+              </button>
+            )}
+          </div>
         ) : (
           <div className="space-y-4">
             {!props.configured && (
               <Notice tone="warning">Billing is not configured in this environment, so subscriptions cannot be started or managed here.</Notice>
+            )}
+            {props.freeAccess && props.freeUntil && !(sub && props.entitled) && (
+              <Notice tone="info">
+                {props.plan === 'free_period' ? 'Your account is free' : 'Your free trial runs'} until {formatDate(props.freeUntil)}.
+                {' '}Subscribe any time before then to keep access afterwards. You will not be charged until {formatDate(props.freeUntil)}.
+              </Notice>
+            )}
+            {!props.freeAccess && props.freeUntil && !props.entitled && (
+              <Notice tone="warning">
+                {props.plan === 'free_period' ? 'Your free period' : 'Your free trial'} ended on {formatDate(props.freeUntil)}. Subscribe to keep using benchtop.
+              </Notice>
             )}
             {props.devBypass && !sub && (
               <Notice tone="info">Developer bypass is on (BILLING_DEV_BYPASS), so this account has access without a subscription. This has no effect in production.</Notice>
@@ -102,7 +134,7 @@ export function BillingPanel(props: Props) {
                 <dd>
                   <span
                     className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      props.entitled && sub ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                      props.entitled && (sub || props.freeAccess) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
                     }`}
                   >
                     {statusLabel}

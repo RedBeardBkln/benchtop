@@ -15,6 +15,9 @@ export default async function BillingSettingsPage({
     <BillingPanel
       isOwner={ctx.role === 'owner'}
       billingExempt={ctx.account.billingExempt}
+      plan={ctx.account.plan}
+      freeUntil={ctx.account.freeUntil?.toISOString() ?? null}
+      freeAccess={ctx.account.freeAccess}
       configured={isBillingConfigured()}
       devBypass={isDevBypassActive()}
       entitled={ctx.entitled}
