@@ -133,11 +133,18 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
         body: JSON.stringify({ ...form, name: form.name.trim() }),
       })
       if (!r.ok) throw new Error(await readErrorMessage(r, 'Could not save supplier'))
+      return (await r.json()) as { renamedIngredients: number }
     },
-    onSuccess: () => {
+    onSuccess: ({ renamedIngredients }) => {
       queryClient.invalidateQueries({ queryKey: ['supplier', supplier.id] })
       queryClient.invalidateQueries({ queryKey: ['suppliers'] })
-      toast.success('Supplier saved')
+      if (renamedIngredients) {
+        queryClient.invalidateQueries({ queryKey: ['ingredients'] })
+        queryClient.invalidateQueries({ queryKey: ['ingredient'] })
+      }
+      toast.success(renamedIngredients
+        ? `Supplier saved; ${renamedIngredients} ingredient${renamedIngredients === 1 ? '' : 's'} updated to the new name`
+        : 'Supplier saved')
     },
     onError: (e: Error) => toast.error(e.message),
   })

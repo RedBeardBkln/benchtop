@@ -5,7 +5,7 @@ import { suppliers, ingredientSuppliers, supplierContacts } from '@/lib/db/schem
 import { and, asc, eq } from 'drizzle-orm'
 import { isUuid, getOwnedSupplier, notFoundResponse } from '@/lib/tenancy'
 import { normalizeSupplierFields, supplierPatchSchema } from '@/lib/supplier-schemas'
-import { getSupplierIngredients } from '@/lib/suppliers-server'
+import { getSupplierIngredients, renameSupplierOnIngredients } from '@/lib/suppliers-server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -40,13 +40,25 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid supplier' }, { status: 400 })
   }
 
-  const [row] = await db
-    .update(suppliers)
-    .set({ ...normalizeSupplierFields(parsed.data), updatedAt: new Date() })
-    .where(and(eq(suppliers.id, id), eq(suppliers.accountId, ctx.account.id)))
-    .returning()
-  if (!row) return notFoundResponse()
-  return NextResponse.json(row)
+  const existing = await getOwnedSupplier(ctx, id)
+  if (!existing) return notFoundResponse()
+
+  const result = await db.transaction(async tx => {
+    const [row] = await tx
+      .update(suppliers)
+      .set({ ...normalizeSupplierFields(parsed.data), updatedAt: new Date() })
+      .where(and(eq(suppliers.id, id), eq(suppliers.accountId, ctx.account.id)))
+      .returning()
+    if (!row) return null
+    // Ingredients that name this supplier in their free-text Supplier field follow the rename,
+    // so they stay listed under it
+    const renamedIngredients = row.name !== existing.name
+      ? await renameSupplierOnIngredients(tx, ctx.account.id, existing.name, row.name)
+      : 0
+    return { ...row, renamedIngredients }
+  })
+  if (!result) return notFoundResponse()
+  return NextResponse.json(result)
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {

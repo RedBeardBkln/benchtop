@@ -68,6 +68,23 @@ export async function getSupplierIngredients(accountId: string, supplierId: stri
   return [...out.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+/** Points ingredients whose Supplier field names `oldName` (case-insensitively) at `newName`. Returns how many changed. */
+export async function renameSupplierOnIngredients(tx: Tx, accountId: string, oldName: string, newName: string): Promise<number> {
+  const key = nameKey(oldName)
+  if (!key) return 0
+  const rows = await tx
+    .update(ingredients)
+    .set({ supplierName: newName.trim() })
+    .where(and(
+      eq(ingredients.accountId, accountId),
+      sql`lower(trim(${ingredients.supplierName})) = ${key}`,
+    ))
+    .returning({ id: ingredients.id })
+  return rows.length
+}
+
 /** How many distinct ingredients each of the account's suppliers has, by supplier id. */
 export async function getSupplierIngredientCounts(accountId: string): Promise<Map<string, number>> {
   const [supplierRows, links, named] = await Promise.all([
