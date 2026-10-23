@@ -3,6 +3,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import type { MemberAccess } from '../../team-access'
+import type { UserPreferences } from '../../preferences'
 
 // Fixed, well-known id of the account that owns all data that existed before multi-tenancy
 // (the original LaunchTime staff workspace). Created by the 0007 migration; billing exempt.
@@ -54,6 +55,8 @@ export const profiles = pgTable('profiles', {
   jobTitle: text('job_title'),
   phone: text('phone'),
   timezone: text('timezone'),
+  // Per-user display preferences (see UserPreferences)
+  preferences: jsonb('preferences').$type<UserPreferences>().notNull().default({}),
   isPlatformAdmin: boolean('is_platform_admin').notNull().default(false),
   termsVersion: text('terms_version'),
   termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),

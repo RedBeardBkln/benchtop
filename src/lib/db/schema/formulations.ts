@@ -24,6 +24,8 @@ export const formulations = pgTable('formulations', {
   mode: formulationModeEnum('mode').notNull().default('ground_up'),
   status: formulationStatusEnum('status').notNull().default('draft'),
   servingSizeG: numeric('serving_size_g', { precision: 10, scale: 4 }),
+  // Finished weight of one sellable unit / package, for COGS per unit
+  unitSizeG: numeric('unit_size_g', { precision: 10, scale: 4 }),
   batchSizeG: numeric('batch_size_g', { precision: 12, scale: 4 }),
   // When true, batch_size_g is a fixed target: ingredient quantities rebalance to always total it
   batchLocked: boolean('batch_locked').notNull().default(false),

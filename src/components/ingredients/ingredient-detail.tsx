@@ -12,6 +12,7 @@ import {
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
+import { IngredientCostPanel } from './ingredient-cost-panel'
 
 const PACK_UNITS = ['kg', 'g', 'lb', 'oz', 'mt', 'case', 'bag', 'drum', 'pail', 'each', 'L', 'gal']
 
@@ -27,7 +28,7 @@ const STANDARD_CERTS = [
   'Vegan', 'Gluten-Free', 'Fair Trade',
 ]
 
-type Tab = 'nutrients' | 'allergens' | 'certs' | 'subs' | 'docs' | 'formulations' | 'suppliers' | 'inventory'
+type Tab = 'nutrients' | 'allergens' | 'certs' | 'subs' | 'docs' | 'formulations' | 'suppliers' | 'cost' | 'inventory'
 
 type InventoryData = {
   id: string
@@ -734,6 +735,7 @@ export function IngredientDetail({ id }: { id: string }) {
           ['docs', `Documents (${data.docs?.length ?? 0})`],
           ['formulations', `Formulations (${data.formulations?.length ?? 0})`],
           ['suppliers', `Suppliers (${data.suppliers?.length ?? 0})`],
+          ['cost', 'Cost'],
           ['inventory', 'Inventory'],
         ] as const).map(([tab, label]) => (
           <button
@@ -1523,6 +1525,17 @@ export function IngredientDetail({ id }: { id: string }) {
       )}
 
       {/* ── INVENTORY ── */}
+      {activeTab === 'cost' && (
+        <IngredientCostPanel
+          key={`${data.defaultCostPerKg}-${data.costUnit}`}
+          ingredientId={id}
+          defaultCostPerKg={data.defaultCostPerKg}
+          costUnit={data.costUnit}
+          suppliers={data.suppliers ?? []}
+          onGoToSuppliers={() => setActiveTab('suppliers')}
+        />
+      )}
+
       {activeTab === 'inventory' && (
         <div className="space-y-5">
           {/* Stock level card */}

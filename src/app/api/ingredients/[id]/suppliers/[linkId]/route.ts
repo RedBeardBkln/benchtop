@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredientSuppliers } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, ne, TransactionRollbackError } from 'drizzle-orm'
 import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 import { z } from 'zod'
 
@@ -13,6 +13,7 @@ const patchSchema = z.object({
   packUnit: z.string().max(50).nullable().optional(),
   costPerUnit: z.number().positive().nullable().optional(),
   isPreferred: z.boolean().optional(),
+  useForCost: z.boolean().optional(),
   notes: z.string().max(1000).nullable().optional(),
 })
 
@@ -37,11 +38,26 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (d.isPreferred !== undefined) updates.isPreferred = d.isPreferred
   if (d.notes !== undefined) updates.notes = d.notes
 
-  const [row] = await db
-    .update(ingredientSuppliers)
-    .set(updates)
-    .where(and(eq(ingredientSuppliers.id, linkId), eq(ingredientSuppliers.ingredientId, id)))
-    .returning()
+  if (d.useForCost !== undefined) updates.useForCost = d.useForCost
+
+  if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+
+  const row = await db.transaction(async tx => {
+    // Only one supplier price is the ingredient's cost, so choosing this one clears the others first
+    // (the partial unique index allows one)
+    if (d.useForCost) {
+      await tx.update(ingredientSuppliers).set({ useForCost: false })
+        .where(and(eq(ingredientSuppliers.ingredientId, id), ne(ingredientSuppliers.id, linkId)))
+    }
+    const [r] = await tx
+      .update(ingredientSuppliers)
+      .set(updates)
+      .where(and(eq(ingredientSuppliers.id, linkId), eq(ingredientSuppliers.ingredientId, id)))
+      .returning()
+    // Unknown link: roll back so the other links keep their flag
+    if (!r) tx.rollback()
+    return r
+  }).catch(e => { if (e instanceof TransactionRollbackError) return undefined; throw e })
 
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(row)

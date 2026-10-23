@@ -14,6 +14,8 @@ type Ctx = { params: Promise<{ id: string }> }
 const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   servingSizeG: z.number().positive().nullable().optional(),
+  // Package size for COGS per unit
+  unitSizeG: z.number().positive().max(1e8).nullable().optional(),
   batchSizeG: z.number().positive().nullable().optional(),
   batchLocked: z.boolean().optional(),
   notes: z.string().max(5000).nullable().optional(),
@@ -132,12 +134,14 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const d = parsed.data
-  // Changing only the grid's column view isn't an edit to the formulation, so it leaves updatedAt alone
-  const viewOnly = d.gridNutrientIds !== undefined && Object.keys(d).every(k => k === 'gridNutrientIds')
+  // Changing only the grid's column view or the COGS package size isn't an edit to the formula,
+  // so it leaves updatedAt alone
+  const viewOnly = Object.keys(d).length > 0 && Object.keys(d).every(k => k === 'gridNutrientIds' || k === 'unitSizeG')
   const updates: Record<string, unknown> = viewOnly ? {} : { updatedAt: new Date() }
   if (d.gridNutrientIds !== undefined) updates.gridNutrientIds = d.gridNutrientIds ? [...new Set(d.gridNutrientIds)] : null
   if (d.name !== undefined) updates.name = d.name
   if (d.servingSizeG !== undefined) updates.servingSizeG = d.servingSizeG?.toString() ?? null
+  if (d.unitSizeG !== undefined) updates.unitSizeG = d.unitSizeG?.toString() ?? null
   if (d.batchSizeG !== undefined) updates.batchSizeG = d.batchSizeG?.toString() ?? null
   if (d.batchLocked !== undefined) updates.batchLocked = d.batchLocked
   if (d.notes !== undefined) updates.notes = d.notes

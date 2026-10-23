@@ -43,6 +43,8 @@ import { NfpDialog } from '@/components/formulations/nfp-dialog'
 import { CompleteBatchDialog } from '@/components/formulations/complete-batch-dialog'
 import { SaveAsIngredientDialog } from '@/components/formulations/save-as-ingredient-dialog'
 import { PrintOptionsDialog } from '@/components/formulations/print-options-dialog'
+import { CogsPanel } from '@/components/formulations/cogs-panel'
+import { usePreferences } from '@/lib/use-preferences'
 
 // Nutrient columns the grid shows until the formulation picks its own
 const DEFAULT_GRID_NUTRIENT_NAMES = ['Energy', 'Protein', 'Total Fat', 'Total Carbohydrate', 'Dietary Fiber']
@@ -288,6 +290,10 @@ export function FormulationGrid({ id }: { id: string }) {
   const [showLibraryPicker, setShowLibraryPicker] = useState(false)
   const [swapIngredientName, setSwapIngredientName] = useState('')
   const initDoneRef = useRef(false)
+  // COGS tab, shown only to users who turned it on in Settings → Preferences
+  const { prefs } = usePreferences()
+  const [tab, setTab] = useState<'formula' | 'cogs'>('formula')
+  const activeTab = prefs.showCogs ? tab : 'formula'
 
   const { data, isLoading, error } = useQuery<FormulationDetail>({
     queryKey: ['formulation', id],
@@ -1163,6 +1169,39 @@ export function FormulationGrid({ id }: { id: string }) {
         </div>
       )}
 
+      {prefs.showCogs && (
+        <div className="flex border-b border-gray-200 mb-4 print:hidden" role="tablist" aria-label="Formulation views">
+          {([['formula', 'Formula'], ['cogs', 'COGS']] as const).map(([t, label]) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={activeTab === t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm border-b-2 -mb-px transition-colors ${
+                activeTab === t ? 'border-blue-500 text-blue-600 font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'cogs' && (
+        <CogsPanel
+          key={data.unitSizeG ?? 'none'}
+          formulationId={id}
+          lines={lines}
+          finishedWeightG={calcResult?.finishedWeightG ?? totalWeightG}
+          yieldPct={calcResult?.processYield.yieldPct ?? 100}
+          servingSizeG={servingSizeG && parseFloat(servingSizeG) > 0 ? parseFloat(servingSizeG) : null}
+          unitSizeG={data.unitSizeG ? parseFloat(data.unitSizeG) : null}
+          canEdit={!readOnly}
+          hasUnsavedChanges={isDirty}
+        />
+      )}
+
+      {activeTab === 'formula' && (<>
       {/* Sort + column controls */}
       {lines.length > 0 && (
         <div className="flex flex-wrap items-center gap-1 mb-2 justify-end print:hidden">
@@ -1793,6 +1832,7 @@ export function FormulationGrid({ id }: { id: string }) {
           )}
         </div>
       )}
+      </>)}
 
       <AddIngredientDialog
         open={showManualDialog}

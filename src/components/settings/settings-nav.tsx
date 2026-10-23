@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 
 const SECTIONS = [
   { href: '/settings/profile', label: 'Profile' },
+  { href: '/settings/preferences', label: 'Preferences' },
   { href: '/settings/account', label: 'Account' },
   { href: '/settings/team', label: 'Team', teamAdminOnly: true },
   { href: '/settings/billing', label: 'Billing' },

@@ -16,6 +16,7 @@ import {
   suppliers,
 } from '@/lib/db/schema'
 import { and, eq, inArray, sql } from 'drizzle-orm'
+import { COST_UNITS } from '@/lib/preferences'
 import { z } from 'zod'
 import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
 import { identityKey } from '@/lib/ingredient-identity'
@@ -84,6 +85,7 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
           packUnit: ingredientSuppliers.packUnit,
           costPerUnit: ingredientSuppliers.costPerUnit,
           isPreferred: ingredientSuppliers.isPreferred,
+          useForCost: ingredientSuppliers.useForCost,
           notes: ingredientSuppliers.notes,
           createdAt: ingredientSuppliers.createdAt,
           supplierName: suppliers.name,
@@ -148,7 +150,8 @@ const patchSchema = z.object({
   verification: z.enum(['verified', 'unverified']).optional(),
   naturallyDerived: z.boolean().optional(),
   notes: z.string().max(2000).optional(),
-  defaultCostPerKg: z.number().positive().nullable().optional(),
+  defaultCostPerKg: z.number().positive().max(1e6).nullable().optional(),
+  costUnit: z.enum(COST_UNITS).optional(),
   moisturePct: z.number().min(0).max(100).nullable().optional(),
   stockG: z.number().nullable().optional(),
   category: z.string().trim().max(120).nullable().optional(),
@@ -192,6 +195,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     if (d.naturallyDerived !== undefined) updateValues.naturallyDerived = d.naturallyDerived
     if (d.notes !== undefined) updateValues.notes = d.notes
     if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null
+    if (d.costUnit !== undefined) updateValues.costUnit = d.costUnit
     if (d.moisturePct !== undefined) updateValues.moisturePct = d.moisturePct?.toString() ?? null
     if (d.stockG !== undefined) updateValues.stockG = d.stockG?.toString() ?? null
     if (d.category !== undefined || d.subcategory !== undefined || d.microCategory !== undefined) {

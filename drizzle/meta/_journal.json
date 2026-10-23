@@ -120,6 +120,13 @@
       "when": 1792777672532,
       "tag": "0016_supplier_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792795914840,
+      "tag": "0017_cogs",
+      "breakpoints": true
     }
   ]
 }

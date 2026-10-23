@@ -1,7 +1,8 @@
 import {
   pgTable, uuid, text, numeric, boolean, integer,
-  timestamp, index, jsonb,
+  timestamp, index, uniqueIndex, jsonb,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 import { ingredients } from './ingredients'
 import { accounts } from './accounts'
 import type { ClientAddress } from '../../client-schemas'
@@ -49,9 +50,12 @@ export const ingredientSuppliers = pgTable('ingredient_suppliers', {
   packUnit: text('pack_unit'),
   costPerUnit: numeric('cost_per_unit', { precision: 10, scale: 4 }),
   isPreferred: boolean('is_preferred').notNull().default(false),
+  // This link's price is the ingredient's cost in formulations; at most one per ingredient
+  useForCost: boolean('use_for_cost').notNull().default(false),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index('ingredient_suppliers_ingredient_idx').on(t.ingredientId),
+  uniqueIndex('ingredient_suppliers_cost_link_uniq').on(t.ingredientId).where(sql`${t.useForCost}`),
   index('ingredient_suppliers_supplier_idx').on(t.supplierId),
 ])

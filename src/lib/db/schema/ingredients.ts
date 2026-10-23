@@ -19,7 +19,10 @@ export const ingredients = pgTable('ingredients', {
   isAbSpi: boolean('is_ab_spi').notNull().default(false),
   isIsolateOrConcentrate: boolean('is_isolate_or_concentrate').notNull().default(false),
   naturallyDerived: boolean('naturally_derived').notNull().default(true),
+  // Manually entered raw material cost, always stored per kg; cost_unit is the unit it's shown/entered in.
+  // A supplier link marked use_for_cost overrides it (see lib/costing.ts).
   defaultCostPerKg: numeric('default_cost_per_kg', { precision: 10, scale: 4 }),
+  costUnit: text('cost_unit').notNull().default('kg'),
   moisturePct: numeric('moisture_pct', { precision: 6, scale: 4 }),
   stockG: numeric('stock_g', { precision: 14, scale: 4 }),
   // Preferred name as it should appear on the ingredient deck
