@@ -2,10 +2,11 @@
 //
 // The account owner is covered by the plan. Every other member (admin or member) is one extra
 // seat, billed as a second item on the same Stripe subscription. Stripe requires all items on a
-// subscription to share one interval, so the seat price follows the plan: $5/month on a monthly
-// plan, $50/year on a yearly one.
+// subscription to share one interval, so the seat price follows the plan: monthly seats on a
+// monthly plan, yearly seats on a yearly one. These amounts must match the prices in Stripe.
 
-export const SEAT_PRICE_USD = { month: 5, year: 50 } as const
+export const PLAN_PRICE_USD = { month: 25, year: 250 } as const
+export const SEAT_PRICE_USD = { month: 10, year: 100 } as const
 
 export type SeatInterval = keyof typeof SEAT_PRICE_USD
 
@@ -15,6 +16,10 @@ export function seatInterval(interval: string | null | undefined): SeatInterval 
 
 export function formatSeatPrice(interval: SeatInterval): string {
   return `$${SEAT_PRICE_USD[interval]}/${interval}`
+}
+
+export function formatPlanPrice(interval: SeatInterval): string {
+  return `$${PLAN_PRICE_USD[interval]}/${interval}`
 }
 
 // Paid seats for a membership list: everyone except the owner

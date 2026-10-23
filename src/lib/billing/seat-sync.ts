@@ -2,8 +2,8 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { accountMembers, accounts, subscriptions } from '@/lib/db/schema'
 import { ENTITLED_STATUSES, isDevBypassActive } from './entitlement'
-import { getPriceId, getSeatPriceId, getSeatPriceIds, getStripe, isSeatBillingConfigured } from './stripe'
-import { billableSeats, seatInterval, seatItemChanges, type SeatInterval } from './seats'
+import { getSeatPriceId, getSeatPriceIds, getStripe, isSeatBillingConfigured } from './stripe'
+import { billableSeats, seatInterval, seatItemChanges } from './seats'
 import { hasFreeAccess } from './plans'
 
 // Can this account add team members right now, and how would they be billed?
@@ -33,16 +33,6 @@ export function seatBillingState(input: {
 
 export function canAddSeats(state: SeatBillingState): boolean {
   return state === 'exempt' || state === 'free' || state === 'dev_bypass' || state === 'ready'
-}
-
-// The plan price's interval (month/year); falls back to month when Stripe can't be reached
-export async function planInterval(): Promise<SeatInterval> {
-  try {
-    const price = await getStripe().prices.retrieve(getPriceId())
-    return seatInterval(price.recurring?.interval)
-  } catch {
-    return 'month'
-  }
 }
 
 export async function countSeats(accountId: string): Promise<number> {

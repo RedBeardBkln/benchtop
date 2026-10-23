@@ -37,7 +37,8 @@ describe('POST /api/stripe/webhook (signature handling)', () => {
   beforeEach(() => {
     tx.calls = 0
     process.env.STRIPE_SECRET_KEY = 'sk_test_unit'
-    process.env.STRIPE_PRICE_ID = 'price_unit'
+    process.env.STRIPE_PLAN_PRICE_MONTHLY_ID = 'price_unit_month'
+    process.env.STRIPE_PLAN_PRICE_YEARLY_ID = 'price_unit_year'
     process.env.STRIPE_WEBHOOK_SECRET = SECRET
   })
   afterEach(() => {
@@ -54,7 +55,8 @@ describe('POST /api/stripe/webhook (signature handling)', () => {
 
   it('returns 503 when no Stripe env vars are set at all', async () => {
     delete process.env.STRIPE_SECRET_KEY
-    delete process.env.STRIPE_PRICE_ID
+    delete process.env.STRIPE_PLAN_PRICE_MONTHLY_ID
+    delete process.env.STRIPE_PLAN_PRICE_YEARLY_ID
     delete process.env.STRIPE_WEBHOOK_SECRET
     const res = await POST(req(payload, sign(payload)))
     expect(res.status).toBe(503)

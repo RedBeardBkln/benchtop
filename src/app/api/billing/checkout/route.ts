@@ -5,9 +5,9 @@ import { db } from '@/lib/db'
 import { accounts } from '@/lib/db/schema'
 import { isEntitled } from '@/lib/billing/entitlement'
 import {
-  billingNotConfiguredResponse, getPriceId, getSeatPriceId, getStripe, isBillingConfigured, isSeatBillingConfigured,
+  billingNotConfiguredResponse, getPlanPriceId, getSeatPriceId, getStripe, isBillingConfigured, isSeatBillingConfigured,
 } from '@/lib/billing/stripe'
-import { countSeats, planInterval } from '@/lib/billing/seat-sync'
+import { countSeats } from '@/lib/billing/seat-sync'
 import { getAppOrigin } from '@/lib/app-url'
 import { checkoutTrialEnd } from '@/lib/billing/plans'
 
@@ -24,6 +24,10 @@ export async function POST(req: NextRequest) {
     )
   }
   if (!isBillingConfigured()) return billingNotConfiguredResponse()
+
+  // Monthly unless the owner picked yearly
+  const body = await req.json().catch(() => null) as { interval?: unknown } | null
+  const interval = body?.interval === 'year' ? 'year' : 'month'
 
   if (ctx.subscription && isEntitled({ billingExempt: false, status: ctx.subscription.status })) {
     return NextResponse.json(
@@ -61,10 +65,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Resubscribing with team members already in the account: their seats are part of the plan
-    const lineItems = [{ price: getPriceId(), quantity: 1 }]
+    const lineItems = [{ price: getPlanPriceId(interval), quantity: 1 }]
     const seats = await countSeats(ctx.account.id)
     if (seats > 0 && isSeatBillingConfigured()) {
-      lineItems.push({ price: getSeatPriceId(await planInterval()), quantity: seats })
+      lineItems.push({ price: getSeatPriceId(interval), quantity: seats })
     }
 
     const origin = getAppOrigin(req.nextUrl.origin)

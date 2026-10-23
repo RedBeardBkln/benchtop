@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
+import { PLAN_PRICE_USD, SEAT_PRICE_USD, formatPlanPrice, type SeatInterval } from '@/lib/billing/seats'
 import { btnPrimary, btnSecondary, Card, formatDate, Notice } from './ui'
 
 type Props = {
@@ -38,6 +39,7 @@ export function BillingPanel(props: Props) {
   const router = useRouter()
   const { subscription: sub } = props
   const [busy, setBusy] = useState<null | 'checkout' | 'portal'>(null)
+  const [interval, setBillingInterval] = useState<SeatInterval>('month')
   const [syncing, setSyncing] = useState(props.checkout === 'success' && Boolean(props.sessionId))
   const syncedRef = useRef(false)
 
@@ -60,7 +62,11 @@ export function BillingPanel(props: Props) {
 
   async function go(kind: 'checkout' | 'portal') {
     setBusy(kind)
-    const res = await fetch(`/api/billing/${kind}`, { method: 'POST' })
+    const res = await fetch(`/api/billing/${kind}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(kind === 'checkout' ? { interval } : {}),
+    })
     if (!res.ok) {
       setBusy(null)
       return toast.error(await readErrorMessage(res, 'Billing request failed'))
@@ -159,6 +165,36 @@ export function BillingPanel(props: Props) {
 
             {!props.isOwner && (
               <p className="text-sm text-gray-500">Only the account owner can start or manage the subscription.</p>
+            )}
+
+            {props.isOwner && props.configured && (!sub || !props.entitled) && (
+              <fieldset>
+                <legend className="text-sm text-gray-500 mb-2">Billing</legend>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(['month', 'year'] as const).map(i => (
+                    <label
+                      key={i}
+                      className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm ${
+                        interval === i ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input type="radio" name="interval" value={i} checked={interval === i}
+                        onChange={() => setBillingInterval(i)} className="mt-0.5" />
+                      <span>
+                        <span className="block font-medium text-gray-900">
+                          {i === 'month' ? 'Monthly' : 'Annual'} · {formatPlanPrice(i)}
+                        </span>
+                        <span className="block text-xs text-gray-500">
+                          {i === 'year'
+                            ? `Save $${PLAN_PRICE_USD.month * 12 - PLAN_PRICE_USD.year} a year. `
+                            : ''}
+                          Extra team members ${SEAT_PRICE_USD[i]}/{i} each.
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
             )}
 
             {props.isOwner && props.configured && (

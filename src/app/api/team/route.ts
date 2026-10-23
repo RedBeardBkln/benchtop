@@ -3,7 +3,8 @@ import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { clients as clientsTable, invitations, projects } from '@/lib/db/schema'
-import { planInterval, seatBillingState } from '@/lib/billing/seat-sync'
+import { seatBillingState } from '@/lib/billing/seat-sync'
+import { planIntervalForPrice } from '@/lib/billing/stripe'
 import { listMembers } from '@/lib/team-server'
 import { memberAccessSchema } from '@/lib/team-access'
 
@@ -77,7 +78,7 @@ export async function GET() {
       state,
       used: members.filter(m => m.role !== 'owner').length,
       billed: ctx.subscription?.seatQuantity ?? 0,
-      interval: state === 'ready' ? await planInterval() : null,
+      interval: state === 'ready' ? planIntervalForPrice(ctx.subscription?.priceId) : null,
       // Free-for-life cap on additional users (pending invitations count toward it); null = none
       cap: ctx.account.userCap,
       pending: pending.length,

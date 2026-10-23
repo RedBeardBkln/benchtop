@@ -1,12 +1,13 @@
 import Stripe from 'stripe'
 import { NextResponse } from 'next/server'
+import type { SeatInterval } from './seats'
 
 type Env = Record<string, string | undefined>
 
-// Billing is "configured" when the secret key and price are present. The webhook route
-// additionally needs STRIPE_WEBHOOK_SECRET.
+// Billing is "configured" when the secret key and both plan prices (monthly and yearly) are
+// present. The webhook route additionally needs STRIPE_WEBHOOK_SECRET.
 export function isBillingConfigured(env: Env = process.env): boolean {
-  return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_PRICE_ID)
+  return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_PLAN_PRICE_MONTHLY_ID && env.STRIPE_PLAN_PRICE_YEARLY_ID)
 }
 
 export function isWebhookConfigured(env: Env = process.env): boolean {
@@ -30,14 +31,19 @@ export function getStripe(): Stripe {
   return cached
 }
 
-export function getPriceId(): string {
-  const id = process.env.STRIPE_PRICE_ID
+export function getPlanPriceId(interval: SeatInterval, env: Env = process.env): string {
+  const id = interval === 'year' ? env.STRIPE_PLAN_PRICE_YEARLY_ID : env.STRIPE_PLAN_PRICE_MONTHLY_ID
   if (!id) throw new BillingNotConfiguredError()
   return id
 }
 
+/** The interval of a subscription's plan price: yearly if it is the yearly plan price, else monthly. */
+export function planIntervalForPrice(priceId: string | null | undefined, env: Env = process.env): SeatInterval {
+  return priceId && priceId === env.STRIPE_PLAN_PRICE_YEARLY_ID ? 'year' : 'month'
+}
+
 // Extra team seats: one price per plan interval, since every item on a Stripe subscription must
-// share its billing interval. $5/month for a monthly plan, $50/year for a yearly one.
+// share its billing interval. See SEAT_PRICE_USD for the amounts.
 export function isSeatBillingConfigured(env: Env = process.env): boolean {
   return isBillingConfigured(env) && Boolean(env.STRIPE_SEAT_PRICE_MONTHLY_ID && env.STRIPE_SEAT_PRICE_YEARLY_ID)
 }

@@ -10,7 +10,7 @@ export const PRIVACY_VERSION = '2026-10-23'
 export const PRIVACY_EFFECTIVE_DATE = 'October 23, 2026'
 
 export const LEGAL_ENTITY_NAME = 'Benchtop, LLC'
-export const LEGAL_CONTACT_EMAIL = 'legal@benchtop.com'
+export const LEGAL_CONTACT_EMAIL = 'legal@benchtop.solutions'
 export const LEGAL_JURISDICTION = 'the State of Delaware, United States'
 
 export const LEGAL_DRAFT_NOTICE = 'Draft -- pending legal review'

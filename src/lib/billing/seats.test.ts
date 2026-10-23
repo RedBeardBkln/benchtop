@@ -7,9 +7,9 @@ const YEARLY = 'price_seat_year'
 const SEAT_IDS = [MONTHLY, YEARLY]
 
 describe('seat pricing', () => {
-  it('is $5/month or $50/year, following the plan interval', () => {
-    expect(formatSeatPrice('month')).toBe('$5/month')
-    expect(formatSeatPrice('year')).toBe('$50/year')
+  it('is $10/month or $100/year, following the plan interval', () => {
+    expect(formatSeatPrice('month')).toBe('$10/month')
+    expect(formatSeatPrice('year')).toBe('$100/year')
     expect(seatInterval('year')).toBe('year')
     expect(seatInterval('month')).toBe('month')
     expect(seatInterval(null)).toBe('month')

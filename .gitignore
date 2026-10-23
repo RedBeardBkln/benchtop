@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Claude Code local-only settings
 .claude/settings.local.json
+
+# Local notes with Stripe details; never commit
+Benchtop Stripe.txt

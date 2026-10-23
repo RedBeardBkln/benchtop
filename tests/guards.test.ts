@@ -147,7 +147,7 @@ describe('environment documentation', () => {
     const missing = [...used].filter(v => !documented.has(v))
     expect(missing).toEqual([])
     // The Stripe / bypass vars from the plan must be there even if only read via an env param
-    for (const v of ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID', 'STRIPE_WEBHOOK_SECRET', 'BILLING_DEV_BYPASS',
+    for (const v of ['STRIPE_SECRET_KEY', 'STRIPE_PLAN_PRICE_MONTHLY_ID', 'STRIPE_PLAN_PRICE_YEARLY_ID', 'STRIPE_WEBHOOK_SECRET', 'BILLING_DEV_BYPASS',
       'SUPABASE_SERVICE_ROLE_KEY', 'PLATFORM_ADMIN_EMAILS', 'NEXT_PUBLIC_APP_URL']) {
       expect(documented.has(v), v).toBe(true)
     }
