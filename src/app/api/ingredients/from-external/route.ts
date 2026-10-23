@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
 import { formatIngredientName } from '@/lib/ingredient-name'
 import { convertToUnit } from '@/lib/units'
+import { canonicalTerm, categoryOptions } from '@/lib/ingredient-categories'
+import { loadTaxonomyEntries } from '@/lib/ingredient-taxonomy'
 
 const bodySchema = z.object({
   name: z.string().min(1).max(255),
@@ -17,6 +19,14 @@ const bodySchema = z.object({
     amountPer100g: z.number().min(0),
     unit: z.string(),
   })).min(1),
+  // Optional lab details, e.g. when the reverse wizard adds a material that's on the shelf
+  brandName: z.string().trim().max(255).optional(),
+  supplierName: z.string().trim().max(255).optional(),
+  category: z.string().trim().max(120).optional(),
+  subcategory: z.string().trim().max(120).optional(),
+  microCategory: z.string().trim().max(120).optional(),
+  onHand: z.boolean().optional(),
+  stockG: z.number().min(0).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -30,8 +40,10 @@ export async function POST(req: NextRequest) {
   const { sourceType, sourceUrl, nutrients: inputNutrients } = parsed.data
   const name = formatIngredientName(parsed.data.name)
 
-  const dupe = await findDuplicate(ctx.account.id, { name })
-  if (dupe) return duplicateResponse({ name }, dupe)
+  const d = parsed.data
+  const identity = { name, brandName: d.brandName || null, supplierName: d.supplierName || null }
+  const dupe = await findDuplicate(ctx.account.id, identity)
+  if (dupe) return duplicateResponse(identity, dupe)
 
   // Load all DB nutrients to match by name (case-insensitive)
   const allNutrients = await db
@@ -68,6 +80,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: why }, { status: 422 })
   }
 
+  // Category values take an existing spelling when they match one ignoring case
+  const known = d.category || d.subcategory || d.microCategory ? await loadTaxonomyEntries(ctx.account.id) : []
+
   // Create ingredient
   const [row] = await db
     .insert(ingredients)
@@ -75,6 +90,13 @@ export async function POST(req: NextRequest) {
       accountId: ctx.account.id,
       name,
       sourceType,
+      brandName: identity.brandName,
+      supplierName: identity.supplierName,
+      category: canonicalTerm(d.category, categoryOptions(known)),
+      subcategory: canonicalTerm(d.subcategory, known.map(k => k.subcategory)),
+      microCategory: canonicalTerm(d.microCategory, known.map(k => k.microCategory)),
+      onHand: d.onHand ?? false,
+      stockG: d.stockG?.toString(),
       verification: 'unverified',
       naturallyDerived: true,
       notes: sourceUrl

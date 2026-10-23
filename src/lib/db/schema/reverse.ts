@@ -2,6 +2,7 @@ import { pgTable, uuid, text, integer, numeric, boolean, timestamp, jsonb, index
 import { reverseCandidateStatusEnum } from './enums'
 import { projects } from './projects'
 import { ingredients } from './ingredients'
+import { formulations } from './formulations'
 
 // Parsed competitor/reference product for reverse-engineering mode
 // label_photo_paths: Supabase Storage paths
@@ -38,3 +39,11 @@ export const reverseCandidates = pgTable('reverse_candidates', {
   index('reverse_candidates_target_idx').on(t.reverseTargetId),
   index('reverse_candidates_ingredient_idx').on(t.candidateIngredientId),
 ])
+
+// An unfinished reverse-engineer wizard session ("Save as draft"), one per formulation.
+// data is the wizard's own state (label, targets, deck links, research); deleted once the result is applied.
+export const reverseWizardDrafts = pgTable('reverse_wizard_drafts', {
+  formulationId: uuid('formulation_id').primaryKey().references(() => formulations.id, { onDelete: 'cascade' }),
+  data: jsonb('data').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})

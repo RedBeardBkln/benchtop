@@ -1,17 +1,19 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   X, Plus, Trash2, ChevronRight, ChevronLeft, Zap, Search, Database,
   Upload, ImageIcon, CheckCircle2, XCircle, AlertCircle, Link2, Unlink,
-  FileText, Sparkles, FlaskConical, RotateCcw, Globe, ExternalLink,
+  FileText, Sparkles, FlaskConical, RotateCcw, Globe, ExternalLink, Save, PackagePlus,
 } from 'lucide-react'
 import type { Nutrient } from '@/lib/types'
 import type { SolverResult } from '@/lib/solver'
 import { convertToUnit } from '@/lib/units'
+import { categoryPath } from '@/lib/ingredient-categories'
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
+import { MANUAL_NUTRIENTS, NewLibraryIngredientPanel } from '@/components/formulations/new-library-ingredient-panel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,6 +54,26 @@ type ResearchResult = {
   additionalNotes: string
 }
 
+// A library search hit: name, category path and on-hand badge
+type LibrarySearchHit = {
+  id: string; name: string; onHand?: boolean
+  category?: string | null; subcategory?: string | null; microCategory?: string | null
+}
+
+function LibraryHitLabel({ ing }: { ing: LibrarySearchHit }) {
+  return (
+    <span className="flex items-center justify-between gap-2">
+      <span className="min-w-0">
+        <span className="block truncate">{ing.name}</span>
+        {ing.category && <span className="block text-xs text-gray-400 truncate">{categoryPath(ing)}</span>}
+      </span>
+      {ing.onHand && (
+        <span className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700">On hand</span>
+      )}
+    </span>
+  )
+}
+
 type ExtraCandidate = {
   ingredientId: string; name: string; verification: string; minPct: string; maxPct: string
   nutrients: NutrientInfo[]
@@ -88,15 +110,10 @@ type DeckLinkState = {
 
 // ── Link-picker constants & helpers ──────────────────────────────────────────
 
-const MANUAL_NUTRIENTS = [
-  { name: 'Energy',             unit: 'kcal' },
-  { name: 'Protein',            unit: 'g'    },
-  { name: 'Total Fat',          unit: 'g'    },
-  { name: 'Total Carbohydrate', unit: 'g'    },
-  { name: 'Dietary Fiber',      unit: 'g'    },
-  { name: 'Sugars',             unit: 'g'    },
-  { name: 'Sodium',             unit: 'mg'   },
-] as const
+/** Nutrients the server left out because their unit couldn't be converted to the stored one. */
+function warnUnconvertible(names: string[] | undefined) {
+  if (names?.length) toast.warning(`Skipped — unit couldn't be converted: ${names.join(', ')}`)
+}
 
 function defaultLinkState(): DeckLinkState {
   return {
@@ -183,7 +200,19 @@ const STEPS: { key: WizardStep; label: string }[] = [
 function StepDots({ step }: { step: WizardStep }) {
   const idx = STEPS.findIndex(s => s.key === step)
   return (
-    <div className="flex items-center gap-0">
+    <>
+    {/* Phones: "Step 3 of 5 · Link ingr." over a segmented bar */}
+    <div className="sm:hidden w-full">
+      <p className="text-xs text-gray-500 mb-1">
+        Step {idx + 1} of {STEPS.length} · <span className="font-medium text-violet-700">{STEPS[idx]?.label}</span>
+      </p>
+      <div className="flex gap-1">
+        {STEPS.map((s, i) => (
+          <div key={s.key} className={`h-1 flex-1 rounded-full ${i <= idx ? 'bg-violet-500' : 'bg-gray-200'}`} />
+        ))}
+      </div>
+    </div>
+    <div className="hidden sm:flex items-center gap-0">
       {STEPS.map((s, i) => {
         const done   = i < idx
         const active = i === idx
@@ -206,6 +235,89 @@ function StepDots({ step }: { step: WizardStep }) {
         )
       })}
     </div>
+    </>
+  )
+}
+
+// ── Drafts ───────────────────────────────────────────────────────────────────
+
+// What "Save as draft" keeps: everything entered or found so far. Label photos aren't kept, only what was
+// read from them; the solver result isn't either (re-running it is quick).
+type WizardDraft = {
+  v: 1
+  step: WizardStep
+  mode: EntryMode | null
+  productName: string
+  labelServingG: string
+  batchSizeG: string
+  targets: TargetRow[]
+  deckIngredients: DeckIngredient[]
+  manualDeckText: string
+  claims: string[]
+  impliedConstraints: string[]
+  extraCandidates: ExtraCandidate[]
+  researchResult: ResearchResult | null
+  usdaCandidates: Record<string, UsdaCandidate[]>
+}
+
+function isWizardDraft(d: unknown): d is WizardDraft {
+  if (!d || typeof d !== 'object') return false
+  const x = d as Partial<WizardDraft>
+  return x.v === 1 && STEPS.some(s => s.key === x.step) && Array.isArray(x.targets) && Array.isArray(x.deckIngredients)
+}
+
+// ── Phone layout ─────────────────────────────────────────────────────────────
+
+/** True below Tailwind's `sm` breakpoint, where each ingredient opens in its own full-screen dialog */
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const update = () => setMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return mobile
+}
+
+/** Full-screen dialog for one ingredient on a phone, with previous/next to move through the list */
+function IngredientSheet({ title, subtitle, onClose, onPrev, onNext, children }: {
+  title: string
+  subtitle: string
+  onClose: () => void
+  onPrev: (() => void) | null
+  onNext: (() => void) | null
+  children: React.ReactNode
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-white flex flex-col" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-200">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-gray-400">{subtitle}</p>
+          <h3 className="text-base font-semibold text-gray-900 break-words">{title}</h3>
+        </div>
+        <button onClick={onClose} aria-label="Close" className="p-2 -m-1 text-gray-400 hover:text-gray-600">
+          <X size={20} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4">{children}</div>
+      <div className="flex gap-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-gray-200">
+        <button
+          onClick={onPrev ?? undefined} disabled={!onPrev}
+          className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm border border-gray-200 rounded-md text-gray-600 disabled:opacity-40"
+        >
+          <ChevronLeft size={15} /> Previous
+        </button>
+        <button onClick={onClose} className="flex-1 py-2.5 text-sm bg-violet-600 text-white rounded-md">Done</button>
+        <button
+          onClick={onNext ?? undefined} disabled={!onNext}
+          className="flex-1 flex items-center justify-center gap-1 py-2.5 text-sm border border-gray-200 rounded-md text-gray-600 disabled:opacity-40"
+        >
+          Next <ChevronRight size={15} />
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -219,7 +331,7 @@ function LibraryLinkSearch({
   onClose: () => void
 }) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Array<{ id: string; name: string }>>([])
+  const [results, setResults] = useState<LibrarySearchHit[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
@@ -267,7 +379,7 @@ function LibraryLinkSearch({
           onClick={() => pick(ing)}
           className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 border-b border-gray-50"
         >
-          {ing.name}
+          <LibraryHitLabel ing={ing} />
         </button>
       ))}
       {query && results.length === 0 && (
@@ -281,7 +393,7 @@ function LibraryLinkSearch({
 
 function DeckLinkCard({
   item, linkState, onImportCandidate, onFetchUrl, onFetchUrlFrom, onWebSearch,
-  onSaveExternal, onSkip, onUpdateLinkState, onParseDoc,
+  onSaveExternal, onSkip, onUpdateLinkState, onParseDoc, onAddNew,
 }: {
   item: DeckIngredient
   linkState: DeckLinkState | undefined
@@ -293,6 +405,7 @@ function DeckLinkCard({
   onSkip: () => void
   onUpdateLinkState: (patch: Partial<DeckLinkState>) => void
   onParseDoc: (file: File) => void
+  onAddNew: () => void
 }) {
   const ls = linkState ?? defaultLinkState()
   return (
@@ -300,9 +413,18 @@ function DeckLinkCard({
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
         <span className="text-sm font-medium text-gray-800">{item.rawName}</span>
-        <button onClick={onSkip} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5 rounded hover:bg-gray-100 transition-colors">
-          Skip
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={onAddNew}
+            title="In the lab but not in the library? Add it and link it"
+            className="flex items-center gap-1 text-xs text-green-700 px-2 py-1 sm:py-0.5 rounded border border-green-200 hover:bg-green-50 transition-colors"
+          >
+            <PackagePlus size={11} /> Add new
+          </button>
+          <button onClick={onSkip} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 sm:py-0.5 rounded hover:bg-gray-100 transition-colors">
+            Skip
+          </button>
+        </div>
       </div>
       {/* Tabs */}
       <div className="flex border-b border-gray-100 bg-gray-50">
@@ -508,16 +630,16 @@ function DeckLinkCard({
         {ls.activeTab === 'manual' && (
           <div className="space-y-2.5">
             <p className="text-xs text-gray-400">Enter values per 100 g of this ingredient</p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
               {MANUAL_NUTRIENTS.map(mn => (
                 <div key={mn.name} className="flex items-center gap-2">
-                  <label className="text-xs text-gray-600 flex-1 min-w-0">{mn.name}</label>
+                  <label className="text-sm sm:text-xs text-gray-600 flex-1 min-w-0">{mn.name}</label>
                   <input
-                    type="number" min="0" step="any"
+                    type="number" inputMode="decimal" min="0" step="any"
                     value={ls.manualNutrients[mn.name] ?? ''}
                     onChange={e => onUpdateLinkState({ manualNutrients: { ...ls.manualNutrients, [mn.name]: e.target.value } })}
                     placeholder="0"
-                    className="w-20 px-2 py-1 text-xs text-right border border-gray-200 rounded tabular-nums focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="w-24 sm:w-20 px-2 py-2 sm:py-1 text-base sm:text-xs text-right border border-gray-200 rounded tabular-nums focus:outline-none focus:ring-1 focus:ring-violet-500"
                   />
                   <span className="text-xs text-gray-400 w-8 shrink-0">{mn.unit}</span>
                 </div>
@@ -637,7 +759,7 @@ export function ReverseWizard({
   const [usdaTargetId, setUsdaTargetId] = useState<string | null>(null)
   const [extraCandidates, setExtraCandidates] = useState<ExtraCandidate[]>([])
   const [extraSearchQuery, setExtraSearchQuery] = useState('')
-  const [extraSearchResults, setExtraSearchResults] = useState<Array<{ id: string; name: string }>>([])
+  const [extraSearchResults, setExtraSearchResults] = useState<LibrarySearchHit[]>([])
 
   // ── Research ─────────────────────────────────────────────────────────────────
   const [researchResult, setResearchResult] = useState<ResearchResult | null>(null)
@@ -648,6 +770,31 @@ export function ReverseWizard({
   // ── Solve ─────────────────────────────────────────────────────────────────────
   const [solverResult, setSolverResult] = useState<SolverResult | null>(null)
   const [isSolving, setIsSolving] = useState(false)
+
+  // ── Phone layout: one ingredient at a time in a full-screen dialog ───────────
+  const isMobile = useIsMobile()
+  const [newPanelOpenId, setNewPanelOpenId] = useState<string | null>(null)
+  // The ingredients the open dialog moves through (the list it was opened from) and which one is showing
+  const [sheet, setSheet] = useState<{ ids: string[]; index: number } | null>(null)
+
+  // ── Draft ────────────────────────────────────────────────────────────────────
+  const queryClient = useQueryClient()
+  const draftKey = ['reverse-draft', formulationId]
+  const { data: savedDraft } = useQuery<{ draft: unknown; savedAt: string | null }>({
+    queryKey: draftKey,
+    queryFn: () => fetch(`/api/formulations/${formulationId}/reverse-draft`)
+      .then(r => (r.ok ? r.json() : { draft: null, savedAt: null })),
+  })
+  const [draftOfferDismissed, setDraftOfferDismissed] = useState(false)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const [closePromptOpen, setClosePromptOpen] = useState(false)
+  // JSON of the last saved (or resumed) draft, to tell whether there's anything unsaved
+  const savedSnapshotRef = useRef<string | null>(null)
+  const markSavedOnRenderRef = useRef(false)
+  // A resumed draft that already has research results shouldn't call Claude again on arrival
+  const skipResearchRunRef = useRef(false)
 
   const { data: allNutrients } = useQuery<Nutrient[]>({
     queryKey: ['nutrients-all'],
@@ -799,8 +946,27 @@ export function ReverseWizard({
     setDeckIngredients(prev => prev.map(d => d.id === id ? { ...d, [field]: val } : d))
   }
 
-  // Link a deck item to an on-hand library ingredient Claude suggested
-  async function linkOnHand(deckItemId: string, ingredientId: string) {
+  // One link panel open at a time: library search, web URL, or a new library ingredient
+  function togglePanel(id: string, kind: 'library' | 'url' | 'new') {
+    const open = kind === 'library' ? linkSearchOpenId : kind === 'url' ? urlPanelOpenId : newPanelOpenId
+    const next = open === id ? null : id
+    setLinkSearchOpenId(kind === 'library' ? next : null)
+    setUrlPanelOpenId(kind === 'url' ? next : null)
+    setNewPanelOpenId(kind === 'new' ? next : null)
+  }
+
+  function openSheet(ids: string[], id: string) {
+    setLinkSearchOpenId(null); setUrlPanelOpenId(null); setNewPanelOpenId(null)
+    setSheet({ ids, index: Math.max(0, ids.indexOf(id)) })
+  }
+  function moveSheet(delta: number) {
+    setLinkSearchOpenId(null); setUrlPanelOpenId(null); setNewPanelOpenId(null)
+    setSheet(s => (s ? { ...s, index: s.index + delta } : s))
+  }
+
+  // Link a deck item to an existing library ingredient (an on-hand match from research, or a duplicate
+  // found when adding a new one)
+  async function linkLibraryIngredient(deckItemId: string, ingredientId: string, message: (name: string) => string) {
     try {
       const r = await fetch(`/api/ingredients/${ingredientId}`)
       if (!r.ok) throw new Error('Could not load ingredient')
@@ -813,9 +979,9 @@ export function ReverseWizard({
         name: n.nutrient.name, unit: n.nutrient.unit, category: n.nutrient.category,
       }))
       linkDeckItem(deckItemId, detail.id, detail.name, nutrients, 'library')
-      toast.success(`Linked to on-hand "${detail.name}"`)
+      toast.success(message(detail.name))
     } catch (err) {
-      toast.error(String(err))
+      toast.error(err instanceof Error ? err.message : String(err))
     }
   }
 
@@ -942,6 +1108,7 @@ export function ReverseWizard({
       const data = await r.json()
       if (!r.ok) throw new Error(data.error ?? 'Failed to fetch URL')
       updateLinkState(deckItemId, { fetchedNutrients: data.nutrients, isFetchingUrl: false })
+      warnUnconvertible(data.unconvertible)
     } catch (err) {
       updateLinkState(deckItemId, { fetchError: String(err), isFetchingUrl: false })
     }
@@ -958,6 +1125,7 @@ export function ReverseWizard({
       const data = await r.json()
       if (!r.ok) throw new Error(data.error ?? 'Failed to parse document')
       updateLinkState(deckItemId, { parsedDocNutrients: data.nutrients, isParsingDoc: false })
+      warnUnconvertible(data.unconvertible)
     } catch (err) {
       updateLinkState(deckItemId, { docParseError: String(err), isParsingDoc: false })
     }
@@ -998,9 +1166,7 @@ export function ReverseWizard({
           name: n.name, unit: n.unit, category: n.category,
         })), 'usda')
       toast.success(`Saved & linked "${item.rawName}"`)
-      if (data.unconvertible?.length) {
-        toast.warning(`Not saved — unit couldn't be converted: ${data.unconvertible.join(', ')}`)
-      }
+      warnUnconvertible(data.unconvertible)
     } catch (err) {
       toast.error(String(err))
     } finally {
@@ -1138,8 +1304,97 @@ export function ReverseWizard({
   }, [formulationId, productName, labelServingG, targets, deckIngredients, claims, impliedConstraints])
 
   useEffect(() => {
-    if (step === 'research') runResearch()
+    if (step !== 'research') return
+    if (skipResearchRunRef.current) { skipResearchRunRef.current = false; return }
+    runResearch()
   }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A dialog belongs to the step it was opened on
+  useEffect(() => { setSheet(null) }, [step])
+
+  // ── Draft ────────────────────────────────────────────────────────────────────
+
+  function buildDraft(): WizardDraft {
+    const usdaCandidates: Record<string, UsdaCandidate[]> = {}
+    for (const [id, ls] of Object.entries(deckLinkStates)) if (ls.candidates.length) usdaCandidates[id] = ls.candidates
+    return {
+      v: 1, step, mode, productName, labelServingG, batchSizeG, targets, deckIngredients, manualDeckText,
+      claims, impliedConstraints, extraCandidates, researchResult, usdaCandidates,
+    }
+  }
+  const currentSnapshot = JSON.stringify(buildDraft())
+  const hasUnsavedProgress = step !== 'entry' && currentSnapshot !== savedSnapshotRef.current
+
+  useEffect(() => {
+    if (!markSavedOnRenderRef.current) return
+    markSavedOnRenderRef.current = false
+    savedSnapshotRef.current = currentSnapshot
+  })
+
+  function restoreDraft(d: WizardDraft, savedAt: string | null) {
+    setMode(d.mode)
+    setProductName(d.productName ?? '')
+    setLabelServingG(d.labelServingG ?? '')
+    setBatchSizeG(d.batchSizeG ?? '1000')
+    setTargets(d.targets)
+    setDeckIngredients(d.deckIngredients)
+    setManualDeckText(d.manualDeckText ?? '')
+    setClaims(d.claims ?? [])
+    setImpliedConstraints(d.impliedConstraints ?? [])
+    setExtraCandidates(d.extraCandidates ?? [])
+    setResearchResult(d.researchResult ?? null)
+    setDeckLinkStates(Object.fromEntries(
+      Object.entries(d.usdaCandidates ?? {}).map(([id, candidates]) => [id, { ...defaultLinkState(), candidates }]),
+    ))
+    if (d.step === 'research' && d.researchResult) skipResearchRunRef.current = true
+    setStep(d.step)
+    setLastSavedAt(savedAt ? new Date(savedAt) : null)
+    markSavedOnRenderRef.current = true
+    setDraftOfferDismissed(true)
+  }
+
+  async function saveDraft(): Promise<boolean> {
+    setIsSavingDraft(true)
+    try {
+      const data = buildDraft()
+      const r = await fetch(`/api/formulations/${formulationId}/reverse-draft`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      })
+      const body = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(typeof body.error === 'string' ? body.error : 'Could not save the draft')
+      savedSnapshotRef.current = JSON.stringify(data)
+      setLastSavedAt(new Date(body.savedAt ?? Date.now()))
+      setDraftOfferDismissed(true)
+      queryClient.invalidateQueries({ queryKey: draftKey })
+      toast.success(imageFiles.length > 0
+        ? 'Draft saved. Label photos aren’t kept, but everything read from them is.'
+        : 'Draft saved — pick up where you left off next time you open the wizard')
+      return true
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
+      return false
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
+
+  async function discardDraft() {
+    setDraftOfferDismissed(true)
+    const r = await fetch(`/api/formulations/${formulationId}/reverse-draft`, { method: 'DELETE' })
+    if (!r.ok) toast.error('Could not discard the draft')
+    queryClient.invalidateQueries({ queryKey: draftKey })
+  }
+
+  function requestClose() {
+    if (hasUnsavedProgress) setClosePromptOpen(true)
+    else onClose()
+  }
+
+  const resumableDraft = !draftOfferDismissed && step === 'entry' && isWizardDraft(savedDraft?.draft)
+    ? savedDraft!.draft as WizardDraft
+    : null
 
   // ── Solve ─────────────────────────────────────────────────────────────────────
 
@@ -1233,6 +1488,12 @@ export function ReverseWizard({
 
     const allLines = [...deckLines, ...extraLines]
 
+    // The wizard's work is done; a saved draft would only offer to redo it
+    if (savedDraft?.draft || lastSavedAt) {
+      void fetch(`/api/formulations/${formulationId}/reverse-draft`, { method: 'DELETE' })
+        .then(() => queryClient.invalidateQueries({ queryKey: draftKey }))
+    }
+
     onApply(allLines.map((c, i) => ({
       key: c.ingredientId,
       ingredientId: c.ingredientId,
@@ -1272,6 +1533,247 @@ export function ReverseWizard({
     return <span className="text-gray-300 text-xs">—</span>
   }
 
+  // ── Link-step pieces (desktop row and phone dialog share them) ─────────────────
+
+  function renderUrlPanel(d: DeckIngredient) {
+    const ls = deckLinkStates[d.id] ?? defaultLinkState()
+    return (
+      <div className="mt-1 bg-white border border-gray-200 rounded-lg overflow-hidden z-30 relative">
+        <div className="flex items-center justify-between px-2.5 py-1.5 bg-gray-50 border-b border-gray-100">
+          <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5"><Globe size={11} /> Link via web URL</span>
+          <button onClick={() => setUrlPanelOpenId(null)} aria-label="Close" className="p-1 -m-1"><X size={12} className="text-gray-400 hover:text-gray-600" /></button>
+        </div>
+        <div className="p-2.5 space-y-2.5">
+          {/* Search row */}
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              value={ls.webSearchQuery || d.rawName}
+              onChange={e => updateLinkState(d.id, { webSearchQuery: e.target.value })}
+              onKeyDown={e => { if (e.key === 'Enter') webSearchIngredient(d.id, ls.webSearchQuery || d.rawName) }}
+              placeholder={d.rawName}
+              className="flex-1 min-w-0 px-2 py-2 sm:py-1 text-base sm:text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-violet-500"
+            />
+            <button
+              onClick={() => webSearchIngredient(d.id, ls.webSearchQuery || d.rawName)}
+              disabled={ls.isWebSearching}
+              className="flex items-center gap-1 px-3 sm:px-2 py-2 sm:py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {ls.isWebSearching ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <Globe size={10} />}
+              Search
+            </button>
+          </div>
+          {ls.webSearchError && <p className="text-xs text-red-500">{ls.webSearchError}</p>}
+          {ls.webSearchResults.length > 0 && (
+            <div className="space-y-1">
+              {ls.webSearchResults.map((r, i) => (
+                <div key={i} className="flex items-center gap-1.5 p-1.5 border border-gray-100 rounded hover:border-blue-200 hover:bg-blue-50/20 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-700 truncate">{r.title}</p>
+                    <p className="text-[10px] text-blue-500 truncate">{r.url}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <a href={r.url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-0.5 px-2 sm:px-1.5 py-1.5 sm:py-0.5 text-xs sm:text-[10px] border border-gray-200 rounded hover:bg-gray-50 text-gray-500">
+                      <ExternalLink size={8} /> Open
+                    </a>
+                    <button
+                      onClick={() => fetchUrlNutrition(d.id, r.url)}
+                      disabled={ls.isFetchingUrl}
+                      className="flex items-center gap-0.5 px-2 sm:px-1.5 py-1.5 sm:py-0.5 text-xs sm:text-[10px] border border-violet-200 rounded hover:bg-violet-50 text-violet-600 disabled:opacity-50">
+                      <Sparkles size={8} /> Fetch
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* URL paste */}
+          <div className="flex gap-1.5 border-t border-gray-100 pt-2">
+            <input
+              type="url"
+              value={ls.customUrl}
+              onChange={e => updateLinkState(d.id, { customUrl: e.target.value, fetchedNutrients: null, fetchError: null })}
+              onKeyDown={e => { if (e.key === 'Enter' && ls.customUrl) fetchUrlNutrition(d.id) }}
+              placeholder="https://..."
+              className="flex-1 min-w-0 px-2 py-2 sm:py-1 text-base sm:text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-violet-500"
+            />
+            <button
+              onClick={() => fetchUrlNutrition(d.id)}
+              disabled={!ls.customUrl || ls.isFetchingUrl}
+              className="flex items-center gap-1 px-3 sm:px-2 py-2 sm:py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50 transition-colors">
+              {ls.isFetchingUrl ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles size={10} />}
+              Fetch
+            </button>
+          </div>
+          {ls.fetchError && <p className="text-xs text-red-500">{ls.fetchError}</p>}
+          {ls.fetchedNutrients && ls.fetchedNutrients.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="border border-green-100 rounded overflow-hidden">
+                <div className="bg-green-50 px-2 py-1 border-b border-green-100 text-xs font-medium text-green-700">Extracted · per 100 g</div>
+                <table className="w-full text-xs">
+                  <tbody className="divide-y divide-gray-50">
+                    {ls.fetchedNutrients.map((n, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1 text-gray-700">{n.name}</td>
+                        <td className="px-2 py-1 text-right tabular-nums text-gray-600 font-medium">{n.amountPer100g} {n.unit}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button
+                onClick={() => saveExternalLink(d.id, 'url')}
+                disabled={ls.isLinking}
+                className="flex items-center gap-1 px-3 py-2 sm:py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 transition-colors">
+                {ls.isLinking ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 size={11} />}
+                Save & Link
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Whichever link panel is open for this item
+  function renderLinkPanels(d: DeckIngredient) {
+    return (
+      <>
+        {linkSearchOpenId === d.id && (
+          <LibraryLinkSearch
+            onLink={(ingId, name, nutrients) => linkDeckItem(d.id, ingId, name, nutrients, 'library')}
+            onClose={() => setLinkSearchOpenId(null)}
+          />
+        )}
+        {urlPanelOpenId === d.id && renderUrlPanel(d)}
+        {newPanelOpenId === d.id && (
+          <NewLibraryIngredientPanel
+            rawName={d.rawName}
+            onClose={() => setNewPanelOpenId(null)}
+            onLinkExisting={e => {
+              setNewPanelOpenId(null)
+              linkLibraryIngredient(d.id, e.id, name => `Linked to "${name}" from your library`)
+            }}
+            onCreated={c => {
+              linkDeckItem(d.id, c.ingredientId, c.ingredientName, c.nutrients, 'library')
+              setNewPanelOpenId(null)
+              toast.success(`Added "${c.ingredientName}" to the library and linked it`)
+            }}
+          />
+        )}
+      </>
+    )
+  }
+
+  function renderStatusBadges(d: DeckIngredient) {
+    return (
+      <>
+        {d.subIngredients.length > 0 && (
+          <span className="text-[10px] text-violet-500 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full">blend</span>
+        )}
+        {d.status === 'library' && (
+          <span className="text-xs text-green-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> library</span>
+        )}
+        {d.status === 'usda' && (
+          <span className="text-xs text-blue-600 flex items-center gap-0.5"><Database size={11} /> USDA</span>
+        )}
+        {d.status === 'skipped' && <span className="text-xs text-gray-400">skipped</span>}
+      </>
+    )
+  }
+
+  function openUsdaFor(d: DeckIngredient) {
+    setUsdaTargetId(d.id); setUsdaQuery(d.rawName); setUsdaOpen(true)
+  }
+
+  // The phone dialog for one ingredient: status, bounds, every way to link it, and the open panel
+  function renderLinkSheetBody(d: DeckIngredient) {
+    const linked = d.status === 'library' || d.status === 'usda'
+    const big = 'flex items-center justify-center gap-1.5 px-3 py-3 text-sm border rounded-lg'
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          {renderStatusBadges(d)}
+          {d.status === 'unlinked' && <span className="text-xs text-gray-400">Not linked yet</span>}
+          {d.parentBlendName && <span className="text-xs text-violet-600">in {d.parentBlendName}</span>}
+        </div>
+        {d.linkedIngredientName && (
+          <p className="text-sm text-gray-700">Linked to <span className="font-medium">{d.linkedIngredientName}</span></p>
+        )}
+        {linked && (
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">Usage bounds for the solver (%)</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number" inputMode="decimal" min="0" max="100" step="any" aria-label="Minimum %"
+                value={d.minPct} onChange={e => updateBound(d.id, 'minPct', e.target.value)} placeholder="min"
+                className="w-full px-3 py-2.5 text-base border border-gray-200 rounded-lg tabular-nums"
+              />
+              <span className="text-gray-300">–</span>
+              <input
+                type="number" inputMode="decimal" min="0" max="100" step="any" aria-label="Maximum %"
+                value={d.maxPct} onChange={e => updateBound(d.id, 'maxPct', e.target.value)} placeholder="max"
+                className="w-full px-3 py-2.5 text-base border border-gray-200 rounded-lg tabular-nums"
+              />
+              <span className="text-sm text-gray-400">%</span>
+            </div>
+          </div>
+        )}
+        {d.status === 'unlinked' ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => togglePanel(d.id, 'library')} className={`${big} border-gray-200 text-gray-700 ${linkSearchOpenId === d.id ? 'bg-gray-100' : ''}`}>
+              <Link2 size={15} /> Library
+            </button>
+            <button onClick={() => openUsdaFor(d)} className={`${big} border-blue-200 text-blue-600`}>
+              <Database size={15} /> USDA
+            </button>
+            <button onClick={() => togglePanel(d.id, 'url')} className={`${big} border-violet-200 text-violet-600 ${urlPanelOpenId === d.id ? 'bg-violet-50' : ''}`}>
+              <Globe size={15} /> Web URL
+            </button>
+            <button onClick={() => togglePanel(d.id, 'new')} className={`${big} border-green-200 text-green-700 ${newPanelOpenId === d.id ? 'bg-green-50' : ''}`}>
+              <PackagePlus size={15} /> Add new
+            </button>
+            <button onClick={() => skipDeckItem(d.id)} className={`${big} col-span-2 border-gray-100 text-gray-400`}>
+              Skip this ingredient
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => unlinkDeckItem(d.id)} className={`${big} w-full border-gray-200 text-gray-500`}>
+            <Unlink size={15} /> {d.status === 'skipped' ? 'Undo skip' : 'Unlink'}
+          </button>
+        )}
+        {renderLinkPanels(d)}
+      </div>
+    )
+  }
+
+  // Phone list row: tap to open the ingredient's dialog
+  function renderMobileRow(d: DeckIngredient, idx: number, ids: string[]) {
+    const linked = d.status === 'library' || d.status === 'usda'
+    return (
+      <button
+        key={d.id}
+        onClick={() => openSheet(ids, d.id)}
+        className={`w-full text-left rounded-lg border p-3 flex items-center gap-2 ${d.parentBlendName ? 'ml-3 w-[calc(100%-0.75rem)] ' : ''}${
+          linked ? 'border-green-200 bg-green-50/40' : d.status === 'skipped' ? 'border-gray-100 bg-gray-50 opacity-60' : 'border-gray-200'
+        }`}
+      >
+        <span className="text-xs text-gray-400 w-5 shrink-0">{idx + 1}.</span>
+        <span className="flex-1 min-w-0">
+          <span className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-gray-800">{d.rawName}</span>
+            {renderStatusBadges(d)}
+          </span>
+          {d.linkedIngredientName && <span className="block text-xs text-gray-500 truncate">→ {d.linkedIngredientName}</span>}
+          {linked && <span className="block text-xs text-gray-400">{d.minPct || 0}–{d.maxPct || 100}%</span>}
+          {d.status === 'unlinked' && <span className="block text-xs text-violet-600">Tap to link</span>}
+        </span>
+        <ChevronRight size={16} className="text-gray-300 shrink-0" />
+      </button>
+    )
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -1279,17 +1781,43 @@ export function ReverseWizard({
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center">
+          <div className="w-7 h-7 shrink-0 rounded-lg bg-violet-600 flex items-center justify-center">
             <FlaskConical size={14} className="text-white" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold text-gray-900">Reverse-engineer wizard</h2>
-            <p className="text-xs text-gray-400">{productName || 'New reverse formulation'}</p>
+            <p className="text-xs text-gray-400 truncate">{productName || 'New reverse formulation'}</p>
+          </div>
+          {/* On phones the draft and close buttons sit beside the title */}
+          <div className="flex items-center gap-1 sm:hidden">
+            <button
+              onClick={saveDraft}
+              disabled={step === 'entry' || isSavingDraft}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-md text-gray-600 disabled:opacity-40"
+            >
+              <Save size={13} /> {isSavingDraft ? 'Saving…' : 'Save draft'}
+            </button>
+            <button onClick={requestClose} aria-label="Close wizard" className="p-2 text-gray-400"><X size={18} /></button>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <StepDots step={step} />
-          <button onClick={onClose} className="ml-4 text-gray-400 hover:text-gray-600"><X size={16} /></button>
+          <div className="hidden sm:flex items-center gap-3">
+            {lastSavedAt && !hasUnsavedProgress && (
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                Saved {lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            )}
+            <button
+              onClick={saveDraft}
+              disabled={step === 'entry' || isSavingDraft}
+              title="Save your progress and finish later"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 whitespace-nowrap"
+            >
+              <Save size={12} /> {isSavingDraft ? 'Saving…' : 'Save as draft'}
+            </button>
+            <button onClick={requestClose} aria-label="Close wizard" className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+          </div>
         </div>
       </div>
 
@@ -1298,6 +1826,36 @@ export function ReverseWizard({
         {/* ══ STEP: ENTRY ══════════════════════════════════════════════════════ */}
         {step === 'entry' && (
           <div className="space-y-6">
+            {resumableDraft && (
+              <div className="p-4 rounded-xl border border-violet-200 bg-violet-50 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">You have a saved draft</p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {resumableDraft.productName || 'Untitled product'}
+                    {' · '}{STEPS.find(s => s.key === resumableDraft.step)?.label}
+                    {' · '}{resumableDraft.deckIngredients.filter(d => d.status === 'library' || d.status === 'usda').length}
+                    /{resumableDraft.deckIngredients.length} ingredients linked
+                    {savedDraft?.savedAt && <> · saved {new Date(savedDraft.savedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</>}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => (confirmDiscard ? discardDraft() : setConfirmDiscard(true))}
+                    className={`flex-1 sm:flex-none px-4 py-2 text-sm border rounded-md ${
+                      confirmDiscard ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {confirmDiscard ? 'Delete draft?' : 'Discard'}
+                  </button>
+                  <button
+                    onClick={() => restoreDraft(resumableDraft, savedDraft?.savedAt ?? null)}
+                    className="flex-1 sm:flex-none px-4 py-2 text-sm bg-violet-600 text-white rounded-md hover:bg-violet-700"
+                  >
+                    Resume
+                  </button>
+                </div>
+              </div>
+            )}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">How would you like to start?</h3>
               <p className="text-sm text-gray-500">
@@ -1581,14 +2139,15 @@ export function ReverseWizard({
         {/* ══ STEP: LINK ═══════════════════════════════════════════════════════ */}
         {step === 'link' && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">Link ingredients to your library</h3>
                 <p className="text-sm text-gray-500">
                   Connect each label ingredient to a library or USDA record so the solver has nutrient data.
+                  If the lab has it but the library doesn't, add it with “New”.
                 </p>
               </div>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 whitespace-nowrap">
                 {linkedCount}/{totalDeck} linked
               </span>
             </div>
@@ -1615,6 +2174,7 @@ export function ReverseWizard({
                         <div className="flex-1 h-px bg-violet-100" />
                       </div>
                     ),
+                    isMobile ? renderMobileRow(d, idx, deckIngredients.map(x => x.id)) :
                     <div key={d.id} className={`rounded-lg border p-3 transition-colors ${d.parentBlendName ? 'ml-4 ' : ''}${
                       d.status === 'library' || d.status === 'usda' ? 'border-green-200 bg-green-50/40' :
                       d.status === 'skipped'  ? 'border-gray-100 bg-gray-50 opacity-60' :
@@ -1625,22 +2185,7 @@ export function ReverseWizard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-gray-800">{d.rawName}</span>
-                          {d.subIngredients.length > 0 && (
-                            <span className="text-[10px] text-violet-500 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full">blend</span>
-                          )}
-                          {d.status === 'library' && (
-                            <span className="text-xs text-green-600 flex items-center gap-0.5">
-                              <CheckCircle2 size={11} /> library
-                            </span>
-                          )}
-                          {d.status === 'usda' && (
-                            <span className="text-xs text-blue-600 flex items-center gap-0.5">
-                              <Database size={11} /> USDA
-                            </span>
-                          )}
-                          {d.status === 'skipped' && (
-                            <span className="text-xs text-gray-400">skipped</span>
-                          )}
+                          {renderStatusBadges(d)}
                         </div>
 
                         {/* Linked name */}
@@ -1671,115 +2216,7 @@ export function ReverseWizard({
                           </div>
                         )}
 
-                        {/* Inline library search */}
-                        {linkSearchOpenId === d.id && (
-                          <LibraryLinkSearch
-                            onLink={(ingId, name, nutrients) => linkDeckItem(d.id, ingId, name, nutrients, 'library')}
-                            onClose={() => setLinkSearchOpenId(null)}
-                          />
-                        )}
-
-                        {/* Inline URL panel */}
-                        {urlPanelOpenId === d.id && (() => {
-                          const ls = deckLinkStates[d.id] ?? defaultLinkState()
-                          return (
-                            <div className="mt-1 bg-white border border-gray-200 rounded-lg overflow-hidden z-30 relative">
-                              <div className="flex items-center justify-between px-2.5 py-1.5 bg-gray-50 border-b border-gray-100">
-                                <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5"><Globe size={11} /> Link via web URL</span>
-                                <button onClick={() => setUrlPanelOpenId(null)}><X size={11} className="text-gray-400 hover:text-gray-600" /></button>
-                              </div>
-                              <div className="p-2.5 space-y-2.5">
-                                {/* Search row */}
-                                <div className="flex gap-1.5">
-                                  <input
-                                    type="text"
-                                    value={ls.webSearchQuery || d.rawName}
-                                    onChange={e => updateLinkState(d.id, { webSearchQuery: e.target.value })}
-                                    onKeyDown={e => { if (e.key === 'Enter') webSearchIngredient(d.id, ls.webSearchQuery || d.rawName) }}
-                                    placeholder={d.rawName}
-                                    className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-violet-500"
-                                  />
-                                  <button
-                                    onClick={() => webSearchIngredient(d.id, ls.webSearchQuery || d.rawName)}
-                                    disabled={ls.isWebSearching}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                                  >
-                                    {ls.isWebSearching ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <Globe size={10} />}
-                                    Search
-                                  </button>
-                                </div>
-                                {ls.webSearchError && <p className="text-xs text-red-500">{ls.webSearchError}</p>}
-                                {ls.webSearchResults.length > 0 && (
-                                  <div className="space-y-1">
-                                    {ls.webSearchResults.map((r, i) => (
-                                      <div key={i} className="flex items-center gap-1.5 p-1.5 border border-gray-100 rounded hover:border-blue-200 hover:bg-blue-50/20 transition-colors">
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-medium text-gray-700 truncate">{r.title}</p>
-                                          <p className="text-[10px] text-blue-500 truncate">{r.url}</p>
-                                        </div>
-                                        <div className="flex gap-1 shrink-0">
-                                          <a href={r.url} target="_blank" rel="noopener noreferrer"
-                                            className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] border border-gray-200 rounded hover:bg-gray-50 text-gray-500">
-                                            <ExternalLink size={8} /> Open
-                                          </a>
-                                          <button
-                                            onClick={() => fetchUrlNutrition(d.id, r.url)}
-                                            disabled={ls.isFetchingUrl}
-                                            className="flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] border border-violet-200 rounded hover:bg-violet-50 text-violet-600 disabled:opacity-50">
-                                            <Sparkles size={8} /> Fetch
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {/* URL paste */}
-                                <div className="flex gap-1.5 border-t border-gray-100 pt-2">
-                                  <input
-                                    type="url"
-                                    value={ls.customUrl}
-                                    onChange={e => updateLinkState(d.id, { customUrl: e.target.value, fetchedNutrients: null, fetchError: null })}
-                                    onKeyDown={e => { if (e.key === 'Enter' && ls.customUrl) fetchUrlNutrition(d.id) }}
-                                    placeholder="https://..."
-                                    className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-violet-500"
-                                  />
-                                  <button
-                                    onClick={() => fetchUrlNutrition(d.id)}
-                                    disabled={!ls.customUrl || ls.isFetchingUrl}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50 transition-colors">
-                                    {ls.isFetchingUrl ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles size={10} />}
-                                    Fetch
-                                  </button>
-                                </div>
-                                {ls.fetchError && <p className="text-xs text-red-500">{ls.fetchError}</p>}
-                                {ls.fetchedNutrients && ls.fetchedNutrients.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    <div className="border border-green-100 rounded overflow-hidden">
-                                      <div className="bg-green-50 px-2 py-1 border-b border-green-100 text-xs font-medium text-green-700">Extracted · per 100 g</div>
-                                      <table className="w-full text-xs">
-                                        <tbody className="divide-y divide-gray-50">
-                                          {ls.fetchedNutrients.map((n, i) => (
-                                            <tr key={i}>
-                                              <td className="px-2 py-1 text-gray-700">{n.name}</td>
-                                              <td className="px-2 py-1 text-right tabular-nums text-gray-600 font-medium">{n.amountPer100g} {n.unit}</td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                    <button
-                                      onClick={() => saveExternalLink(d.id, 'url')}
-                                      disabled={ls.isLinking}
-                                      className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 transition-colors">
-                                      {ls.isLinking ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 size={11} />}
-                                      Save & Link
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })()}
+                        {renderLinkPanels(d)}
                       </div>
 
                       {/* Action buttons */}
@@ -1787,25 +2224,32 @@ export function ReverseWizard({
                         {d.status === 'unlinked' ? (
                           <>
                             <button
-                              onClick={() => { setLinkSearchOpenId(linkSearchOpenId === d.id ? null : d.id); setUrlPanelOpenId(null) }}
+                              onClick={() => togglePanel(d.id, 'library')}
                               title="Link to library ingredient"
                               className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 text-gray-600"
                             >
                               <Link2 size={11} /> Library
                             </button>
                             <button
-                              onClick={() => { setUsdaTargetId(d.id); setUsdaQuery(d.rawName); setUsdaOpen(true) }}
+                              onClick={() => openUsdaFor(d)}
                               title="Search USDA FoodData Central"
                               className="flex items-center gap-1 px-2 py-1 text-xs border border-blue-200 rounded hover:bg-blue-50 text-blue-600"
                             >
                               <Database size={11} /> USDA
                             </button>
                             <button
-                              onClick={() => { setUrlPanelOpenId(urlPanelOpenId === d.id ? null : d.id); setLinkSearchOpenId(null) }}
+                              onClick={() => togglePanel(d.id, 'url')}
                               title="Link from a web URL"
                               className="flex items-center gap-1 px-2 py-1 text-xs border border-violet-200 rounded hover:bg-violet-50 text-violet-600"
                             >
                               <Globe size={11} /> URL
+                            </button>
+                            <button
+                              onClick={() => togglePanel(d.id, 'new')}
+                              title="In the lab but not in the library? Add it and link it"
+                              className="flex items-center gap-1 px-2 py-1 text-xs border border-green-200 rounded hover:bg-green-50 text-green-700"
+                            >
+                              <PackagePlus size={11} /> New
                             </button>
                             <button
                               onClick={() => skipDeckItem(d.id)}
@@ -1854,7 +2298,7 @@ export function ReverseWizard({
                         onClick={() => addExtraCandidate(ing)}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-50"
                       >
-                        {ing.name}
+                        <LibraryHitLabel ing={ing} />
                       </button>
                     ))}
                   </div>
@@ -1964,7 +2408,7 @@ export function ReverseWizard({
                                 <span className="text-xs text-emerald-700 whitespace-nowrap">Linked</span>
                               ) : (
                                 <button
-                                  onClick={() => linkOnHand(deckItem.id, m.ingredientId)}
+                                  onClick={() => linkLibraryIngredient(deckItem.id, m.ingredientId, name => `Linked to on-hand "${name}"`)}
                                   className="px-2 py-1 text-xs border border-emerald-300 rounded text-emerald-700 hover:bg-emerald-100 whitespace-nowrap"
                                 >
                                   {deckItem.status === 'unlinked' ? 'Use this' : 'Use instead'}
@@ -2081,22 +2525,31 @@ export function ReverseWizard({
                     — select a source for each or skip
                   </span>
                 </h4>
-                {deckIngredients
+                {isMobile && (() => {
+                  const ids = deckIngredients.filter(d => d.status === 'unlinked').map(d => d.id)
+                  return deckIngredients
+                    .filter(d => d.status === 'unlinked')
+                    .map(d => renderMobileRow(d, deckIngredients.indexOf(d), ids))
+                })()}
+                {!isMobile && deckIngredients
                   .filter(d => d.status === 'unlinked')
                   .map(item => (
-                    <DeckLinkCard
-                      key={item.id}
-                      item={item}
-                      linkState={deckLinkStates[item.id]}
-                      onImportCandidate={fdcId => importCandidate(item.id, fdcId, item.rawName)}
-                      onFetchUrl={() => fetchUrlNutrition(item.id)}
-                      onFetchUrlFrom={url => fetchUrlNutrition(item.id, url)}
-                      onWebSearch={query => webSearchIngredient(item.id, query)}
-                      onSaveExternal={source => saveExternalLink(item.id, source)}
-                      onSkip={() => skipDeckItem(item.id)}
-                      onUpdateLinkState={patch => updateLinkState(item.id, patch)}
-                      onParseDoc={file => parseDoc(item.id, file)}
-                    />
+                    <div key={item.id}>
+                      <DeckLinkCard
+                        item={item}
+                        linkState={deckLinkStates[item.id]}
+                        onImportCandidate={fdcId => importCandidate(item.id, fdcId, item.rawName)}
+                        onFetchUrl={() => fetchUrlNutrition(item.id)}
+                        onFetchUrlFrom={url => fetchUrlNutrition(item.id, url)}
+                        onWebSearch={query => webSearchIngredient(item.id, query)}
+                        onSaveExternal={source => saveExternalLink(item.id, source)}
+                        onSkip={() => skipDeckItem(item.id)}
+                        onUpdateLinkState={patch => updateLinkState(item.id, patch)}
+                        onParseDoc={file => parseDoc(item.id, file)}
+                        onAddNew={() => togglePanel(item.id, 'new')}
+                      />
+                      {newPanelOpenId === item.id && renderLinkPanels(item)}
+                    </div>
                   ))
                 }
               </div>
@@ -2180,6 +2633,7 @@ export function ReverseWizard({
                 {solverResult.status !== 'optimal' && (
                   <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">{solverResult.message}</p>
                 )}
+                {/* A note on an optimal result, e.g. targets skipped for a unit that can't be converted */}
                 {solverResult.status === 'optimal' && solverResult.message && (
                   <p className="text-sm text-amber-800 p-3 bg-amber-50 rounded-lg">{solverResult.message}</p>
                 )}
@@ -2327,6 +2781,73 @@ export function ReverseWizard({
         )}
 
       </div>
+
+      {/* Phones: one ingredient at a time (rendered before the USDA dialog so that opens on top) */}
+      {isMobile && sheet && (() => {
+        const d = deckIngredients.find(x => x.id === sheet.ids[sheet.index])
+        if (!d) return null
+        return (
+          <IngredientSheet
+            title={d.rawName}
+            subtitle={`Ingredient ${deckIngredients.indexOf(d) + 1} of ${deckIngredients.length}`}
+            onClose={() => setSheet(null)}
+            onPrev={sheet.index > 0 ? () => moveSheet(-1) : null}
+            onNext={sheet.index < sheet.ids.length - 1 ? () => moveSheet(1) : null}
+          >
+            {step === 'research' && d.status === 'unlinked' ? (
+              <div className="space-y-3">
+                <DeckLinkCard
+                  item={d}
+                  linkState={deckLinkStates[d.id]}
+                  onImportCandidate={fdcId => importCandidate(d.id, fdcId, d.rawName)}
+                  onFetchUrl={() => fetchUrlNutrition(d.id)}
+                  onFetchUrlFrom={url => fetchUrlNutrition(d.id, url)}
+                  onWebSearch={query => webSearchIngredient(d.id, query)}
+                  onSaveExternal={source => saveExternalLink(d.id, source)}
+                  onSkip={() => skipDeckItem(d.id)}
+                  onUpdateLinkState={patch => updateLinkState(d.id, patch)}
+                  onParseDoc={file => parseDoc(d.id, file)}
+                  onAddNew={() => togglePanel(d.id, 'new')}
+                />
+                {renderLinkPanels(d)}
+              </div>
+            ) : renderLinkSheetBody(d)}
+          </IngredientSheet>
+        )
+      })()}
+
+      {/* Closing with unsaved progress */}
+      {closePromptOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5" role="dialog" aria-modal="true" aria-label="Save your progress?">
+            <h3 className="text-base font-semibold text-gray-900">Save your progress?</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Save a draft to pick up where you left off next time you open the wizard.
+            </p>
+            <div className="flex flex-col gap-2 mt-4">
+              <button
+                onClick={async () => { if (await saveDraft()) { setClosePromptOpen(false); onClose() } }}
+                disabled={isSavingDraft}
+                className="w-full py-2.5 text-sm bg-violet-600 text-white rounded-md hover:bg-violet-700 disabled:opacity-50"
+              >
+                {isSavingDraft ? 'Saving…' : 'Save draft & close'}
+              </button>
+              <button
+                onClick={() => { setClosePromptOpen(false); onClose() }}
+                className="w-full py-2.5 text-sm border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50"
+              >
+                Close without saving
+              </button>
+              <button
+                onClick={() => setClosePromptOpen(false)}
+                className="w-full py-2 text-sm text-gray-400 hover:text-gray-600"
+              >
+                Keep working
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* USDA search dialog (used for ingredient linking) */}
       <UsdaSearchDialog

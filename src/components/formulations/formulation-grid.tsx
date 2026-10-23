@@ -298,6 +298,15 @@ export function FormulationGrid({ id }: { id: string }) {
       }),
   })
 
+  // A reverse-wizard session saved to finish later (same query the wizard uses)
+  const { data: reverseDraft } = useQuery<{ draft: unknown; savedAt: string | null }>({
+    queryKey: ['reverse-draft', id],
+    queryFn: () => fetch(`/api/formulations/${id}/reverse-draft`)
+      .then(r => (r.ok ? r.json() : { draft: null, savedAt: null })),
+    enabled: data?.mode === 'reverse',
+  })
+  const hasReverseDraft = !!reverseDraft?.draft
+
   // The library, for on-hand status and on-hand alternatives to each line
   const { data: library = [] } = useQuery<IngredientListRow[]>({
     queryKey: ['ingredients'],
@@ -964,6 +973,9 @@ export function FormulationGrid({ id }: { id: string }) {
                          text-sm rounded-md hover:bg-violet-50 transition-colors"
             >
               <Zap size={13} /> Reverse wizard
+              {hasReverseDraft && (
+                <span className="ml-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700">draft</span>
+              )}
             </button>
           )}
           {(data.project?.targets?.length ?? 0) > 0 && lines.length > 0 && !readOnly && (
