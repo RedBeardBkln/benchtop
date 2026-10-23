@@ -28,7 +28,7 @@ export const ingredients = pgTable('ingredients', {
   supplierName: text('supplier_name'),
   itemCode: text('item_code'),
   notes: text('notes'),
-  // Library taxonomy, e.g. Starches > Tapioca > Native. Category is one of INGREDIENT_CATEGORIES.
+  // Library taxonomy, e.g. Starches > Tapioca > Native. Categories: the standard list plus any users add.
   category: text('category'),
   subcategory: text('subcategory'),
   microCategory: text('micro_category'),

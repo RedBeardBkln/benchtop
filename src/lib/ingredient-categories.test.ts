@@ -1,8 +1,53 @@
 import { describe, expect, it } from 'vitest'
 import {
-  categoryPath, onHandAlternatives, parseIntakeLine, parseIntakeLines, quantityToGrams,
-  type CategorizedIngredient,
+  INGREDIENT_CATEGORIES, canonicalTerm, categoryOptions, categoryPath, microCategoryOptions, onHandAlternatives,
+  parseIntakeLine, parseIntakeLines, quantityToGrams, subcategoryOptions,
+  type CategorizedIngredient, type TaxonomyEntry,
 } from './ingredient-categories'
+
+describe('INGREDIENT_CATEGORIES', () => {
+  it('has the 20 standard categories; "Other" gave way to adding your own', () => {
+    expect(INGREDIENT_CATEGORIES).toHaveLength(20)
+    expect(INGREDIENT_CATEGORIES).not.toContain('Other')
+  })
+})
+
+describe('taxonomy options', () => {
+  const entries: TaxonomyEntry[] = [
+    { category: 'Fats & Oils', subcategory: 'Vegetable Oils', microCategory: 'Canola' },
+    { category: 'Fats & Oils', subcategory: 'Vegetable Oils', microCategory: 'Sunflower' },
+    { category: 'Fats & Oils', subcategory: 'Tropical Fats', microCategory: null },
+    { category: 'Botanicals', subcategory: 'Adaptogens', microCategory: 'Root' },
+    { category: 'botanicals ', subcategory: 'adaptogens', microCategory: null },
+    { category: null, subcategory: 'Loose', microCategory: null },
+  ]
+
+  it('lists the standard categories plus added ones, once each, sorted', () => {
+    const opts = categoryOptions(entries)
+    expect(opts).toHaveLength(21)
+    expect(opts.filter(o => o.toLowerCase() === 'botanicals')).toEqual(['Botanicals'])
+    expect(opts).toEqual([...opts].sort((a, b) => a.localeCompare(b)))
+  })
+
+  it('lists subcategories under the chosen category, or all when none is chosen', () => {
+    expect(subcategoryOptions(entries, 'fats & oils')).toEqual(['Tropical Fats', 'Vegetable Oils'])
+    expect(subcategoryOptions(entries, 'Botanicals')).toEqual(['Adaptogens'])
+    expect(subcategoryOptions(entries, '')).toEqual(['Adaptogens', 'Loose', 'Tropical Fats', 'Vegetable Oils'])
+  })
+
+  it('lists micro categories under the chosen category and subcategory', () => {
+    expect(microCategoryOptions(entries, 'Fats & Oils', 'Vegetable Oils')).toEqual(['Canola', 'Sunflower'])
+    expect(microCategoryOptions(entries, 'Fats & Oils', 'Tropical Fats')).toEqual([])
+    expect(microCategoryOptions(entries, null, null)).toEqual(['Canola', 'Root', 'Sunflower'])
+  })
+
+  it('spells a typed value like an existing one, tidies it, and treats blank as none', () => {
+    expect(canonicalTerm('  fats   & oils ', categoryOptions(entries))).toBe('Fats & Oils')
+    expect(canonicalTerm('Sea Vegetables', categoryOptions(entries))).toBe('Sea Vegetables')
+    expect(canonicalTerm('   ', ['x'])).toBeNull()
+    expect(canonicalTerm(null, ['x'])).toBeNull()
+  })
+})
 
 describe('parseIntakeLine', () => {
   it('keeps a plain name', () => {
@@ -63,5 +108,10 @@ describe('onHandAlternatives', () => {
   it('suggests nothing for an on-hand or uncategorized target', () => {
     expect(onHandAlternatives(ing('t', 'Starches', 'Tapioca', null, true), library)).toEqual([])
     expect(onHandAlternatives(ing('t', null, null, null, false), library)).toEqual([])
+  })
+  it('matches within a category the lab added, but never within the legacy "Other" catch-all', () => {
+    const lib = [ing('ash', 'Botanicals', 'Adaptogens', null, true), ing('misc', 'Other', null, null, true)]
+    expect(onHandAlternatives(ing('t', 'botanicals', null, null, false), lib).map(c => c.id)).toEqual(['ash'])
+    expect(onHandAlternatives(ing('t', 'Other', null, null, false), lib)).toEqual([])
   })
 })

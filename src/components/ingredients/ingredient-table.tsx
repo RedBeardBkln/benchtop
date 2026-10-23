@@ -20,7 +20,7 @@ import { UsdaSearchDialog } from './usda-search-dialog'
 import { AddIngredientDialog } from './add-ingredient-dialog'
 import { PhotoIngredientDialog } from './photo-ingredient-dialog'
 import { EditIngredientDialog, type EditableIngredient } from './edit-ingredient-dialog'
-import { INGREDIENT_CATEGORIES, categoryPath } from '@/lib/ingredient-categories'
+import { categoryOptions, categoryPath } from '@/lib/ingredient-categories'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 
 const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
@@ -221,7 +221,7 @@ export function IngredientTable() {
     [onlyDuplicates, duplicateRows, ingredients, onlyOnHand, categoryFilter],
   )
   const usedCategories = useMemo(
-    () => INGREDIENT_CATEGORIES.filter(c => ingredients.some(i => i.category === c)),
+    () => categoryOptions(ingredients).filter(c => ingredients.some(i => i.category === c)),
     [ingredients],
   )
 

@@ -21,7 +21,8 @@ import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingred
 import { identityKey } from '@/lib/ingredient-identity'
 import { formatIngredientName } from '@/lib/ingredient-name'
 import { getOwnedIngredient, notFoundResponse, isUuid, visibleProjects } from '@/lib/tenancy'
-import { INGREDIENT_CATEGORIES } from '@/lib/ingredient-categories'
+import { canonicalTerm, categoryOptions } from '@/lib/ingredient-categories'
+import { loadTaxonomyEntries } from '@/lib/ingredient-taxonomy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -150,7 +151,7 @@ const patchSchema = z.object({
   defaultCostPerKg: z.number().positive().nullable().optional(),
   moisturePct: z.number().min(0).max(100).nullable().optional(),
   stockG: z.number().nullable().optional(),
-  category: z.enum(INGREDIENT_CATEGORIES).nullable().optional(),
+  category: z.string().trim().max(120).nullable().optional(),
   subcategory: z.string().trim().max(120).nullable().optional(),
   microCategory: z.string().trim().max(120).nullable().optional(),
   onHand: z.boolean().optional(),
@@ -169,30 +170,42 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const d = { ...parsed.data, name: parsed.data.name !== undefined ? formatIngredientName(parsed.data.name) : undefined }
-  const updateValues: Record<string, unknown> = { updatedAt: new Date() }
-  if (d.name !== undefined) updateValues.name = d.name
-  if (d.labelName !== undefined) updateValues.labelName = d.labelName
-  if (d.brandName !== undefined) updateValues.brandName = d.brandName
-  if (d.supplierName !== undefined) updateValues.supplierName = d.supplierName
-  if (d.itemCode !== undefined) updateValues.itemCode = d.itemCode
-  if (d.verification !== undefined) updateValues.verification = d.verification
-  if (d.naturallyDerived !== undefined) updateValues.naturallyDerived = d.naturallyDerived
-  if (d.notes !== undefined) updateValues.notes = d.notes
-  if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null
-  if (d.moisturePct !== undefined) updateValues.moisturePct = d.moisturePct?.toString() ?? null
-  if (d.stockG !== undefined) updateValues.stockG = d.stockG?.toString() ?? null
-  if (d.category !== undefined) updateValues.category = d.category
-  if (d.subcategory !== undefined) updateValues.subcategory = d.subcategory || null
-  if (d.microCategory !== undefined) updateValues.microCategory = d.microCategory || null
-  if (d.onHand !== undefined) updateValues.onHand = d.onHand
-
   try {
+    const current = parsed.data.name !== undefined || parsed.data.brandName !== undefined
+      || parsed.data.supplierName !== undefined || parsed.data.itemCode !== undefined
+      ? await getOwnedIngredient(ctx, id)
+      : undefined
+    if (current === null) return notFoundResponse()
+    // Forms resend the name on every save; only a real rename goes through the naming rule, so a
+    // legacy name is left as it is until someone actually renames it
+    const name = parsed.data.name === undefined || parsed.data.name === current?.name
+      ? undefined
+      : formatIngredientName(parsed.data.name)
+    const d = { ...parsed.data, name }
+    const updateValues: Record<string, unknown> = { updatedAt: new Date() }
+    if (d.name !== undefined) updateValues.name = d.name
+    if (d.labelName !== undefined) updateValues.labelName = d.labelName
+    if (d.brandName !== undefined) updateValues.brandName = d.brandName
+    if (d.supplierName !== undefined) updateValues.supplierName = d.supplierName
+    if (d.itemCode !== undefined) updateValues.itemCode = d.itemCode
+    if (d.verification !== undefined) updateValues.verification = d.verification
+    if (d.naturallyDerived !== undefined) updateValues.naturallyDerived = d.naturallyDerived
+    if (d.notes !== undefined) updateValues.notes = d.notes
+    if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null
+    if (d.moisturePct !== undefined) updateValues.moisturePct = d.moisturePct?.toString() ?? null
+    if (d.stockG !== undefined) updateValues.stockG = d.stockG?.toString() ?? null
+    if (d.category !== undefined || d.subcategory !== undefined || d.microCategory !== undefined) {
+      // New values are allowed; ones matching an existing value (ignoring case) take its spelling
+      const known = await loadTaxonomyEntries(ctx.account.id)
+      if (d.category !== undefined) updateValues.category = canonicalTerm(d.category, categoryOptions(known))
+      if (d.subcategory !== undefined) updateValues.subcategory = canonicalTerm(d.subcategory, known.map(k => k.subcategory))
+      if (d.microCategory !== undefined) updateValues.microCategory = canonicalTerm(d.microCategory, known.map(k => k.microCategory))
+    }
+    if (d.onHand !== undefined) updateValues.onHand = d.onHand
+
     // Only a change to name/brand/supplier/item code is checked, so an entry that is already part of a
     // duplicate pair can still have its other fields edited until it is renamed or merged.
-    if (d.name !== undefined || d.brandName !== undefined || d.supplierName !== undefined || d.itemCode !== undefined) {
-      const current = await getOwnedIngredient(ctx, id)
-      if (!current) return notFoundResponse()
+    if (current) {
       const next = {
         name: d.name ?? current.name,
         brandName: d.brandName !== undefined ? d.brandName : current.brandName,

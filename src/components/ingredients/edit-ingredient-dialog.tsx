@@ -5,7 +5,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
-import { INGREDIENT_CATEGORIES } from '@/lib/ingredient-categories'
+import { categoryOptions, subcategoryOptions, microCategoryOptions } from '@/lib/ingredient-categories'
+import { TaxonomyField, useTaxonomy } from './taxonomy-field'
 
 export type EditableIngredient = {
   id: string
@@ -32,6 +33,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
   const [subcategory, setSubcategory] = useState('')
   const [microCategory, setMicroCategory] = useState('')
   const [onHand, setOnHand] = useState(false)
+  const taxonomy = useTaxonomy(!!ingredient)
 
   useEffect(() => {
     if (!ingredient) return
@@ -69,9 +71,9 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
     patchMutation.mutate({
       name: trimmed,
       stockG: stockG.trim() === '' ? null : parseFloat(stockG),
-      category: category || null,
-      subcategory: category ? subcategory.trim() || null : null,
-      microCategory: category ? microCategory.trim() || null : null,
+      category: category.trim() || null,
+      subcategory: category.trim() ? subcategory.trim() || null : null,
+      microCategory: category.trim() ? microCategory.trim() || null : null,
       onHand,
     })
   }
@@ -101,20 +103,39 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Category</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className={inputClass}>
-              <option value="">Uncategorized</option>
-              {INGREDIENT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <TaxonomyField
+              key={`cat-${ingredient.id}`}
+              label="Category"
+              value={category}
+              onChange={setCategory}
+              options={categoryOptions(taxonomy)}
+              placeholder="New category"
+              noneLabel="Uncategorized"
+            />
           </div>
-          {category && (
+          {category.trim() && (
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1.5">Subcategory</label>
-                <input value={subcategory} onChange={e => setSubcategory(e.target.value)} placeholder="e.g. Tapioca" className={inputClass} />
+                <TaxonomyField
+                  key={`sub-${ingredient.id}`}
+                  label="Subcategory"
+                  value={subcategory}
+                  onChange={setSubcategory}
+                  options={subcategoryOptions(taxonomy, category)}
+                  placeholder="e.g. Tapioca"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1.5">Micro category</label>
-                <input value={microCategory} onChange={e => setMicroCategory(e.target.value)} placeholder="e.g. Native" className={inputClass} />
+                <TaxonomyField
+                  key={`micro-${ingredient.id}`}
+                  label="Micro category"
+                  value={microCategory}
+                  onChange={setMicroCategory}
+                  options={microCategoryOptions(taxonomy, category, subcategory)}
+                  placeholder="e.g. Native"
+                />
               </div>
             </div>
           )}

@@ -10,8 +10,10 @@ import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
 import { compressImage } from '@/lib/compress-image'
 import {
-  INGREDIENT_CATEGORIES, INTAKE_UNITS, categoryPath, parseIntakeLines, type IntakeUnit,
+  INTAKE_UNITS, categoryOptions, categoryPath, microCategoryOptions, parseIntakeLines, subcategoryOptions,
+  type IntakeUnit,
 } from '@/lib/ingredient-categories'
+import { TaxonomyField, useTaxonomy } from './taxonomy-field'
 import type { IngredientListRow } from '@/lib/types'
 
 type IntakeItem = {
@@ -389,6 +391,7 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
     queryFn: () => fetch('/api/ingredients').then(r => r.json()),
   })
   const sortedLibrary = useMemo(() => [...library].sort((a, b) => a.name.localeCompare(b.name)), [library])
+  const taxonomy = useTaxonomy()
 
   const identified = item.status === 'identified'
   const labelChanged = rawName.trim() !== item.rawName
@@ -405,7 +408,7 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
       if (identified && !labelChanged) {
         Object.assign(body, {
           name: name.trim() || null,
-          category: category || null,
+          category: category.trim() || null,
           subcategory: subcategory.trim() || null,
           microCategory: microCategory.trim() || null,
           matchedIngredientId: matchedId || null,
@@ -476,18 +479,35 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1.5">Category</label>
-                <select value={category} onChange={e => setCategory(e.target.value)} className={inputClass}>
-                  {INGREDIENT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <TaxonomyField
+                  label="Category"
+                  value={category}
+                  onChange={setCategory}
+                  options={categoryOptions(taxonomy)}
+                  placeholder="New category"
+                  noneLabel="Uncategorized"
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1.5">Subcategory</label>
-                  <input value={subcategory} onChange={e => setSubcategory(e.target.value)} className={inputClass} />
+                  <TaxonomyField
+                    label="Subcategory"
+                    value={subcategory}
+                    onChange={setSubcategory}
+                    options={subcategoryOptions(taxonomy, category)}
+                    placeholder="e.g. Tapioca"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1.5">Micro category</label>
-                  <input value={microCategory} onChange={e => setMicroCategory(e.target.value)} placeholder="—" className={inputClass} />
+                  <TaxonomyField
+                    label="Micro category"
+                    value={microCategory}
+                    onChange={setMicroCategory}
+                    options={microCategoryOptions(taxonomy, category, subcategory)}
+                    placeholder="e.g. Native"
+                  />
                 </div>
               </div>
               <div>

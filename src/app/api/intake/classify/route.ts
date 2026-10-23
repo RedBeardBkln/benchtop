@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
 import { ingredients, intakeItems } from '@/lib/db/schema'
 import { AiRefusalError, claudeJson } from '@/lib/ai-json'
 import {
-  INGREDIENT_CATEGORIES, SUBCATEGORY_EXAMPLES, categoryPath, isIngredientCategory,
+  INGREDIENT_CATEGORIES, SUBCATEGORY_EXAMPLES, categoryOptions, categoryPath,
 } from '@/lib/ingredient-categories'
 
 // Opus on a full batch can take a minute or two; the client calls this repeatedly until nothing is pending.
@@ -20,7 +20,8 @@ const bodySchema = z.object({
   ids: z.array(z.string().uuid()).max(BATCH).optional(),
 })
 
-const schema = {
+// The category enum is the standard list plus the account's own categories, so it's built per request
+const responseSchema = (categories: string[]) => ({
   type: 'object',
   additionalProperties: false,
   required: ['items'],
@@ -34,7 +35,7 @@ const schema = {
         properties: {
           id: { type: 'string' },
           name: { type: 'string' },
-          category: { type: 'string', enum: [...INGREDIENT_CATEGORIES] },
+          category: { type: 'string', enum: [...categories, ''] },
           subcategory: { type: 'string' },
           microCategory: { type: 'string' },
           confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
@@ -44,7 +45,7 @@ const schema = {
       },
     },
   },
-}
+})
 
 type Classified = {
   id: string; name: string; category: string; subcategory: string; microCategory: string
@@ -92,8 +93,15 @@ export async function POST(request: NextRequest) {
   const taxonomy = new Set<string>()
   for (const r of [...library, ...usedPaths]) if (r.category) taxonomy.add(categoryPath(r))
 
-  const categoryGuide = INGREDIENT_CATEGORIES
-    .map(c => `- ${c}${SUBCATEGORY_EXAMPLES[c].length ? ` (e.g. ${SUBCATEGORY_EXAMPLES[c].join(', ')})` : ''}`)
+  // Standard categories with examples, then any the lab added itself ("Other" was the old catch-all)
+  const categories = categoryOptions([...library, ...usedPaths]).filter(c => c.toLowerCase() !== 'other')
+  const examples: Record<string, string[]> = SUBCATEGORY_EXAMPLES
+  const standard = new Set<string>(INGREDIENT_CATEGORIES)
+  const categoryGuide = categories
+    .map(c => {
+      if (!standard.has(c)) return `- ${c} (added by this lab)`
+      return `- ${c}${examples[c].length ? ` (e.g. ${examples[c].join(', ')})` : ''}`
+    })
     .join('\n')
   const libraryList = library
     .map(l => `${l.id} | ${l.name}${l.brandName ? ` (${l.brandName})` : ''}`)
@@ -103,7 +111,7 @@ export async function POST(request: NextRequest) {
 
 For each item return:
 - name: the clean, standard name of the material as a formulator would write it (e.g. label "tapioca strch" → "Tapioca Starch"; "SF lecithin liq" → "Sunflower Lecithin, Liquid"). Keep grades, percentages and codes that matter (DE, mesh, bloom, % protein, "90").
-- category: exactly one of the categories listed below, chosen by the material's main function in a formulation.
+- category: exactly one of the categories listed below, chosen by the material's main function in a formulation. Use "" only when none of them fits; the lab will file it by hand.
 - subcategory: the material type or source within that category (e.g. Tapioca, Sunflower Lecithin, Xanthan, Whey).
 - microCategory: the form, grade or treatment when it matters (e.g. Native, Pregelatinized, Liquid, Powder, Isolate, 80% Concentrate, Organic). Use "" when nothing further distinguishes it.
 - confidence: high if the label clearly names one material; medium if you had to interpret an abbreviation or a likely variant; low if it is a guess.
@@ -124,23 +132,24 @@ ${batch.map(b => `${b.id} | ${b.rawName}`).join('\n')}
 Return one entry per item, using its id.`
 
   try {
-    const result = await claudeJson<{ items: Classified[] }>({ content: prompt, schema, effort: 'medium' })
+    const result = await claudeJson<{ items: Classified[] }>({ content: prompt, schema: responseSchema(categories), effort: 'medium' })
 
     const batchIds = new Set(batch.map(b => b.id))
     const libraryIds = new Set(library.map(l => l.id))
+    const allowed = new Set(categories)
     const clean = (s: string, max: number) => s.trim().slice(0, max) || null
     let classified = 0
     for (const c of result.items) {
-      if (!batchIds.has(c.id) || !isIngredientCategory(c.category)) continue
+      if (!batchIds.has(c.id) || (c.category !== '' && !allowed.has(c.category))) continue
       batchIds.delete(c.id) // one update per item even if Claude repeats an id
       await db
         .update(intakeItems)
         .set({
           status: 'identified',
           name: clean(formatIngredientName(c.name), 255),
-          category: c.category,
-          subcategory: clean(c.subcategory, 120),
-          microCategory: clean(c.microCategory, 120),
+          category: c.category || null,
+          subcategory: c.category ? clean(c.subcategory, 120) : null,
+          microCategory: c.category ? clean(c.microCategory, 120) : null,
           confidence: c.confidence,
           aiNotes: clean(c.notes, 500),
           matchedIngredientId: libraryIds.has(c.libraryMatchId) ? c.libraryMatchId : null,

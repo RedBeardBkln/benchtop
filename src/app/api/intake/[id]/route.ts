@@ -4,7 +4,8 @@ import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { intakeItems } from '@/lib/db/schema'
-import { INGREDIENT_CATEGORIES, INTAKE_UNITS } from '@/lib/ingredient-categories'
+import { INTAKE_UNITS, canonicalTerm, categoryOptions } from '@/lib/ingredient-categories'
+import { loadTaxonomyEntries } from '@/lib/ingredient-taxonomy'
 import { assertIngredientsOwned, isUuid, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -16,7 +17,7 @@ const patchSchema = z.object({
   quantity: z.number().positive().max(1e9).nullable().optional(),
   quantityUnit: z.enum(INTAKE_UNITS).nullable().optional(),
   name: optText(255),
-  category: z.enum(INGREDIENT_CATEGORIES).nullable().optional(),
+  category: optText(120),
   subcategory: optText(120),
   microCategory: optText(120),
   matchedIngredientId: z.string().uuid().nullable().optional(),
@@ -48,9 +49,13 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   if (d.quantity !== undefined) values.quantity = d.quantity?.toString() ?? null
   if (d.quantityUnit !== undefined) values.quantityUnit = d.quantityUnit
   if (d.name !== undefined) values.name = d.name || null
-  if (d.category !== undefined) values.category = d.category
-  if (d.subcategory !== undefined) values.subcategory = d.subcategory || null
-  if (d.microCategory !== undefined) values.microCategory = d.microCategory || null
+  if (d.category !== undefined || d.subcategory !== undefined || d.microCategory !== undefined) {
+    // New values are allowed; ones matching an existing value (ignoring case) take its spelling
+    const known = await loadTaxonomyEntries(ctx.account.id)
+    if (d.category !== undefined) values.category = canonicalTerm(d.category, categoryOptions(known))
+    if (d.subcategory !== undefined) values.subcategory = canonicalTerm(d.subcategory, known.map(k => k.subcategory))
+    if (d.microCategory !== undefined) values.microCategory = canonicalTerm(d.microCategory, known.map(k => k.microCategory))
+  }
   if (d.matchedIngredientId !== undefined) values.matchedIngredientId = d.matchedIngredientId
 
   try {

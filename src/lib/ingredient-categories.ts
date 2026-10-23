@@ -1,7 +1,8 @@
 // Ingredient library taxonomy: Category > Subcategory > Micro category.
 //
-// Categories are a fixed list so filters and on-hand matching stay consistent. Subcategory and micro
-// category are free text (Claude reuses the ones already in the library); the examples here guide it.
+// Categories start from a standard list; users can add their own. Subcategory and micro category are
+// free text. Every value saved on an ingredient or intake entry becomes an option for the next one
+// (Claude reuses them too); the subcategory examples here guide it.
 //   Starches > Tapioca > Native        Emulsifiers > Sunflower Lecithin > Liquid
 
 export const INGREDIENT_CATEGORIES = [
@@ -25,7 +26,6 @@ export const INGREDIENT_CATEGORIES = [
   'Starches',
   'Sweeteners',
   'Vitamins & Supplements',
-  'Other',
 ] as const
 
 export type IngredientCategory = (typeof INGREDIENT_CATEGORIES)[number]
@@ -52,11 +52,50 @@ export const SUBCATEGORY_EXAMPLES: Record<IngredientCategory, string[]> = {
   'Starches': ['Tapioca', 'Corn', 'Potato', 'Rice', 'Modified Starch'],
   'Sweeteners': ['Sugars', 'Syrups', 'Polyols', 'High-Intensity', 'Rare Sugars'],
   'Vitamins & Supplements': ['Vitamins', 'Minerals', 'Botanicals', 'Amino Acids'],
-  'Other': [],
 }
 
-export function isIngredientCategory(v: unknown): v is IngredientCategory {
-  return typeof v === 'string' && (INGREDIENT_CATEGORIES as readonly string[]).includes(v)
+/** A category/subcategory/micro category combination in use on some ingredient or intake entry. */
+export type TaxonomyEntry = { category: string | null; subcategory: string | null; microCategory: string | null }
+
+const tidy = (s: string | null | undefined) => (s ?? '').trim().replace(/\s+/g, ' ')
+
+/** Distinct non-empty values, first spelling wins (ignoring case), sorted. */
+function distinctSorted(values: Array<string | null | undefined>): string[] {
+  const seen = new Map<string, string>()
+  for (const v of values) {
+    const t = tidy(v)
+    if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t)
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b))
+}
+
+/** The standard categories plus any added on ingredients. */
+export function categoryOptions(entries: Pick<TaxonomyEntry, 'category'>[]): string[] {
+  return distinctSorted([...INGREDIENT_CATEGORIES, ...entries.map(e => e.category)])
+}
+
+const same = (a: string | null | undefined, b: string | null | undefined) => tidy(a).toLowerCase() === tidy(b).toLowerCase()
+
+/** Subcategories used under `category` (all of them when no category is chosen). */
+export function subcategoryOptions(entries: TaxonomyEntry[], category: string | null): string[] {
+  return distinctSorted(entries.filter(e => !tidy(category) || same(e.category, category)).map(e => e.subcategory))
+}
+
+/** Micro categories used under `category` › `subcategory` (narrowed only by the levels chosen). */
+export function microCategoryOptions(entries: TaxonomyEntry[], category: string | null, subcategory: string | null): string[] {
+  return distinctSorted(entries
+    .filter(e => (!tidy(category) || same(e.category, category)) && (!tidy(subcategory) || same(e.subcategory, subcategory)))
+    .map(e => e.microCategory))
+}
+
+/**
+ * A typed category/subcategory/micro value, tidied and spelled like an existing one when it matches
+ * ignoring case ("fats & oils" → "Fats & Oils"), so one value never shows up twice. null when empty.
+ */
+export function canonicalTerm(value: string | null | undefined, known: Array<string | null | undefined>): string | null {
+  const t = tidy(value)
+  if (!t) return null
+  return known.map(tidy).find(k => k.toLowerCase() === t.toLowerCase()) ?? t
 }
 
 /** "Starches › Tapioca › Native", skipping empty levels; '' when uncategorized. */
@@ -135,7 +174,8 @@ const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase()
  * category) before same category only. Empty when the target is on hand itself or uncategorized.
  */
 export function onHandAlternatives<T extends CategorizedIngredient>(target: CategorizedIngredient, library: T[], limit = 5): T[] {
-  if (target.onHand || !target.category || target.category === 'Other') return []
+  // "Other" was the catch-all before users could add categories; its items aren't alike, so it never matches
+  if (target.onHand || !target.category || norm(target.category) === 'other') return []
   const cat = norm(target.category)
   const sub = norm(target.subcategory)
   const micro = norm(target.microCategory)
