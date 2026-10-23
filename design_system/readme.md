@@ -20,7 +20,7 @@ Intentional additions: **Icon** (Lucide wrapper) and **SegmentDisplay** (the bra
 - Voice: a friendly lab-mate. Nerdy-precise, never stiff. First person plural for shared work ("What are we solving today?"), "you/your" for the user, "benchtop" (always lowercase, even at sentence start) for the product.
 - Casing: sentence case everywhere. UI labels are mono and may be UPPERCASE with tracking. No Title Case headings.
 - Numbers are first-class: always with units, in mono or segment display (`aw 0.62`, `12.4 %`).
-- Short, concrete, a little wry: "Bars are coming out crumbly." "Weigh it. Tweak it." "Formulas that finally add up."
+- Short, concrete, a little wry: "Bars are coming out crumbly." "Formulation, from bench to label." "Formulas that finally add up."
 - AI speaks as a suggestion with reasons and predicted effect, never as an oracle: "Try this: swap 4% glucose syrup for allulose. Predicted aw 0.58."
 - No emoji. No exclamation-mark enthusiasm. Light puns on lab/scale vocabulary are fine, once.
 
