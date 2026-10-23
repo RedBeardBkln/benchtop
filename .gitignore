@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Local notes with Stripe details; never commit
 Benchtop Stripe.txt
+
+# DS-Digital font files (kept local for now)
+design_system/ds-digital/
