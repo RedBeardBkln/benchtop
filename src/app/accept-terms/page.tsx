@@ -22,7 +22,7 @@ export default async function AcceptTermsPage() {
           (effective {PRIVACY_EFFECTIVE_DATE}) to keep using benchtop.
         </p>
         <div className="rounded-md bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-900">
-          We will never sell your data or your clients&apos; data, and we will not share it with anyone unless
+          <strong>The bottom line:</strong> We will never sell your data or your clients&apos; data, and we will not share it with anyone unless
           required or mandated by law.
         </div>
         <AcceptTermsForm termsVersion={TERMS_VERSION} privacyVersion={PRIVACY_VERSION} />
