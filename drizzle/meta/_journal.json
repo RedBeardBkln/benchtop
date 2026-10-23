@@ -113,6 +113,13 @@
       "when": 1792772778093,
       "tag": "0015_loose_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792777672532,
+      "tag": "0016_supplier_contacts",
+      "breakpoints": true
     }
   ]
 }

@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { suppliers, ingredientSuppliers } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { suppliers, ingredientSuppliers, supplierContacts } from '@/lib/db/schema'
+import { and, asc, eq } from 'drizzle-orm'
 import { isUuid, getOwnedSupplier, notFoundResponse } from '@/lib/tenancy'
-import { z } from 'zod'
+import { normalizeSupplierFields, supplierPatchSchema } from '@/lib/supplier-schemas'
+import { getSupplierIngredients } from '@/lib/suppliers-server'
 
 type Ctx = { params: Promise<{ id: string }> }
-
-const patchSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  websiteUrl: z.string().url().nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
-})
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const auth = await requireApi()
@@ -22,7 +17,14 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const { id } = await params
   const row = await getOwnedSupplier(ctx, id)
   if (!row) return notFoundResponse()
-  return NextResponse.json(row)
+
+  const [contacts, linked] = await Promise.all([
+    db.select().from(supplierContacts).where(eq(supplierContacts.supplierId, id))
+      .orderBy(asc(supplierContacts.position), asc(supplierContacts.createdAt)),
+    getSupplierIngredients(ctx.account.id, id, row.name),
+  ])
+
+  return NextResponse.json({ ...row, contacts, ingredients: linked })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -32,24 +34,18 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   const { id } = await params
   if (!isUuid(id)) return notFoundResponse()
-  const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
-  const parsed = patchSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
-
-  const d = parsed.data
-  const updates: Record<string, unknown> = { updatedAt: new Date() }
-  if (d.name !== undefined) updates.name = d.name
-  if (d.websiteUrl !== undefined) updates.websiteUrl = d.websiteUrl
-  if (d.notes !== undefined) updates.notes = d.notes
+  const parsed = supplierPatchSchema.safeParse(await req.json().catch(() => null))
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid supplier' }, { status: 400 })
+  }
 
   const [row] = await db
     .update(suppliers)
-    .set(updates)
+    .set({ ...normalizeSupplierFields(parsed.data), updatedAt: new Date() })
     .where(and(eq(suppliers.id, id), eq(suppliers.accountId, ctx.account.id)))
     .returning()
-  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!row) return notFoundResponse()
   return NextResponse.json(row)
 }
 
@@ -76,6 +72,7 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     )
   }
 
+  // Contacts cascade
   await db.delete(suppliers).where(and(eq(suppliers.id, id), eq(suppliers.accountId, ctx.account.id)))
   return new NextResponse(null, { status: 204 })
 }

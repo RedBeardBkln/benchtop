@@ -6,7 +6,7 @@ import {
   accountMembers, batchRuns, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
   ingredientAllergens, ingredientCerts, ingredientDocs, ingredientNutrients, ingredientSuppliers,
   ingredients, intakeItems, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
-  subIngredients, suppliers,
+  subIngredients, supplierContacts, suppliers,
 } from '@/lib/db/schema'
 
 // Full JSON export of the caller's account. Owner only. Stays available without an active
@@ -21,7 +21,7 @@ export async function GET() {
 
   const [
     projectRows, formulationRows, ingredientRows, supplierRows, equipmentRows, memberRows, intakeRows, clientRows,
-    contactRows,
+    contactRows, supplierContactRows,
   ] = await Promise.all([
     db.select().from(projects).where(eq(projects.accountId, accountId)),
     db.select().from(formulations).where(eq(formulations.accountId, accountId)),
@@ -38,6 +38,9 @@ export async function GET() {
     db.select({ r: clientContacts }).from(clientContacts)
       .innerJoin(clients, eq(clientContacts.clientId, clients.id))
       .where(eq(clients.accountId, accountId)),
+    db.select({ r: supplierContacts }).from(supplierContacts)
+      .innerJoin(suppliers, eq(supplierContacts.supplierId, suppliers.id))
+      .where(eq(suppliers.accountId, accountId)),
   ])
 
   const [
@@ -140,6 +143,7 @@ export async function GET() {
     subIngredients: subIngredientRows.map(x => x.r),
     ingredientDocs: docRows.map(x => x.r),
     suppliers: supplierRows,
+    supplierContacts: supplierContactRows.map(x => x.r),
     ingredientSuppliers: supplierLinkRows.map(x => x.r),
     equipment: equipmentRows,
   }

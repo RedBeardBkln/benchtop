@@ -1,27 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { suppliers } from '@/lib/db/schema'
-import { asc, eq } from 'drizzle-orm'
-import { z } from 'zod'
-
-const createSchema = z.object({
-  name: z.string().min(1).max(255),
-  websiteUrl: z.string().url().nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
-})
+import { supplierContacts, suppliers } from '@/lib/db/schema'
+import { asc, eq, sql } from 'drizzle-orm'
+import { normalizeSupplierFields, supplierCreateSchema } from '@/lib/supplier-schemas'
+import { getSupplierIngredientCounts } from '@/lib/suppliers-server'
 
 export async function GET() {
   const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
-  const rows = await db
-    .select()
-    .from(suppliers)
-    .where(eq(suppliers.accountId, ctx.account.id))
-    .orderBy(asc(suppliers.name))
-  return NextResponse.json(rows)
+  const [rows, counts, contacts] = await Promise.all([
+    db
+      .select()
+      .from(suppliers)
+      .where(eq(suppliers.accountId, ctx.account.id))
+      .orderBy(asc(sql`lower(${suppliers.name})`)),
+    getSupplierIngredientCounts(ctx.account.id),
+    db
+      .select({
+        supplierId: supplierContacts.supplierId,
+        name: supplierContacts.name,
+        email: supplierContacts.email,
+        phone: supplierContacts.phone,
+        isPrimary: supplierContacts.isPrimary,
+      })
+      .from(supplierContacts)
+      .innerJoin(suppliers, eq(supplierContacts.supplierId, suppliers.id))
+      .where(eq(suppliers.accountId, ctx.account.id))
+      .orderBy(asc(supplierContacts.position), asc(supplierContacts.createdAt)),
+  ])
+
+  // The primary contact, or the first one listed
+  const contactBy = new Map<string, { name: string; email: string | null; phone: string | null }>()
+  for (const c of contacts) {
+    if (c.isPrimary || !contactBy.has(c.supplierId)) contactBy.set(c.supplierId, { name: c.name, email: c.email, phone: c.phone })
+  }
+
+  return NextResponse.json(rows.map(r => ({
+    ...r,
+    ingredientCount: counts.get(r.id) ?? 0,
+    primaryContact: contactBy.get(r.id) ?? null,
+  })))
 }
 
 export async function POST(req: NextRequest) {
@@ -29,17 +50,30 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
-  const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  const parsed = supplierCreateSchema.safeParse(await req.json().catch(() => null))
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid supplier' }, { status: 400 })
+  }
+  const { contact, ...fields } = parsed.data
 
-  const parsed = createSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
-
-  const { name, websiteUrl, notes } = parsed.data
-  const [row] = await db
-    .insert(suppliers)
-    .values({ accountId: ctx.account.id, name, websiteUrl: websiteUrl ?? null, notes: notes ?? null })
-    .returning()
+  const row = await db.transaction(async tx => {
+    const [created] = await tx
+      .insert(suppliers)
+      .values({ ...normalizeSupplierFields(fields), accountId: ctx.account.id })
+      .returning()
+    if (contact) {
+      await tx.insert(supplierContacts).values({
+        supplierId: created.id,
+        name: contact.name,
+        title: contact.title || null,
+        email: contact.email || null,
+        phone: contact.phone || null,
+        notes: contact.notes || null,
+        isPrimary: true,
+      })
+    }
+    return created
+  })
 
   return NextResponse.json(row, { status: 201 })
 }

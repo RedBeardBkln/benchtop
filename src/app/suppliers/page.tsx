@@ -6,13 +6,14 @@ import { SupplierList } from '@/components/suppliers/supplier-list'
 
 export default async function SuppliersPage() {
   const ctx = await requirePage()
+  const canEdit = canEditLibrary(ctx.access)
 
   return (
     <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
-      {!canEditLibrary(ctx.access) && (
+      {!canEdit && (
         <div className="px-4 pt-5 sm:px-8"><LibraryViewOnlyNotice /></div>
       )}
-      <SupplierList />
+      <SupplierList canEdit={canEdit} />
     </AppShell>
   )
 }

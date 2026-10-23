@@ -26,7 +26,7 @@ import {
   subIngredients,
   ingredientDocs,
 } from './ingredients'
-import { suppliers, ingredientSuppliers } from './suppliers'
+import { suppliers, ingredientSuppliers, supplierContacts } from './suppliers'
 import { projects } from './projects'
 import { clients, clientContacts } from './clients'
 import {
@@ -55,6 +55,11 @@ export const ingredientsRelations = relations(ingredients, ({ many }) => ({
   formulationLines: many(formulationLines),
   reverseCandidates: many(reverseCandidates),
   ingredientSuppliers: many(ingredientSuppliers),
+  contacts: many(supplierContacts),
+}))
+
+export const supplierContactsRelations = relations(supplierContacts, ({ one }) => ({
+  supplier: one(suppliers, { fields: [supplierContacts.supplierId], references: [suppliers.id] }),
 }))
 
 export const suppliersRelations = relations(suppliers, ({ many }) => ({
