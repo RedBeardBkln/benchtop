@@ -40,7 +40,7 @@ export default function LoginForm() {
       <div className="mb-6">
         <div className="-mx-8 -mt-8 mb-6 rounded-t-lg bg-lcd-300 px-8 py-7 shadow-[inset_0_2px_0_rgba(22,32,14,.12),inset_0_0_24px_rgba(111,140,18,.35)]">
           <h1 className="text-ink-900">
-            <Logo variant="wordmark" height={40} />
+            <Logo variant="wordmark" height={36} />
           </h1>
           <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-700 mt-3">Formulation, from bench to label.</p>
         </div>

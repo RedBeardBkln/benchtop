@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"DesignSystem_998768","components":[{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"Logo","sourcePath":"components/core/Logo.jsx"},{"name":"SegmentDisplay","sourcePath":"components/core/SegmentDisplay.jsx"},{"name":"Tooltip","sourcePath":"components/feedback/Tooltip.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Input","sourcePath":"components/forms/Input.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"Tabs","sourcePath":"components/navigation/Tabs.jsx"}],"sourceHashes":{"components/core/Badge.jsx":"1f6dc0e4450d","components/core/Button.jsx":"ef36919f4c47","components/core/Card.jsx":"74b6025df09b","components/core/Icon.jsx":"edd79cee021a","components/core/Logo.jsx":"f11dc2849a25","components/core/SegmentDisplay.jsx":"2284d1653a2a","components/feedback/Tooltip.jsx":"817ffc6d2222","components/forms/Checkbox.jsx":"7fb7540e916f","components/forms/Input.jsx":"95023c520728","components/forms/Switch.jsx":"a9f15319c835","components/navigation/Tabs.jsx":"3d1e8015cf48","ui_kits/app/Screens.jsx":"e919f81cae61","ui_kits/app/Shell.jsx":"62630f766ecd"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"DesignSystem_998768","components":[{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"Logo","sourcePath":"components/core/Logo.jsx"},{"name":"SegmentDisplay","sourcePath":"components/core/SegmentDisplay.jsx"},{"name":"Tooltip","sourcePath":"components/feedback/Tooltip.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Input","sourcePath":"components/forms/Input.jsx"},{"name":"Switch","sourcePath":"components/forms/Switch.jsx"},{"name":"Tabs","sourcePath":"components/navigation/Tabs.jsx"}],"sourceHashes":{"components/core/Badge.jsx":"1f6dc0e4450d","components/core/Button.jsx":"ef36919f4c47","components/core/Card.jsx":"74b6025df09b","components/core/Icon.jsx":"edd79cee021a","components/core/Logo.jsx":"0d10d7bbf880","components/core/SegmentDisplay.jsx":"4d01af8575a0","components/feedback/Tooltip.jsx":"817ffc6d2222","components/forms/Checkbox.jsx":"7fb7540e916f","components/forms/Input.jsx":"95023c520728","components/forms/Switch.jsx":"a9f15319c835","components/navigation/Tabs.jsx":"3d1e8015cf48","ui_kits/app/Screens.jsx":"e919f81cae61","ui_kits/app/Shell.jsx":"62630f766ecd"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -115,117 +115,69 @@ Object.assign(__ds_scope, { Button });
 
 // components/core/Logo.jsx
 try { (() => {
-const P = ["0,0 18,18 18,80 0,80", "0,90 18,90 18,152 0,170", "21,94 39,76 61,76 79,94", "82,90 100,90 100,170 82,152", "21,170 39,152 61,152 79,170"];
 function Logo({
   variant = "mark",
   height = 48,
   color = "var(--ink-900)",
   style
 }) {
-  const svg = h => /*#__PURE__*/React.createElement("svg", {
-    viewBox: "0 0 100 170",
+  return /*#__PURE__*/React.createElement("span", {
     "aria-label": "benchtop",
     style: {
-      display: "block",
-      height: h
-    }
-  }, P.map((p, i) => /*#__PURE__*/React.createElement("polygon", {
-    key: i,
-    points: p,
-    fill: color
-  })));
-  if (variant === "mark") return /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      ...style
-    }
-  }, svg(height));
-  const f = height;
-  return /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-flex",
-      alignItems: "baseline",
-      gap: f * 0.06,
-      color,
-      ...style
-    }
-  }, svg(f * 0.82), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontFamily: "var(--font-display)",
+      display: "inline-block",
+      fontFamily: "var(--font-segment)",
       fontWeight: 700,
-      fontSize: f,
-      letterSpacing: "-0.04em",
-      lineHeight: 1
+      fontSize: height * 1.7,
+      lineHeight: height * 1.1 + "px",
+      height: height * 1.1,
+      letterSpacing: "0.04em",
+      color,
+      whiteSpace: "nowrap",
+      ...style
     }
-  }, "enchtop"));
+  }, variant === "mark" ? "B" : "BENCHTOP");
 }
 Object.assign(__ds_scope, { Logo });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/Logo.jsx", error: String((e && e.message) || e) }); }
 
 // components/core/SegmentDisplay.jsx
 try { (() => {
-const S = {
-  a: "6,0 54,0 46,8 14,8",
-  b: "60,6 60,46 52,42 52,14",
-  c: "60,54 60,94 52,86 52,58",
-  d: "6,100 54,100 46,92 14,92",
-  e: "0,54 0,94 8,86 8,58",
-  f: "0,6 0,46 8,42 8,14",
-  g: "8,50 14,44 46,44 52,50 46,56 14,56"
-};
-const M = {
-  "0": "abcdef",
-  "1": "bc",
-  "2": "abdeg",
-  "3": "abcdg",
-  "4": "bcfg",
-  "5": "acdfg",
-  "6": "acdefg",
-  "7": "abc",
-  "8": "abcdefg",
-  "9": "abcdfg",
-  "-": "g",
-  b: "cdefg",
-  " ": ""
-};
 function SegmentDisplay({
   value = "0",
   height = 48,
   color = "var(--ink-900)",
   ghost = true
 }) {
+  const fs = height * 1.7;
   return /*#__PURE__*/React.createElement("span", {
     role: "img",
-    "aria-label": value,
+    "aria-label": String(value),
     style: {
       display: "inline-flex",
-      gap: height * 0.12,
-      alignItems: "flex-end"
+      fontFamily: "var(--font-segment)",
+      fontWeight: 700,
+      fontSize: fs,
+      lineHeight: height * 1.1 + "px",
+      height: height * 1.1,
+      letterSpacing: "0.04em",
+      color
     }
-  }, String(value).split("").map((ch, i) => ch === "." ? /*#__PURE__*/React.createElement("span", {
+  }, String(value).split("").map((ch, i) => /*#__PURE__*/React.createElement("span", {
     key: i,
     style: {
-      width: height * 0.1,
-      height: height * 0.1,
-      background: color,
-      marginLeft: -height * 0.04
+      display: "inline-grid"
     }
-  }) : /*#__PURE__*/React.createElement("svg", {
-    key: i,
-    viewBox: "0 0 60 100",
+  }, ghost && ch !== "." && ch !== " " && /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
     style: {
-      height,
-      display: "block"
+      gridArea: "1/1",
+      opacity: 0.08
     }
-  }, Object.keys(S).map(k => {
-    const on = (M[ch] || "").includes(k);
-    return (on || ghost) && /*#__PURE__*/React.createElement("polygon", {
-      key: k,
-      points: S[k],
-      fill: color,
-      fillOpacity: on ? 1 : 0.08
-    });
-  }))));
+  }, "8"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      gridArea: "1/1"
+    }
+  }, ch))));
 }
 Object.assign(__ds_scope, { SegmentDisplay });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/SegmentDisplay.jsx", error: String((e && e.message) || e) }); }

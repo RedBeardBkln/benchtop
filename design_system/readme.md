@@ -2,7 +2,7 @@
 
 **benchtop** is an R&D formulation-tracking system for food development. It logs formulations, ingredients and trials, and uses AI to help solve hard formulation problems (texture, sugar reduction, shelf life). Audience: food scientists and product developers.
 
-**Sources:** none supplied. Everything here (logo, palette, type, components, app UI kit) was designed from the brief: *logo = lowercase b as on a digital-scale / quartz-clock LCD (five trapezoid segments), background = the near-neon backlight of the screen, tone = nerdy but warm and welcoming.*
+**Sources:** none supplied. Everything here (logo, palette, type, components, app UI kit) was designed from the brief: *logo in DS-Digital (user-supplied LCD font), background = near-neon LCD backlight, tone = nerdy but warm*
 
 ## Index
 - `styles.css` → imports `tokens/` (fonts, colors, typography, spacing) and `components/components.css`
@@ -26,7 +26,7 @@ Intentional additions: **Icon** (Lucide wrapper) and **SegmentDisplay** (the bra
 
 ## Visual foundations
 - **Color:** LCD lime `--lcd-300 #D6F55A` is the hero — the backlight. Ink (green-black `#16200E`) is every "lit segment": text, borders, dark surfaces. Warm paper cream is the page. Tangerine is the sole warm accent (AI, human touches). Semantic colours are muted-natural. Never pure black/white.
-- **Type:** Bricolage Grotesque (display + body; quirky, warm, tight tracking −3% on display) and DM Mono (labels, data). **Substituted from Google Fonts — no brand fonts supplied.**
+- **Type:** Bricolage Grotesque (display + body; quirky, warm, tight tracking −3% on display) DM Mono (labels, data) and **DS-Digital** (segment font for logo/readouts). **Substituted from Google Fonts — no brand fonts supplied.**
 - **Backgrounds:** flat paper; hero panels are lit LCD lime with a faint ghost-segment tile (`--ghost-segments`) and inner shadow like a real display. No gradients, photography or illustrations.
 - **Borders:** 1.5px ink outlines on interactive/primary surfaces; 1px ink-200 hairlines for dividers.
 - **Shadows:** "keycap" hard offset (`3px 3px 0 ink`) for buttons; soft lifted shadow with 2px bottom edge for cards; inset screen shadow for LCD panels; lime glow for lit states (switch on).
@@ -41,4 +41,4 @@ Intentional additions: **Icon** (Lucide wrapper) and **SegmentDisplay** (the bra
 Lucide (stroke, 1.5–2px, rounded) via CDN `lucide-static`, rendered through the **Icon** component and tinted by colour. **Substitution — no custom icon set exists.** Icons sit at 18–20px beside text; no emoji, no unicode glyph icons. The seven-segment numeral style is the brand's "iconic" device instead.
 
 ## Logo
-The mark is a lowercase **b** made of five trapezoid segments (viewBox 100×170): ascender + bowl as lit LCD segments. Ink on lime/paper; lime on ink. In the wordmark the mark *is* the "b" — set "enchtop" after it. Keep clear space = one segment-width ×2. Designed from the brief; refine freely.
+The mark is a capital **B** and the wordmark is **BENCHTOP**, both typed in **DS-Digital Bold** (`assets/fonts/DS-Digital-Bold.ttf`, supplied by the user; free for all uses) — a 16-segment LCD font. Ink on lime/paper; lime on ink. Static SVGs in `assets/` have the letters converted to outlines, so they render without the font installed. Use `--font-segment` / SegmentDisplay for the logo, hero readouts and short display text only; body and UI text stays Bricolage Grotesque. (A hand-drawn lowercase variant was tried and dropped.)

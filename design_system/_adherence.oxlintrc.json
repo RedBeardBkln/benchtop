@@ -38,8 +38,8 @@
         "message": "Raw px value — use a design-system spacing token via var()."
       },
       {
-        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Bricolage Grotesque|DM Mono))/i]",
-        "message": "Font not provided by the design system. Available: Bricolage Grotesque, DM Mono."
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:DS-Digital|Bricolage Grotesque|DM Mono))/i]",
+        "message": "Font not provided by the design system. Available: DS-Digital, Bricolage Grotesque, DM Mono."
       },
       {
         "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|dot|children|key|ref|className|style|children)$/]",
@@ -182,6 +182,7 @@
       "--font-body",
       "--font-display",
       "--font-mono",
+      "--font-segment",
       "--ghost-segments",
       "--glow-lcd",
       "--info-100",
@@ -318,6 +319,7 @@
       "--link-hover": "color",
       "--font-display": "font",
       "--font-body": "font",
+      "--font-segment": "font",
       "--font-mono": "font",
       "--text-xs": "font",
       "--text-sm": "font",
@@ -369,7 +371,8 @@
     },
     "fontFamilies": [
       "Bricolage Grotesque",
-      "DM Mono"
+      "DM Mono",
+      "DS-Digital"
     ]
   }
 }

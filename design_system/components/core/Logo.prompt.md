@@ -1,4 +1,4 @@
-One-sentence: the benchtop mark — a lowercase b built from five LCD segments — alone or as a wordmark where the b is the glyph.
+One-sentence: the benchtop logo — capital B mark or BENCHTOP wordmark, set in the DS-Digital LCD segment font.
 
 ```jsx
 <Logo variant="wordmark" height={56} />

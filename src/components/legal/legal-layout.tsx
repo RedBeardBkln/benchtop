@@ -19,7 +19,7 @@ export function LegalLayout({
       <header className="border-b border-gray-200 bg-white">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-gray-900">
-            <Logo variant="wordmark" height={22} />
+            <Logo variant="wordmark" height={18} />
           </Link>
           <nav className="flex gap-4 text-sm">
             <Link href="/legal/terms" className="text-blue-600 hover:underline">Terms</Link>

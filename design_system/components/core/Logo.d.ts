@@ -1,9 +1,9 @@
 import * as React from "react";
 export interface LogoProps {
-  /** mark = the seven-segment b; wordmark = b + "enchtop" (the b is the mark itself) */
+  /** mark = "B"; wordmark = "BENCHTOP" — both set in DS-Digital capitals */
   variant?: "mark" | "wordmark";
+  /** Cap height in px */
   height?: number;
-  /** Any CSS colour; use ink on lcd/paper, lcd on ink */
   color?: string;
   style?: React.CSSProperties;
 }

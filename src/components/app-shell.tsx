@@ -47,7 +47,7 @@ export function AppShell({
       {/* Sidebar — desktop only */}
       <aside className="hidden sm:flex w-56 shrink-0 bg-ink-900 text-ink-300 flex-col print:hidden">
         <div className="px-5 pt-6 pb-5">
-          <Logo variant="wordmark" height={28} className="text-lcd-300" />
+          <Logo variant="wordmark" height={24} className="text-lcd-300" />
         </div>
 
         <nav className="flex-1 px-3 pb-4 space-y-1">
