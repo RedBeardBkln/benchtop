@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { MessageSquarePlus, X } from 'lucide-react'
+import { HelpCircle, MessageSquarePlus, X } from 'lucide-react'
 import { FEEDBACK_KIND_LABELS, FEEDBACK_KINDS, FEEDBACK_MESSAGE_MAX, type FeedbackKind } from '@/lib/feedback'
 import { readErrorMessage } from '@/lib/utils'
 import { btnPrimary, btnSecondary, Field, inputCls } from '@/components/settings/ui'
@@ -13,8 +14,8 @@ type FeedbackContext = { eligible: boolean; contact: { name: string; email: stri
 
 export const FEEDBACK_CONTEXT_KEY = ['feedback-context']
 
-// "Report a bug or request a feature" at the foot of every page. Only shown once the user's profile
-// is complete, so every submission has someone to reply to.
+// Foot of every page: a link to Help, and "Report a bug or request a feature", which is only shown
+// once the user's profile is complete, so every submission has someone to reply to.
 export function FeedbackLink() {
   const [open, setOpen] = useState(false)
   const { data } = useQuery<FeedbackContext>({
@@ -27,19 +28,26 @@ export function FeedbackLink() {
     staleTime: 5 * 60 * 1000,
   })
 
-  if (!data?.eligible) return null
-
   return (
-    <footer className="px-4 sm:px-8 py-6 print:hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
+    <footer className="px-4 sm:px-8 py-6 flex flex-wrap items-center gap-x-5 gap-y-2 print:hidden">
+      <Link
+        href="/help"
         className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors"
       >
-        <MessageSquarePlus size={14} />
-        Report a bug or request a feature
-      </button>
-      {open && <FeedbackDialog contact={data.contact} onClose={() => setOpen(false)} />}
+        <HelpCircle size={14} />
+        Help & FAQ
+      </Link>
+      {data?.eligible && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+        >
+          <MessageSquarePlus size={14} />
+          Report a bug or request a feature
+        </button>
+      )}
+      {open && data && <FeedbackDialog contact={data.contact} onClose={() => setOpen(false)} />}
     </footer>
   )
 }

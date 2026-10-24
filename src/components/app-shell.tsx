@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, FolderOpen, FlaskConical, LogOut, MailPlus, MessageSquare, Settings, Truck } from 'lucide-react'
+import { Building2, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, MessageSquare, Settings, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
@@ -13,6 +13,7 @@ const NAV = [
   { href: '/ingredients', label: 'Ingredients', icon: FlaskConical },
   { href: '/suppliers', label: 'Suppliers', icon: Truck },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/help', label: 'Help', icon: HelpCircle },
 ]
 
 // Only shown to account owners and admins (client records hold accounting and shipping details)
