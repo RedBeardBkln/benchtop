@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Bug, Lightbulb, Mail, Phone } from 'lucide-react'
 import { FEEDBACK_KIND_LABELS, type FeedbackKind } from '@/lib/feedback'
 import { readErrorMessage } from '@/lib/utils'
 import { btnSecondary, Card, Notice } from '@/components/settings/ui'
+import { UNREAD_FEEDBACK_KEY } from '@/components/admin/unread-feedback'
 
 type FeedbackRow = {
   id: string
@@ -18,6 +19,7 @@ type FeedbackRow = {
   wantsContact: boolean
   pagePath: string | null
   userAgent: string | null
+  readAt: string | null
   resolvedAt: string | null
   createdAt: string
   accountName: string
@@ -45,6 +47,18 @@ export function FeedbackAdmin() {
       return r.json()
     },
   })
+
+  // Opening the page reads everything; what was unread keeps a "New" tag until the page is left
+  const [newIds, setNewIds] = useState<Set<string> | null>(null)
+  useEffect(() => {
+    if (!data || newIds) return
+    const unread = new Set(data.filter(f => !f.readAt).map(f => f.id))
+    setNewIds(unread)
+    if (unread.size === 0) return
+    fetch('/api/admin/feedback/read', { method: 'POST' })
+      .then(r => { if (r.ok) queryClient.invalidateQueries({ queryKey: UNREAD_FEEDBACK_KEY }) })
+      .catch(() => {})
+  }, [data, newIds, queryClient])
 
   const setResolved = useMutation({
     mutationFn: async ({ id, resolved }: { id: string; resolved: boolean }) => {
@@ -96,6 +110,9 @@ export function FeedbackAdmin() {
                 <span className="font-medium text-gray-900">{FEEDBACK_KIND_LABELS[f.kind] ?? f.kind}</span>
                 <span className="text-gray-400">·</span>
                 <span className="text-gray-500">{formatWhen(f.createdAt)}</span>
+                {newIds?.has(f.id) && (
+                  <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[11px] font-semibold">New</span>
+                )}
               </div>
               <button
                 type="button"

@@ -17,6 +17,8 @@ export const feedback = pgTable('feedback', {
   // Page the link was clicked on, and the browser, to help reproduce bugs
   pagePath: text('page_path'),
   userAgent: text('user_agent'),
+  // Set when a platform admin opens /admin/feedback; null rows drive the unread banner
+  readAt: timestamp('read_at', { withTimezone: true }),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

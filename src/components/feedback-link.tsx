@@ -52,7 +52,7 @@ function FeedbackDialog({ contact, onClose }: { contact: FeedbackContext['contac
   const [email, setEmail] = useState(contact.email)
   const [phone, setPhone] = useState(contact.phone)
   const [message, setMessage] = useState('')
-  const [wantsContact, setWantsContact] = useState(true)
+  const [wantsContact, setWantsContact] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
 

@@ -6,6 +6,7 @@ import { Building2, FolderOpen, FlaskConical, LogOut, MailPlus, MessageSquare, S
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
+import { UnreadFeedbackBanner, useUnreadFeedback } from '@/components/admin/unread-feedback'
 
 const NAV = [
   { href: '/projects', label: 'Projects', icon: FolderOpen },
@@ -38,6 +39,8 @@ export function AppShell({
   const router = useRouter()
   const base = showClients ? [NAV[0], CLIENTS_NAV, ...NAV.slice(1)] : NAV
   const nav = isPlatformAdmin ? [...base, ...ADMIN_NAV] : base
+  const unreadFeedback = useUnreadFeedback(isPlatformAdmin)
+  const badge = (href: string) => (href === '/admin/feedback' && unreadFeedback > 0 ? unreadFeedback : 0)
 
   async function signOut() {
     const supabase = createClient()
@@ -69,6 +72,11 @@ export function AppShell({
               >
                 <Icon size={18} />
                 {label}
+                {badge(href) > 0 && (
+                  <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center" aria-label={`${badge(href)} unread`}>
+                    {badge(href)}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -90,6 +98,7 @@ export function AppShell({
 
       {/* Main content — extra bottom padding on mobile for the nav bar */}
       <main className="flex-1 min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0 print:pb-0 flex flex-col">
+        {isPlatformAdmin && <UnreadFeedbackBanner count={unreadFeedback} />}
         <div className="flex-1 min-w-0">{children}</div>
         <FeedbackLink />
       </main>
@@ -106,7 +115,12 @@ export function AppShell({
                 active ? 'text-lcd-300' : 'text-ink-400'
               }`}
             >
-              <Icon size={20} />
+              <span className="relative">
+                <Icon size={20} />
+                {badge(href) > 0 && (
+                  <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-red-500" aria-label={`${badge(href)} unread`} />
+                )}
+              </span>
               {label}
             </Link>
           )
