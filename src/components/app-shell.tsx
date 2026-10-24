@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, MessageSquare, Settings, Truck } from 'lucide-react'
+import { Building2, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, Menu, MessageSquare, Settings, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
@@ -16,6 +17,9 @@ const NAV = [
   { href: '/settings', label: 'Settings', icon: Settings, tip: 'Your profile, password, preferences, team and billing' },
   { href: '/help', label: 'Help', icon: HelpCircle, tip: 'Step-by-step guides and answers for every part of benchtop' },
 ]
+
+// Shown in the phone's bottom bar; the rest of the menu sits under More
+const MOBILE_PRIMARY = ['/projects', '/ingredients', '/suppliers', '/settings']
 
 // Only shown to account owners and admins (client records hold accounting and shipping details)
 const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2, tip: 'The customers you formulate for: contacts, billing, shipping and their projects' }
@@ -43,6 +47,16 @@ export function AppShell({
   const nav = isPlatformAdmin ? [...base, ...ADMIN_NAV] : base
   const unreadFeedback = useUnreadFeedback(isPlatformAdmin)
   const badge = (href: string) => (href === '/admin/feedback' && unreadFeedback > 0 ? unreadFeedback : 0)
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+
+  // Phones get the main sections in the bottom bar; everything else goes under More
+  const primary = nav.filter(n => MOBILE_PRIMARY.includes(n.href))
+  const more = nav.filter(n => !MOBILE_PRIMARY.includes(n.href))
+  const moreActive = more.some(n => isActive(n.href))
+  const moreBadge = more.reduce((sum, n) => sum + badge(n.href), 0)
+  // The page More was opened on; it counts as open only while we're still on that page
+  const [moreOpenOn, setMoreOpenOn] = useState<string | null>(null)
+  const moreOpen = moreOpenOn === pathname
 
   async function signOut() {
     const supabase = createClient()
@@ -61,7 +75,7 @@ export function AppShell({
 
         <nav className="flex-1 px-3 pb-4 space-y-1">
           {nav.map(({ href, label, icon: Icon, tip }) => {
-            const active = pathname === href || pathname.startsWith(href + '/')
+            const active = isActive(href)
             return (
               <Link
                 key={href}
@@ -106,37 +120,84 @@ export function AppShell({
         <FeedbackLink />
       </main>
 
-      {/* Bottom nav — mobile only */}
+      {/* Bottom nav — mobile only. Four main sections plus More, which holds the rest. */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-ink-900 border-t border-ink-700 flex pb-[env(safe-area-inset-bottom)] print:hidden">
-        {nav.map(({ href, label, icon: Icon, tip }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
+        {primary.map(({ href, label, icon: Icon }) => {
+          const active = isActive(href)
           return (
             <Link
               key={href}
               href={href}
-              data-tip={tip}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-xs transition-colors ${
+              aria-current={active ? 'page' : undefined}
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 min-h-16 px-1 text-[11px] font-medium transition-colors ${
                 active ? 'text-lcd-300' : 'text-ink-400'
               }`}
             >
-              <span className="relative">
-                <Icon size={20} />
-                {badge(href) > 0 && (
-                  <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-red-500" aria-label={`${badge(href)} unread`} />
-                )}
-              </span>
-              {label}
+              <Icon size={22} />
+              <span className="truncate max-w-full">{label}</span>
             </Link>
           )
         })}
         <button
-          onClick={signOut}
-          className="flex-1 flex flex-col items-center gap-0.5 py-3 text-xs text-ink-400"
+          onClick={() => setMoreOpenOn(moreOpen ? null : pathname)}
+          aria-expanded={moreOpen}
+          aria-controls="mobile-more-menu"
+          className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 min-h-16 px-1 text-[11px] font-medium transition-colors ${
+            moreOpen || moreActive ? 'text-lcd-300' : 'text-ink-400'
+          }`}
         >
-          <LogOut size={20} />
-          Sign out
+          <span className="relative">
+            <Menu size={22} />
+            {moreBadge > 0 && (
+              <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-red-500" aria-label={`${moreBadge} unread`} />
+            )}
+          </span>
+          More
         </button>
       </nav>
+
+      {/* More sheet — mobile only. Closes on navigation because it's tied to the page it was opened on. */}
+      {moreOpen && (
+        <div className="sm:hidden fixed inset-0 z-30 print:hidden" onKeyDown={e => e.key === 'Escape' && setMoreOpenOn(null)}>
+          <button aria-label="Close menu" className="absolute inset-0 bg-black/40" onClick={() => setMoreOpenOn(null)} />
+          <div
+            id="mobile-more-menu"
+            className="absolute left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] bg-ink-900 border-t border-ink-700 rounded-t-2xl px-3 pt-3 pb-2 max-h-[70vh] overflow-y-auto"
+          >
+            {userEmail && (
+              <div className="font-mono text-xs text-ink-400 truncate px-3 pb-2">{userEmail}</div>
+            )}
+            {more.map(({ href, label, icon: Icon }) => {
+              const active = isActive(href)
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex items-center gap-3 min-h-12 px-3 rounded-lg text-[15px] font-medium ${
+                    active ? 'bg-lcd-300 text-ink-900' : 'text-ink-300 active:bg-ink-800'
+                  }`}
+                >
+                  <Icon size={20} />
+                  {label}
+                  {badge(href) > 0 && (
+                    <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center" aria-label={`${badge(href)} unread`}>
+                      {badge(href)}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
+            <button
+              onClick={signOut}
+              className="w-full flex items-center gap-3 min-h-12 px-3 mt-1 rounded-lg border-t border-ink-700 text-[15px] font-medium text-ink-300 active:bg-ink-800"
+            >
+              <LogOut size={20} />
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
