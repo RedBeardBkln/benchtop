@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, CheckCircle2, Loader2, PackageCheck } from 'lucide-react'
 import { toast } from 'sonner'
+import { readErrorMessage } from '@/lib/utils'
 
 type Depletion = {
   ingredientId: string
@@ -49,22 +50,18 @@ export function CompleteBatchDialog({
 
     setIsPreviewing(true)
     try {
-      // POST to get preview without writing
+      // Same calculation as completing, without writing anything
       const r = await fetch(`/api/formulations/${formulationId}/complete-batch/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ multiplier: m }),
       })
-      if (!r.ok) {
-        // If no preview endpoint, just show the confirm directly
-        setPreview([])
-        return
-      }
+      if (!r.ok) throw new Error(await readErrorMessage(r, 'Could not preview the batch'))
       const body = await r.json()
-      setPreview(body.depletions ?? [])
-    } catch {
-      // Preview endpoint doesn't exist yet; skip to confirm
-      setPreview([])
+      // Only ingredients that track stock change; the rest are just recorded in history
+      setPreview((body.depletions as Depletion[]).filter(d => d.remainingG !== null))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not preview the batch')
     } finally {
       setIsPreviewing(false)
     }
@@ -176,9 +173,15 @@ export function CompleteBatchDialog({
             </div>
           )}
 
+          {preview?.some(d => (d.remainingG ?? 0) < 0) && (
+            <p className="text-xs text-red-600">
+              Some stock would go below zero. Check the stock on those ingredients, or complete the batch anyway.
+            </p>
+          )}
+
           {preview !== null && preview.length === 0 && (
             <p className="text-xs text-gray-400">
-              No ingredients in this formulation have inventory tracking enabled.
+              None of these ingredients track stock, so no stock levels change.
               The batch will still be recorded in history.
             </p>
           )}

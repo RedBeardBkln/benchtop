@@ -244,6 +244,26 @@ export async function DELETE(_request: NextRequest, { params }: Ctx) {
   try {
     const ingredient = await getOwnedIngredient(ctx, id)
     if (!ingredient) return notFoundResponse()
+
+    // Formulations (archived ones included) and reverse-engineering candidates keep their
+    // ingredients, so say what's in the way instead of failing on the foreign key
+    const [{ formulationCount, reverseCount }] = await db
+      .select({
+        formulationCount: sql<number>`(select count(distinct fl.formulation_id)::int from formulation_lines fl where fl.ingredient_id = ${ingredients.id})`,
+        reverseCount: sql<number>`(select count(*)::int from reverse_candidates rc where rc.candidate_ingredient_id = ${ingredients.id})`,
+      })
+      .from(ingredients)
+      .where(eq(ingredients.id, id))
+    if (formulationCount > 0 || reverseCount > 0) {
+      const error = formulationCount > 0
+        ? `"${ingredient.name}" can't be deleted because ${formulationCount === 1 ? '1 formulation uses' : `${formulationCount} formulations use`} it (archived ones count too). Remove it from ${formulationCount === 1 ? 'that formulation' : 'them'} first, or merge it into another ingredient.`
+        : `"${ingredient.name}" can't be deleted because a reverse-engineering result uses it. Merge it into another ingredient instead.`
+      return NextResponse.json({
+        error,
+        code: 'ingredient_in_use',
+      }, { status: 409 })
+    }
+
     await db.delete(ingredients).where(and(eq(ingredients.id, id), eq(ingredients.accountId, ctx.account.id)))
     return new NextResponse(null, { status: 204 })
   } catch (err) {

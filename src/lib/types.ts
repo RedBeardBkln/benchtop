@@ -106,6 +106,8 @@ export type FormulationDetail = Formulation & {
   }>
   // False for team members with view-only access to the project
   canEdit: boolean
+  // False for team members with view-only access to the ingredient library
+  canEditLibrary: boolean
 }
 
 // USDA FoodData Central types

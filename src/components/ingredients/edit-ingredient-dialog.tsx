@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
+import type { Ingredient } from '@/lib/types'
 import { categoryOptions, subcategoryOptions, microCategoryOptions } from '@/lib/ingredient-categories'
 import { TaxonomyField, useTaxonomy } from './taxonomy-field'
 
@@ -16,6 +17,25 @@ export type EditableIngredient = {
   subcategory: string | null
   microCategory: string | null
   onHand: boolean
+  naturallyDerived: boolean
+  moisturePct: string | null
+  notes: string | null
+}
+
+/** The dialog's fields, from an ingredient row (list or detail) */
+export function toEditable(i: Ingredient): EditableIngredient {
+  return {
+    id: i.id,
+    name: i.name,
+    stockG: i.stockG,
+    category: i.category,
+    subcategory: i.subcategory,
+    microCategory: i.microCategory,
+    onHand: i.onHand,
+    naturallyDerived: i.naturallyDerived,
+    moisturePct: i.moisturePct,
+    notes: i.notes,
+  }
 }
 
 interface EditIngredientDialogProps {
@@ -33,6 +53,9 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
   const [subcategory, setSubcategory] = useState('')
   const [microCategory, setMicroCategory] = useState('')
   const [onHand, setOnHand] = useState(false)
+  const [naturallyDerived, setNaturallyDerived] = useState(false)
+  const [moisturePct, setMoisturePct] = useState('')
+  const [notes, setNotes] = useState('')
   const taxonomy = useTaxonomy(!!ingredient)
 
   useEffect(() => {
@@ -43,6 +66,9 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
     setSubcategory(ingredient.subcategory ?? '')
     setMicroCategory(ingredient.microCategory ?? '')
     setOnHand(ingredient.onHand)
+    setNaturallyDerived(ingredient.naturallyDerived)
+    setMoisturePct(ingredient.moisturePct != null ? String(parseFloat(ingredient.moisturePct)) : '')
+    setNotes(ingredient.notes ?? '')
   }, [ingredient])
 
   const patchMutation = useMutation({
@@ -64,10 +90,13 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const moistureValue = moisturePct.trim() === '' ? null : Number(moisturePct)
+  const moistureInvalid = moistureValue != null && !(moistureValue >= 0 && moistureValue <= 100)
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) return
+    if (!trimmed || moistureInvalid) return
     patchMutation.mutate({
       name: trimmed,
       stockG: stockG.trim() === '' ? null : parseFloat(stockG),
@@ -75,6 +104,9 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
       subcategory: category.trim() ? subcategory.trim() || null : null,
       microCategory: category.trim() ? microCategory.trim() || null : null,
       onHand,
+      naturallyDerived,
+      moisturePct: moistureValue,
+      notes: notes.trim(),
     })
   }
 
@@ -159,6 +191,40 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
               <span className="text-sm text-gray-400">g</span>
             </div>
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Moisture %</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="any"
+              value={moisturePct}
+              onChange={e => setMoisturePct(e.target.value)}
+              placeholder="—"
+              className={inputClass}
+            />
+            {moistureInvalid && <p className="mt-1 text-xs text-red-600">Enter a number from 0 to 100.</p>}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={naturallyDerived}
+              onChange={e => setNaturallyDerived(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Naturally derived
+          </label>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">Notes</label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="Supplier info, lot number, grade, etc."
+              className={`${inputClass} resize-y`}
+            />
+          </div>
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -169,7 +235,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || patchMutation.isPending}
+              disabled={!name.trim() || moistureInvalid || patchMutation.isPending}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               <Save size={13} />

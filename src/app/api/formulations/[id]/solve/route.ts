@@ -62,7 +62,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       .where(eq(ingredientNutrients.ingredientId, line.ingredientId))
 
     solverLines.push({
-      key: line.id,
+      // Keyed by ingredient (each appears once per formulation): line ids change on every save,
+      // so the editor would no longer match them after saving
+      key: line.ingredientId,
       ingredientName: line.ingredientId,
       weightG: parseFloat(line.weightG ?? '0'),
       // A %-locked line is as fixed for the solver as a quantity-locked one

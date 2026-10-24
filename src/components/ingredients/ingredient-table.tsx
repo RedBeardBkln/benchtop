@@ -15,11 +15,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Plus, Database, Trash2, ArrowUpDown, Camera, Edit2, AlertTriangle, ClipboardList } from 'lucide-react'
 import { toast } from 'sonner'
+import { readErrorMessage } from '@/lib/utils'
 import type { IngredientListRow } from '@/lib/types'
 import { UsdaSearchDialog } from './usda-search-dialog'
 import { AddIngredientDialog } from './add-ingredient-dialog'
 import { PhotoIngredientDialog } from './photo-ingredient-dialog'
-import { EditIngredientDialog, type EditableIngredient } from './edit-ingredient-dialog'
+import { EditIngredientDialog, toEditable, type EditableIngredient } from './edit-ingredient-dialog'
 import { categoryOptions, categoryPath } from '@/lib/ingredient-categories'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 
@@ -33,7 +34,8 @@ const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
 
 const col = createColumnHelper<IngredientListRow>()
 
-export function IngredientTable() {
+// canEdit: false for members with view-only library access (editing controls are hidden)
+export function IngredientTable({ canEdit }: { canEdit: boolean }) {
   const router = useRouter()
   const queryClient = useQueryClient()
 
@@ -55,14 +57,15 @@ export function IngredientTable() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      fetch(`/api/ingredients/${id}`, { method: 'DELETE' }).then(r => {
-        if (!r.ok && r.status !== 204) throw new Error('Delete failed')
+      fetch(`/api/ingredients/${id}`, { method: 'DELETE' }).then(async r => {
+        if (!r.ok && r.status !== 204) throw new Error(await readErrorMessage(r, 'Failed to delete ingredient'))
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ingredients'] })
       toast.success('Ingredient deleted')
     },
-    onError: () => toast.error('Failed to delete ingredient'),
+    // Says why, e.g. which formulations still use it
+    onError: (err: Error) => toast.error(err.message, { duration: 8000 }),
   })
 
   const columns = useMemo(
@@ -84,7 +87,7 @@ export function IngredientTable() {
               {info.row.original.onHand && (
                 <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">On hand</span>
               )}
-              {dupes > 0 && (
+              {dupes > 0 && canEdit && (
                 <button
                   onClick={e => { e.stopPropagation(); setResolvingId(info.row.original.id) }}
                   title="Another ingredient has the same name, brand, supplier and item code. Click to rename or merge."
@@ -171,46 +174,41 @@ export function IngredientTable() {
             : <span className="text-xs text-gray-300">—</span>
         },
       }),
-      col.display({
-        id: 'actions',
-        header: '',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                setEditingIngredient({
-                  id: row.original.id,
-                  name: row.original.name,
-                  stockG: row.original.stockG as string | null,
-                  category: row.original.category,
-                  subcategory: row.original.subcategory,
-                  microCategory: row.original.microCategory,
-                  onHand: row.original.onHand,
-                })
-              }}
-              className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
-              title="Edit"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                if (confirm(`Delete "${row.original.name}"?`)) {
-                  deleteMutation.mutate(row.original.id)
-                }
-              }}
-              className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-              title="Delete"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        ),
-      }),
+      // Edit / delete — hidden for view-only library access
+      ...(canEdit ? [
+        col.display({
+          id: 'actions',
+          header: '',
+          cell: ({ row }) => (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  setEditingIngredient(toEditable(row.original))
+                }}
+                className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
+                title="Edit"
+              >
+                <Edit2 size={14} />
+              </button>
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  if (confirm(`Delete "${row.original.name}"?`)) {
+                    deleteMutation.mutate(row.original.id)
+                  }
+                }}
+                className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ),
+        }),
+      ] : []),
     ],
-    [deleteMutation],
+    [deleteMutation, canEdit],
   )
 
   const duplicateRows = useMemo(() => ingredients.filter(i => (i.duplicateCount ?? 0) > 0), [ingredients])
@@ -273,39 +271,41 @@ export function IngredientTable() {
                        focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link
-            href="/ingredients/intake"
-            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200
-                       rounded-md bg-white hover:bg-emerald-50 text-emerald-700 transition-colors"
-          >
-            <ClipboardList size={14} />
-            Lab intake
-          </Link>
-          <button
-            onClick={() => setUsdaOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200
-                       rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
-          >
-            <Database size={14} />
-            <span className="hidden sm:inline">Search </span>USDA
-          </button>
-          <button
-            onClick={() => setPhotoOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-orange-200
-                       rounded-md bg-white hover:bg-orange-50 text-orange-600 transition-colors"
-          >
-            <Camera size={14} />
-            <span className="hidden sm:inline">Scan </span>photos
-          </button>
-          <button
-            onClick={() => setAddOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600
-                       text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={14} /> Add
-          </button>
-        </div>
+        {canEdit && (
+          <div className="flex gap-2 flex-wrap">
+            <Link
+              href="/ingredients/intake"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200
+                         rounded-md bg-white hover:bg-emerald-50 text-emerald-700 transition-colors"
+            >
+              <ClipboardList size={14} />
+              Lab intake
+            </Link>
+            <button
+              onClick={() => setUsdaOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200
+                         rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+            >
+              <Database size={14} />
+              <span className="hidden sm:inline">Search </span>USDA
+            </button>
+            <button
+              onClick={() => setPhotoOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm border border-orange-200
+                         rounded-md bg-white hover:bg-orange-50 text-orange-600 transition-colors"
+            >
+              <Camera size={14} />
+              <span className="hidden sm:inline">Scan </span>photos
+            </button>
+            <button
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600
+                         text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={14} /> Add
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">

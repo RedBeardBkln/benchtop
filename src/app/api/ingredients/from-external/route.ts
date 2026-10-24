@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
 import { formatIngredientName } from '@/lib/ingredient-name'
 import { convertToUnit } from '@/lib/units'
+import { canonicalNutrientName } from '@/lib/nutrient-names'
 import { canonicalTerm, categoryOptions } from '@/lib/ingredient-categories'
 import { loadTaxonomyEntries } from '@/lib/ingredient-taxonomy'
 
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
   // Values arrive in whatever unit the source used (e.g. Vitamin K in mg); store them in the nutrient's own unit
   const unconvertible: string[] = []
   for (const n of inputNutrients) {
-    const match = allNutrients.find(dbN => dbN.name.toLowerCase() === n.name.toLowerCase())
+    const wanted = canonicalNutrientName(n.name).toLowerCase()
+    const match = allNutrients.find(dbN => dbN.name.toLowerCase() === wanted)
     if (match) {
       const amount = n.unit.trim() ? convertToUnit(n.amountPer100g, n.unit, match.unit) : n.amountPer100g
       if (amount == null) {

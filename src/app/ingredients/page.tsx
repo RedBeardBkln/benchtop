@@ -17,7 +17,7 @@ export default async function IngredientsPage() {
           </p>
         </div>
         {!canEditLibrary(ctx.access) && <LibraryViewOnlyNotice />}
-        <IngredientTable />
+        <IngredientTable canEdit={canEditLibrary(ctx.access)} />
       </div>
     </AppShell>
   )

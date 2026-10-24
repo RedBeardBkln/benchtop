@@ -13,6 +13,14 @@ import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, Ingr
 import { readErrorMessage } from '@/lib/utils'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 import { IngredientCostPanel } from './ingredient-cost-panel'
+import { EditIngredientDialog, toEditable, type EditableIngredient } from './edit-ingredient-dialog'
+import { categoryPath } from '@/lib/ingredient-categories'
+
+// fetch(...).then(okOrThrow('…')) — a refused change (e.g. view-only access) shows its error
+// instead of looking like it worked
+const okOrThrow = (fallback: string) => async (r: Response) => {
+  if (!r.ok) throw new Error(await readErrorMessage(r, fallback))
+}
 
 const PACK_UNITS = ['kg', 'g', 'lb', 'oz', 'mt', 'case', 'bag', 'drum', 'pail', 'each', 'L', 'gal']
 
@@ -61,7 +69,9 @@ type NutrientEdit = {
   rowId?: string    // existing ingredient_nutrient row id
 }
 
-export function IngredientDetail({ id }: { id: string }) {
+// canEdit: false for members with view-only library access (editing controls are hidden;
+// the API refuses their changes anyway)
+export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean }) {
   const router = useRouter()
   const [resolveOpen, setResolveOpen] = useState(false)
   const [resolveMode, setResolveMode] = useState<'rename' | 'merge'>('rename')
@@ -86,6 +96,9 @@ export function IngredientDetail({ id }: { id: string }) {
 
   // ── Allergens ─────────────────────────────────────────────────────────
   const [allergenInput, setAllergenInput] = useState('')
+
+  // Category, on hand, stock, moisture, naturally derived, notes (same dialog as the list's pencil)
+  const [editingDetails, setEditingDetails] = useState<EditableIngredient | null>(null)
 
   // ── Certs ─────────────────────────────────────────────────────────────
   const [certInput, setCertInput] = useState('')
@@ -181,8 +194,9 @@ export function IngredientDetail({ id }: { id: string }) {
         body: JSON.stringify({
           verification: data?.verification === 'verified' ? 'unverified' : 'verified',
         }),
-      }).then(r => r.json()),
+      }).then(okOrThrow('Could not update verification')),
     onSuccess: () => { invalidate(); toast.success('Verification status updated') },
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const patchIngredientMutation = useMutation({
@@ -232,16 +246,17 @@ export function IngredientDetail({ id }: { id: string }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ allergen }),
-      }).then(r => r.json()),
+      }).then(okOrThrow('Failed to add allergen')),
     onSuccess: () => { invalidate(); setAllergenInput('') },
-    onError: () => toast.error('Failed to add allergen'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const removeAllergenMutation = useMutation({
     mutationFn: (allergenId: string) =>
-      fetch(`/api/ingredients/${id}/allergens/${allergenId}`, { method: 'DELETE' }),
+      fetch(`/api/ingredients/${id}/allergens/${allergenId}`, { method: 'DELETE' })
+        .then(okOrThrow('Failed to remove allergen')),
     onSuccess: () => invalidate(),
-    onError: () => toast.error('Failed to remove allergen'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const addCertMutation = useMutation({
@@ -250,16 +265,17 @@ export function IngredientDetail({ id }: { id: string }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cert }),
-      }).then(r => r.json()),
+      }).then(okOrThrow('Failed to add certification')),
     onSuccess: () => { invalidate(); setCertInput('') },
-    onError: () => toast.error('Failed to add certification'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const removeCertMutation = useMutation({
     mutationFn: (certId: string) =>
-      fetch(`/api/ingredients/${id}/certs/${certId}`, { method: 'DELETE' }),
+      fetch(`/api/ingredients/${id}/certs/${certId}`, { method: 'DELETE' })
+        .then(okOrThrow('Failed to remove certification')),
     onSuccess: () => invalidate(),
-    onError: () => toast.error('Failed to remove certification'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const updateSubsMutation = useMutation({
@@ -268,13 +284,13 @@ export function IngredientDetail({ id }: { id: string }) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ names }),
-      }).then(r => r.json()),
+      }).then(okOrThrow('Failed to save sub-ingredients')),
     onSuccess: () => {
       invalidate()
       setEditingSubs(false)
       toast.success('Sub-ingredients saved')
     },
-    onError: () => toast.error('Failed to save sub-ingredients'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const uploadDocMutation = useMutation({
@@ -299,9 +315,10 @@ export function IngredientDetail({ id }: { id: string }) {
 
   const deleteDocMutation = useMutation({
     mutationFn: (docId: string) =>
-      fetch(`/api/ingredients/${id}/docs/${docId}`, { method: 'DELETE' }),
+      fetch(`/api/ingredients/${id}/docs/${docId}`, { method: 'DELETE' })
+        .then(okOrThrow('Failed to delete document')),
     onSuccess: () => { invalidate(); toast.success('Document deleted') },
-    onError: () => toast.error('Failed to delete document'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const addSupplierLinkMutation = useMutation({
@@ -364,9 +381,10 @@ export function IngredientDetail({ id }: { id: string }) {
 
   const removeSupplierLinkMutation = useMutation({
     mutationFn: (linkId: string) =>
-      fetch(`/api/ingredients/${id}/suppliers/${linkId}`, { method: 'DELETE' }),
+      fetch(`/api/ingredients/${id}/suppliers/${linkId}`, { method: 'DELETE' })
+        .then(okOrThrow('Failed to remove supplier')),
     onSuccess: () => { invalidate(); toast.success('Supplier removed') },
-    onError: () => toast.error('Failed to remove supplier'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   // ── Nutrient helpers ──────────────────────────────────────────────────
@@ -482,7 +500,7 @@ export function IngredientDetail({ id }: { id: string }) {
             {data.duplicates!.length === 1 ? 'Another entry has' : `${data.duplicates!.length} other entries have`} the same
             name, brand, supplier and item code. Rename this one, or merge them.
           </p>
-          <div className="flex gap-2">
+          {canEdit && <div className="flex gap-2">
             <button
               onClick={() => { setResolveMode('rename'); setResolveOpen(true) }}
               className="px-3 py-1.5 text-xs font-medium border border-amber-300 rounded-md bg-white text-amber-800 hover:bg-amber-100"
@@ -495,9 +513,10 @@ export function IngredientDetail({ id }: { id: string }) {
             >
               Merge…
             </button>
-          </div>
+          </div>}
         </div>
       )}
+      <EditIngredientDialog ingredient={editingDetails} onClose={() => setEditingDetails(null)} />
       {resolveOpen && (
         <DuplicateResolveDialog
           ingredientId={id}
@@ -541,13 +560,13 @@ export function IngredientDetail({ id }: { id: string }) {
           ) : (
             <div className="flex items-center gap-2 group/name mb-1">
               <h1 className="text-2xl font-semibold text-gray-900">{data.name}</h1>
-              <button
+              {canEdit && <button
                 onClick={() => { setNameEdit(data.name); setEditingName(true) }}
-                className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded"
+                className="[@media(hover:hover)]:opacity-0 group-hover/name:opacity-100 focus:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded"
                 title="Edit name"
               >
                 <Edit2 size={14} />
-              </button>
+              </button>}
             </div>
           )}
 
@@ -589,13 +608,13 @@ export function IngredientDetail({ id }: { id: string }) {
               ) : (
                 <span className="text-xs text-gray-300 italic">No label name set</span>
               )}
-              <button
+              {canEdit && <button
                 onClick={() => { setLabelNameEdit(data.labelName ?? ''); setEditingLabelName(true) }}
-                className="opacity-0 group-hover/label:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
+                className="[@media(hover:hover)]:opacity-0 group-hover/label:opacity-100 focus:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
                 title="Edit label name"
               >
                 <Edit2 size={11} />
-              </button>
+              </button>}
             </div>
           )}
 
@@ -654,7 +673,7 @@ export function IngredientDetail({ id }: { id: string }) {
               ) : (
                 <span className="text-xs text-gray-300 italic">No brand / supplier / item code set</span>
               )}
-              <button
+              {canEdit && <button
                 onClick={() => {
                   setSourceEdit({
                     brandName: data.brandName ?? '',
@@ -663,11 +682,11 @@ export function IngredientDetail({ id }: { id: string }) {
                   })
                   setEditingSource(true)
                 }}
-                className="opacity-0 group-hover/source:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
+                className="[@media(hover:hover)]:opacity-0 group-hover/source:opacity-100 focus:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
                 title="Edit brand, supplier, item code"
               >
                 <Edit2 size={11} />
-              </button>
+              </button>}
             </div>
           )}
 
@@ -682,6 +701,14 @@ export function IngredientDetail({ id }: { id: string }) {
             <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 uppercase">
               {data.sourceType}
             </span>
+            {data.onHand && (
+              <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">On hand</span>
+            )}
+            <span className="text-xs text-gray-500">{categoryPath(data) || 'Uncategorized'}</span>
+            {data.moisturePct != null && (
+              <span className="text-xs text-gray-500">Moisture {parseFloat(data.moisturePct)}%</span>
+            )}
+            {data.naturallyDerived && <span className="text-xs text-gray-500">Naturally derived</span>}
             {data.sourceFormulationId && (
               <Link
                 href={`/formulations/${data.sourceFormulationId}`}
@@ -710,6 +737,14 @@ export function IngredientDetail({ id }: { id: string }) {
           {data.notes && <p className="mt-2 text-sm text-gray-500">{data.notes}</p>}
         </div>
 
+        {canEdit && <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
+        <button
+          onClick={() => setEditingDetails(toEditable(data))}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+          title="Category, on hand, stock, moisture, naturally derived and notes"
+        >
+          <Edit2 size={12} /> Edit details
+        </button>
         <button
           onClick={() => verifyMutation.mutate()}
           disabled={verifyMutation.isPending}
@@ -722,6 +757,7 @@ export function IngredientDetail({ id }: { id: string }) {
           <Check size={12} />
           {data.verification === 'verified' ? 'Mark unverified' : 'Mark verified'}
         </button>
+        </div>}
       </div>
 
       {/* Tabs */}
@@ -759,14 +795,14 @@ export function IngredientDetail({ id }: { id: string }) {
           {!editingNutrients ? (
             /* Read mode */
             <>
-              <div className="flex justify-end">
+              {canEdit && <div className="flex justify-end">
                 <button
                   onClick={() => setEditingNutrients(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   <Edit2 size={12} /> Edit nutrients
                 </button>
-              </div>
+              </div>}
 
               {data.nutrients.length === 0 ? (
                 <p className="text-sm text-gray-400">
@@ -999,7 +1035,7 @@ export function IngredientDetail({ id }: { id: string }) {
                 <button
                   key={allergen}
                   onClick={() => toggleAllergen(allergen)}
-                  disabled={addAllergenMutation.isPending || removeAllergenMutation.isPending}
+                  disabled={!canEdit || addAllergenMutation.isPending || removeAllergenMutation.isPending}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     active
                       ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600'
@@ -1020,16 +1056,16 @@ export function IngredientDetail({ id }: { id: string }) {
                   <span key={a.id}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-orange-500 text-white">
                     {a.allergen}
-                    <button onClick={() => removeAllergenMutation.mutate(a.id)} className="hover:opacity-70">
+                    {canEdit && <button onClick={() => removeAllergenMutation.mutate(a.id)} className="hover:opacity-70">
                       <X size={12} />
-                    </button>
+                    </button>}
                   </span>
                 ))}
               </div>
             </div>
           )}
 
-          <form
+          {canEdit && <form
             className="flex items-center gap-2"
             onSubmit={e => { e.preventDefault(); const v = allergenInput.trim(); if (v) addAllergenMutation.mutate(v) }}
           >
@@ -1046,14 +1082,14 @@ export function IngredientDetail({ id }: { id: string }) {
             >
               <Plus size={14} /> Add
             </button>
-          </form>
+          </form>}
         </div>
       )}
 
       {/* ── CERTIFICATIONS ── */}
       {activeTab === 'certs' && (
         <div className="space-y-4">
-          <p className="text-xs text-gray-400">Click to add or remove certifications.</p>
+          <p className="text-xs text-gray-400">{canEdit ? 'Click to add or remove certifications.' : 'Certifications recorded for this ingredient are highlighted.'}</p>
 
           <div className="flex flex-wrap gap-2">
             {STANDARD_CERTS.map(cert => {
@@ -1062,7 +1098,7 @@ export function IngredientDetail({ id }: { id: string }) {
                 <button
                   key={cert}
                   onClick={() => toggleCert(cert)}
-                  disabled={addCertMutation.isPending || removeCertMutation.isPending}
+                  disabled={!canEdit || addCertMutation.isPending || removeCertMutation.isPending}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
@@ -1083,16 +1119,16 @@ export function IngredientDetail({ id }: { id: string }) {
                   <span key={c.id}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white">
                     {c.cert}
-                    <button onClick={() => removeCertMutation.mutate(c.id)} className="hover:opacity-70">
+                    {canEdit && <button onClick={() => removeCertMutation.mutate(c.id)} className="hover:opacity-70">
                       <X size={12} />
-                    </button>
+                    </button>}
                   </span>
                 ))}
               </div>
             </div>
           )}
 
-          <form
+          {canEdit && <form
             className="flex items-center gap-2"
             onSubmit={e => { e.preventDefault(); const v = certInput.trim(); if (v) addCertMutation.mutate(v) }}
           >
@@ -1109,7 +1145,7 @@ export function IngredientDetail({ id }: { id: string }) {
             >
               <Plus size={14} /> Add
             </button>
-          </form>
+          </form>}
         </div>
       )}
 
@@ -1120,12 +1156,12 @@ export function IngredientDetail({ id }: { id: string }) {
             <>
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">Declared sub-ingredient list (e.g. from label statement).</p>
-                <button
+                {canEdit && <button
                   onClick={() => { setSubsText((data.subIngredients ?? []).map(s => s.name).join('\n')); setEditingSubs(true) }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   <Edit2 size={12} /> Edit list
-                </button>
+                </button>}
               </div>
               {(data.subIngredients?.length ?? 0) === 0 ? (
                 <p className="text-sm text-gray-400">No sub-ingredients declared.</p>
@@ -1199,20 +1235,20 @@ export function IngredientDetail({ id }: { id: string }) {
                     >
                       <Eye size={12} /> View
                     </button>
-                    <button
+                    {canEdit && <button
                       onClick={() => { if (confirm(`Delete "${doc.label}"?`)) deleteDocMutation.mutate(doc.id) }}
                       disabled={deleteDocMutation.isPending}
                       className="flex items-center gap-1 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-40"
                     >
                       <Trash2 size={12} /> Delete
-                    </button>
+                    </button>}
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          <div className="border border-dashed border-gray-200 rounded-lg p-5 space-y-3">
+          {canEdit && <div className="border border-dashed border-gray-200 rounded-lg p-5 space-y-3">
             <p className="text-xs font-medium text-gray-600">Upload document (COA, spec sheet, etc.)</p>
             <div className="space-y-2">
               <input
@@ -1246,7 +1282,7 @@ export function IngredientDetail({ id }: { id: string }) {
                 {docFile.name} · {(docFile.size / 1024).toFixed(0)} KB
               </p>
             )}
-          </div>
+          </div>}
         </div>
       )}
 
@@ -1257,12 +1293,12 @@ export function IngredientDetail({ id }: { id: string }) {
             <div className="rounded-lg border border-dashed border-gray-200 p-10 text-center">
               <Truck size={24} className="mx-auto text-gray-300 mb-2" />
               <p className="text-sm text-gray-400 mb-2">No suppliers linked yet.</p>
-              <button
+              {canEdit && <button
                 onClick={() => setShowAddSupplier(true)}
                 className="text-sm text-blue-600 hover:underline"
               >
                 Link a supplier →
-              </button>
+              </button>}
             </div>
           ) : (
             <>
@@ -1365,7 +1401,7 @@ export function IngredientDetail({ id }: { id: string }) {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      {canEdit && <div className="flex items-center gap-1">
                         <button
                           onClick={() => {
                             setEditingLinkId(link.id)
@@ -1394,7 +1430,7 @@ export function IngredientDetail({ id }: { id: string }) {
                         >
                           <Trash2 size={13} />
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   )}
                 </div>
@@ -1513,7 +1549,7 @@ export function IngredientDetail({ id }: { id: string }) {
                 </button>
               </div>
             </div>
-          ) : (data.suppliers?.length ?? 0) > 0 && (
+          ) : canEdit && (data.suppliers?.length ?? 0) > 0 && (
             <button
               onClick={() => setShowAddSupplier(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
@@ -1533,6 +1569,7 @@ export function IngredientDetail({ id }: { id: string }) {
           costUnit={data.costUnit}
           suppliers={data.suppliers ?? []}
           onGoToSuppliers={() => setActiveTab('suppliers')}
+          canEdit={canEdit}
         />
       )}
 
@@ -1542,7 +1579,7 @@ export function IngredientDetail({ id }: { id: string }) {
           <div className="border border-gray-100 rounded-lg px-4 py-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-gray-700">Current stock</span>
-              {!editingStock && (
+              {!editingStock && canEdit && (
                 <button
                   onClick={() => {
                     setStockEdit(data.stockG != null ? String(parseFloat(data.stockG)) : '')

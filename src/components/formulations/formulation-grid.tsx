@@ -27,6 +27,7 @@ import { ProcessStepsPanel } from '@/components/formulations/process-steps-panel
 import { IterationNote } from '@/components/formulations/iteration-note'
 import { GridColumnPicker } from '@/components/formulations/grid-column-picker'
 import { readErrorMessage } from '@/lib/utils'
+import { useUnsavedChangesWarning } from '@/lib/use-unsaved-changes-warning'
 
 function statusIcon(s: ValidationStatus) {
   if (s === 'pass') return <CheckCircle2 size={14} className="text-green-500" />
@@ -564,7 +565,7 @@ export function FormulationGrid({ id }: { id: string }) {
 
   function applySolution(result: SolverResult) {
     applyLines(lines.map(l => {
-      const sugPct = result.suggestedPcts[l.key]
+      const sugPct = result.suggestedPcts[l.ingredientId]
       if (sugPct == null) return l
       const newWeightG = Math.round(((sugPct / 100) * totalWeightG) * 10) / 10
       return { ...l, weightG: newWeightG }
@@ -637,6 +638,9 @@ export function FormulationGrid({ id }: { id: string }) {
   })
 
   function markDirty() { setIsDirty(true) }
+
+  // Grid edits only persist on Save, so leaving with unsaved ones asks first
+  const confirmLeave = useUnsavedChangesWarning(isDirty)
 
   function handlePrint() {
     setShowPrintDialog(true)
@@ -880,7 +884,7 @@ export function FormulationGrid({ id }: { id: string }) {
     <div className="px-3 py-4 sm:px-8 sm:py-6 max-w-7xl">
       {/* Back nav */}
       <button
-        onClick={() => router.push(`/projects/${data.projectId}`)}
+        onClick={() => { if (confirmLeave()) router.push(`/projects/${data.projectId}`) }}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-4 print:hidden"
       >
         <ArrowLeft size={14} /> {data.project?.name ?? 'Project'}
@@ -932,7 +936,11 @@ export function FormulationGrid({ id }: { id: string }) {
             {data.iterations.length > 1 ? (
               <select
                 value={data.id}
-                onChange={e => { if (e.target.value !== data.id) router.push(`/formulations/${e.target.value}`) }}
+                onChange={e => {
+                  if (e.target.value === data.id) return
+                  if (!confirmLeave()) { e.target.value = data.id; return }
+                  router.push(`/formulations/${e.target.value}`)
+                }}
                 title="Switch iteration"
                 className="text-sm text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 print:hidden"
@@ -986,7 +994,11 @@ export function FormulationGrid({ id }: { id: string }) {
           )}
           {(data.project?.targets?.length ?? 0) > 0 && lines.length > 0 && !readOnly && (
             <button
-              onClick={() => solveMutation.mutate()}
+              onClick={() => {
+                // The solver reads the saved formula, so unsaved edits would be ignored
+                if (isDirty) { toast.warning('Save your changes first — Solve works from the last saved version'); return }
+                solveMutation.mutate()
+              }}
               disabled={solveMutation.isPending}
               title="Run LP solver to find ingredient weights that satisfy nutritional targets"
               className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white
@@ -1711,7 +1723,7 @@ export function FormulationGrid({ id }: { id: string }) {
                   <tbody className="divide-y divide-gray-50">
                     {lines.map(l => {
                       const curPct = totalWeightG > 0 ? (l.weightG / totalWeightG) * 100 : 0
-                      const sugPct = solverResult.suggestedPcts[l.key] ?? curPct
+                      const sugPct = solverResult.suggestedPcts[l.ingredientId] ?? curPct
                       const delta = sugPct - curPct
                       const newW = Math.round(((sugPct / 100) * totalWeightG) * 10) / 10
                       return (
@@ -1887,6 +1899,7 @@ export function FormulationGrid({ id }: { id: string }) {
           ingredientId={sidebarIngredientId}
           lineKey={sidebarLineKey}
           formulationLocked={isLocked}
+          canEditLibrary={data?.canEditLibrary ?? false}
           onClose={() => { setSidebarIngredientId(null); setSidebarLineKey(null) }}
           onSwap={(lk, name) => {
             setSidebarIngredientId(null)

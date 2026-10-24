@@ -17,12 +17,15 @@ export function IngredientCostPanel({
   costUnit,
   suppliers,
   onGoToSuppliers,
+  canEdit,
 }: {
   ingredientId: string
   defaultCostPerKg: string | null
   costUnit: string
   suppliers: IngredientSupplierWithName[]
   onGoToSuppliers: () => void
+  /** false for view-only library access: shows the cost, hides the controls */
+  canEdit: boolean
 }) {
   const queryClient = useQueryClient()
   const unit: CostUnit = costUnit === 'lb' ? 'lb' : 'kg'
@@ -110,7 +113,7 @@ export function IngredientCostPanel({
       </div>
 
       {/* Manual price */}
-      <form onSubmit={submitManual} className="rounded-lg border border-gray-200 bg-white p-4">
+      {canEdit && <form onSubmit={submitManual} className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="text-sm font-semibold text-gray-900">Manual price</h3>
         <p className="text-xs text-gray-500 mb-3">
           Used when no supplier price is chosen below. Leave blank to clear it.
@@ -152,10 +155,10 @@ export function IngredientCostPanel({
           </button>
         </div>
         {priceInvalid && <p className="mt-1 text-xs text-red-600">Enter a price above zero.</p>}
-      </form>
+      </form>}
 
       {/* Supplier prices */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      {canEdit && <div className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="text-sm font-semibold text-gray-900">Use a supplier&apos;s price</h3>
         <p className="text-xs text-gray-500 mb-3">
           Choose one to use instead of the manual price. Prices per kg, g, lb, oz or tonne convert automatically.
@@ -208,7 +211,7 @@ export function IngredientCostPanel({
             })}
           </ul>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

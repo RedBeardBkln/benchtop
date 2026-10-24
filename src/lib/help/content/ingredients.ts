@@ -61,8 +61,8 @@ export const ingredients: HelpSection = {
           ],
         },
         {
-          type: 'warning',
-          text: '**Notes**, **Naturally derived** and **Moisture %** can only be set here, when you create the ingredient; there is no screen to change them later. Fill them in carefully.',
+          type: 'tip',
+          text: 'You can change **Notes**, **Naturally derived** and **Moisture %** later with `Edit details` on the ingredient’s page.',
         },
         {
           type: 'note',
@@ -130,7 +130,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'note',
-          text: 'Only the main label nutrients are read. Some websites block this or build their pages in a way it can’t read; if so, you’ll see an error, and you should use manual entry or a spec sheet instead. **Total sugars aren’t saved from web pages**, so add that value by hand afterwards.',
+          text: 'Only the main label nutrients are read. Some websites block this or build their pages in a way it can’t read; if so, you’ll see an error, and you should use manual entry or a spec sheet instead.',
         },
       ],
     },
@@ -186,15 +186,16 @@ export const ingredients: HelpSection = {
         { type: 'h', text: 'On the ingredient’s page' },
         {
           type: 'p',
-          text: 'Move your mouse over the **name**, the **Label:** line, or the **Brand / Supplier / Item #** line at the top of the page. A small pencil appears; click it, edit, and click `Save`. (On a touch screen, tap just to the right of the text to find the pencil.)',
+          text: 'Move your mouse over the **name**, the **Label:** line, or the **Brand / Supplier / Item #** line at the top of the page. A small pencil appears; click it, edit, and click `Save`. (On a phone or tablet the pencils are always shown.)',
         },
-        { type: 'h', text: 'Category and On hand (from the list)' },
+        { type: 'h', text: 'Category, on hand, stock, moisture and notes' },
         {
           type: 'steps',
           items: [
-            'On [Ingredients](/ingredients), click the **pencil** at the end of the ingredient’s row.',
+            'On the ingredient’s page click `Edit details` (top right), or on [Ingredients](/ingredients) click the **pencil** at the end of its row.',
             'Choose a **Category**, then optionally a **Subcategory** and **Micro category**. Choose **Add new…** to create your own.',
             'Tick **On hand in the lab** if you have it, and optionally enter **Stock on hand (g)**.',
+            'Change **Moisture %**, **Naturally derived** or **Notes** if needed.',
             'Click `Save`.',
           ],
         },
@@ -410,7 +411,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'note',
-          text: 'If you see “Failed to delete ingredient”, it’s probably used in a formulation. Check its **Formulations** tab, remove it from those recipes (or swap it out), then try again. If it’s a duplicate, merge it instead.',
+          text: 'An ingredient that’s used in a formulation (archived ones count too) can’t be deleted; benchtop tells you how many formulations use it. Check its **Formulations** tab, remove it from those recipes (or swap it out), then try again. If it’s a duplicate, merge it instead.',
         },
       ],
     },
@@ -500,15 +501,15 @@ export const ingredients: HelpSection = {
     },
     {
       q: 'How do I change an ingredient’s category or mark it on hand?',
-      a: 'On [Ingredients](/ingredients), click the pencil at the end of its row, change **Category** or tick **On hand in the lab**, and click `Save`.',
+      a: 'Open the ingredient and click `Edit details` (or click the pencil at the end of its row in the [Ingredients](/ingredients) list), change **Category** or tick **On hand in the lab**, and click `Save`.',
     },
     {
-      q: 'Can I change Notes, Moisture % or Naturally derived after creating an ingredient?',
-      a: 'Not at the moment; those are only set when the ingredient is created.',
+      q: 'How do I change an ingredient’s notes, moisture % or “naturally derived”?',
+      a: 'Yes. Open the ingredient and click `Edit details`, or click the pencil on its row in the [Ingredients](/ingredients) list.',
     },
     {
       q: 'Why can’t I delete an ingredient?',
-      a: 'It’s used in at least one formulation. Remove it from those formulations first (see its **Formulations** tab), or merge it if it’s a duplicate.',
+      a: 'It’s used in at least one formulation (archived ones count too), and the message says how many. Remove it from those formulations first (see its **Formulations** tab), or merge it if it’s a duplicate.',
     },
     {
       q: 'What does the ⚠ “Unverified” mean?',
@@ -548,7 +549,7 @@ export const ingredients: HelpSection = {
     },
     {
       q: 'Why can’t I add or edit ingredients?',
-      a: 'Your access to the ingredient library is view-only. Ask an owner or admin to change **Ingredient library & suppliers** to `Can edit` for you. Until then, changes you try to make won’t be saved.',
+      a: 'Your access to the ingredient library is view-only. Ask an owner or admin to change **Ingredient library & suppliers** to `Can edit` for you. Until then you can look at everything, but the editing buttons are hidden.',
     },
     {
       q: 'What files can I upload as documents?',

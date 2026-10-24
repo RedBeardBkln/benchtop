@@ -8,6 +8,7 @@ import {
 import { and, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOwnedFormulation, loadFormulationForEdit, notFoundResponse, projectLevel } from '@/lib/tenancy'
+import { canEditLibrary as canEditLibraryAccess } from '@/lib/team-access'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -119,7 +120,11 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 
   // The UI shows view-only members a read-only formulation
   const canEdit = project ? projectLevel(ctx, project) === 'edit' : false
-  return NextResponse.json({ ...formulation, lines: linesWithNutrients, processSteps: steps, project, iterations, canEdit })
+  // Library edits (nutrients, allergens, verification in the ingredient side panel) are a separate grant
+  const canEditLibrary = canEditLibraryAccess(ctx.access)
+  return NextResponse.json({
+    ...formulation, lines: linesWithNutrients, processSteps: steps, project, iterations, canEdit, canEditLibrary,
+  })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {

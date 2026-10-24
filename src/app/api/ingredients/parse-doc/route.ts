@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { canonicalNutrientName } from '@/lib/nutrient-names'
 import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -66,7 +67,7 @@ Return ONLY this JSON structure:
     {"name": "Protein", "amountPer100g": 25.3, "unit": "g"}
   ]
 }
-Allowed nutrient names: Energy, Protein, Total Fat, Saturated Fat, Trans Fat, Cholesterol, Total Carbohydrate, Dietary Fiber, Sugars, Added Sugars, Sodium, Calcium, Iron, Potassium, Vitamin A, Vitamin C, Vitamin D, Magnesium.
+Allowed nutrient names: Energy, Protein, Total Fat, Saturated Fat, Trans Fat, Cholesterol, Total Carbohydrate, Dietary Fiber, Total Sugars, Added Sugars, Sodium, Calcium, Iron, Potassium, Vitamin A, Vitamin C, Vitamin D, Magnesium.
 If no nutrition data is found return: {"nutrients": [], "error": "No nutrition data found"}`,
         },
       ],
@@ -91,7 +92,10 @@ If no nutrition data is found return: {"nutrients": [], "error": "No nutrition d
         { status: 422 },
       )
     }
-    return NextResponse.json({ nutrients: result.nutrients })
+    // Older answers say "Sugars" etc.; hand back the library's names so nothing is dropped
+    const nutrients = (result.nutrients as Array<{ name?: unknown }>).map(n =>
+      typeof n?.name === 'string' ? { ...n, name: canonicalNutrientName(n.name) } : n)
+    return NextResponse.json({ nutrients })
   } catch {
     return NextResponse.json({ error: 'Invalid AI response format' }, { status: 500 })
   }

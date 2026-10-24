@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import {
-  formulations, formulationLines, ingredients, batchRuns,
-} from '@/lib/db/schema'
+import { ingredients, batchRuns } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOwnedFormulation, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
+import { computeDepletions, loadBatchLines } from '@/lib/batch-depletion'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -24,50 +23,26 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   const loaded = await loadFormulationForEdit(ctx, id)
   if (!loaded.ok) return loaded.res
-  const formulation = loaded.formulation
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const { multiplier, notes } = parsed.data
 
-  // Load lines with ingredient name and current stock
-  const lines = await db
-    .select({
-      ingredientId: formulationLines.ingredientId,
-      ingredientName: ingredients.name,
-      weightG: formulationLines.weightG,
-      stockG: ingredients.stockG,
-    })
-    .from(formulationLines)
-    .innerJoin(ingredients, eq(formulationLines.ingredientId, ingredients.id))
-    .where(and(eq(formulationLines.formulationId, id), eq(ingredients.accountId, ctx.account.id)))
-
+  const lines = await loadBatchLines(ctx.account.id, id)
   if (lines.length === 0)
     return NextResponse.json({ error: 'Formulation has no ingredient lines' }, { status: 422 })
 
-  type Depletion = {
-    ingredientId: string
-    ingredientName: string
-    depletedG: number
-    remainingG: number | null
-  }
-
-  const depletions: Depletion[] = lines.map(l => {
-    const depletedG = parseFloat(l.weightG) * multiplier
-    const remainingG = l.stockG != null ? parseFloat(l.stockG) - depletedG : null
-    return { ingredientId: l.ingredientId, ingredientName: l.ingredientName, depletedG, remainingG }
-  })
+  const depletions = computeDepletions(lines, multiplier)
 
   const result = await db.transaction(async tx => {
     // Deplete stock for ingredients that have tracking enabled
-    for (const l of lines) {
-      if (l.stockG == null) continue
-      const depletedG = parseFloat(l.weightG) * multiplier
+    for (const d of depletions) {
+      if (d.remainingG == null) continue
       await tx
         .update(ingredients)
-        .set({ stockG: sql`${ingredients.stockG} - ${depletedG.toString()}::numeric` })
-        .where(and(eq(ingredients.id, l.ingredientId), eq(ingredients.accountId, ctx.account.id)))
+        .set({ stockG: sql`${ingredients.stockG} - ${d.depletedG.toString()}::numeric` })
+        .where(and(eq(ingredients.id, d.ingredientId), eq(ingredients.accountId, ctx.account.id)))
     }
 
     const [run] = await tx

@@ -30,16 +30,24 @@ type NutrientEdit = {
   rowId?: string
 }
 
+// fetch(...).then(okOrThrow('…')) — a refused change shows its error instead of looking like it worked
+const okOrThrow = (fallback: string) => async (r: Response) => {
+  if (!r.ok) throw new Error(await readErrorMessage(r, fallback))
+}
+
 export function IngredientSidePanel({
   ingredientId,
   lineKey,
   formulationLocked,
+  canEditLibrary,
   onClose,
   onSwap,
 }: {
   ingredientId: string
   lineKey: string
   formulationLocked: boolean
+  /** Nutrient, allergen, cert and verification edits change the shared library ingredient */
+  canEditLibrary: boolean
   onClose: () => void
   onSwap: (lineKey: string, ingredientName: string) => void
 }) {
@@ -99,8 +107,9 @@ export function IngredientSidePanel({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verification: data?.verification === 'verified' ? 'unverified' : 'verified' }),
-      }).then(r => r.json()),
+      }).then(okOrThrow('Could not update verification')),
     onSuccess: () => { invalidate(); toast.success('Verification updated') },
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const saveNutrientsMutation = useMutation({
@@ -130,16 +139,17 @@ export function IngredientSidePanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ allergen }),
-      }).then(r => r.json()),
+      }).then(okOrThrow('Failed to update allergen')),
     onSuccess: () => invalidate(),
-    onError: () => toast.error('Failed to update allergen'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const removeAllergenMutation = useMutation({
     mutationFn: (allergenId: string) =>
-      fetch(`/api/ingredients/${ingredientId}/allergens/${allergenId}`, { method: 'DELETE' }),
+      fetch(`/api/ingredients/${ingredientId}/allergens/${allergenId}`, { method: 'DELETE' })
+        .then(okOrThrow('Failed to update allergen')),
     onSuccess: () => invalidate(),
-    onError: () => toast.error('Failed to update allergen'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const addCertMutation = useMutation({
@@ -148,16 +158,17 @@ export function IngredientSidePanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cert }),
-      }).then(r => r.json()),
+      }).then(okOrThrow('Failed to update certification')),
     onSuccess: () => invalidate(),
-    onError: () => toast.error('Failed to update certification'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const removeCertMutation = useMutation({
     mutationFn: (certId: string) =>
-      fetch(`/api/ingredients/${ingredientId}/certs/${certId}`, { method: 'DELETE' }),
+      fetch(`/api/ingredients/${ingredientId}/certs/${certId}`, { method: 'DELETE' })
+        .then(okOrThrow('Failed to update certification')),
     onSuccess: () => invalidate(),
-    onError: () => toast.error('Failed to update certification'),
+    onError: (err: Error) => toast.error(err.message),
   })
 
   function toggleAllergen(allergen: string) {
@@ -419,6 +430,7 @@ export function IngredientSidePanel({
                           <button
                             key={a}
                             onClick={() => toggleAllergen(a)}
+                            disabled={!canEditLibrary}
                             className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                               active
                                 ? 'bg-red-100 border-red-200 text-red-700'
@@ -435,7 +447,7 @@ export function IngredientSidePanel({
                         {data.allergens.filter(a => !STANDARD_ALLERGENS.includes(a.allergen)).map(a => (
                           <span key={a.id} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 border border-red-200 text-red-700">
                             {a.allergen}
-                            <button onClick={() => removeAllergenMutation.mutate(a.id)} className="ml-0.5 hover:text-red-900">×</button>
+                            {canEditLibrary && <button onClick={() => removeAllergenMutation.mutate(a.id)} className="ml-0.5 hover:text-red-900">×</button>}
                           </span>
                         ))}
                       </div>
@@ -451,6 +463,7 @@ export function IngredientSidePanel({
                           <button
                             key={c}
                             onClick={() => toggleCert(c)}
+                            disabled={!canEditLibrary}
                             className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                               active
                                 ? 'bg-green-100 border-green-200 text-green-700'
@@ -642,7 +655,7 @@ export function IngredientSidePanel({
 
         {/* Footer actions */}
         <div className="border-t border-gray-100 px-5 py-3 flex items-center gap-2 bg-gray-50/50">
-          {tab === 'nutrients' && !editingNutrients && !formulationLocked && (
+          {tab === 'nutrients' && !editingNutrients && !formulationLocked && canEditLibrary && (
             <button
               onClick={() => setEditingNutrients(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md text-gray-600 hover:bg-white hover:border-blue-200 hover:text-blue-600 transition-colors"
@@ -667,7 +680,7 @@ export function IngredientSidePanel({
               </button>
             </>
           )}
-          {!editingNutrients && data && (
+          {!editingNutrients && data && canEditLibrary && (
             <button
               onClick={() => verifyMutation.mutate()}
               disabled={verifyMutation.isPending}

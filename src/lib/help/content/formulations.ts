@@ -43,7 +43,7 @@ export const formulations: HelpSection = {
       blocks: [
         {
           type: 'warning',
-          text: 'Changes to the ingredient grid are **not saved automatically**. When you change something, a blue `Save` button appears in the top-right corner. Click it before you leave the page or switch versions. **benchtop does not warn you** if you leave with unsaved changes; they are simply lost.',
+          text: 'Changes to the ingredient grid are **not saved automatically**. When you change something, a blue `Save` button appears in the top-right corner. Click it before you leave the page or switch versions. If you try to leave with unsaved changes, benchtop asks you to confirm first; choosing to leave anyway throws them away.',
         },
         {
           type: 'terms',
@@ -295,7 +295,7 @@ export const formulations: HelpSection = {
         {
           type: 'steps',
           items: [
-            'Click `Save` first, because Solve works from the saved recipe.',
+            'Click `Save` first. Solve works from the saved recipe, so it asks you to save if you haven’t.',
             'Click `Solve` (it only appears when the project has targets).',
             'Read the **LP Solver** panel. **Suggested Weights** compares the current % with the suggested %. **Constraint Audit** shows whether each target is satisfied.',
             'If you like the result, click `Apply solution`, then click `Save`.',
@@ -311,7 +311,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'tip',
-          text: 'Set the formulation’s **Serving (g)** before using Solve with per-serving targets. If `Apply solution` doesn’t change anything, reload the page and run Solve again.',
+          text: 'Set the formulation’s **Serving (g)** before using Solve with per-serving targets.',
         },
       ],
     },
@@ -472,12 +472,13 @@ export const formulations: HelpSection = {
             'Save the formulation, then click `Complete batch`.',
             'Set the **Batch multiplier**. 1 means you made exactly the saved batch; 2 means double; 0.5 means half.',
             'Optionally add **Notes**, such as “Trial batch for sampling”.',
+            'Optionally click `Preview` to see how much stock each tracked ingredient will have left. Anything that would go below zero shows in red.',
             'Click `Complete batch`. You’ll see how many stock levels were updated.',
           ],
         },
         {
           type: 'warning',
-          text: 'benchtop doesn’t check whether you have enough stock first, so stock can go below zero. Recorded batches can’t be undone from the app; fix any mistake by correcting the stock on the ingredient’s page.',
+          text: 'benchtop doesn’t stop you completing a batch when there isn’t enough stock (Preview warns you), so stock can go below zero. Recorded batches can’t be undone from the app; fix any mistake by correcting the stock on the ingredient’s page.',
         },
       ],
     },
@@ -582,7 +583,7 @@ export const formulations: HelpSection = {
   faqs: [
     {
       q: 'I made changes and they disappeared. What happened?',
-      a: 'Ingredient grid changes only save when you click the blue `Save` button, and benchtop doesn’t warn you before leaving the page. Process steps, notes and column choices save on their own.',
+      a: 'Ingredient grid changes only save when you click the blue `Save` button. benchtop asks before you leave with unsaved changes, but if you choose to leave anyway (or the browser closes), they’re lost. Process steps, notes and column choices save on their own.',
     },
     {
       q: 'How do I scale my recipe to a bigger batch?',
@@ -673,10 +674,6 @@ export const formulations: HelpSection = {
       a: 'It only appears when the project has nutritional targets, the formulation has ingredients, and you have edit access.',
     },
     {
-      q: 'Solve’s “Apply solution” didn’t change anything.',
-      a: 'Reload the page and run Solve again. Solve works from the saved recipe, so always save before solving.',
-    },
-    {
       q: 'Solve says “No feasible solution.”',
       a: 'No mix of your current ingredients meets every target at once. Loosen a target, add an ingredient that helps (for example a protein isolate for a protein target), or unlock ingredients.',
     },
@@ -710,7 +707,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Does Complete batch check I have enough stock?',
-      a: 'No. It subtracts the amounts even if stock goes below zero. Adjust stock on the ingredient’s page if needed.',
+      a: 'It doesn’t stop you, but `Preview` shows what each tracked ingredient will have left and warns in red when stock would go below zero. Adjust stock on the ingredient’s page if needed.',
     },
     {
       q: 'Can I record pH, temperature and mixing time?',
