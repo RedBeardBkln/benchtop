@@ -585,8 +585,76 @@ export const formulations: HelpSection = {
         },
       ],
     },
+    {
+      slug: 'import',
+      title: 'Importing a formulation from Excel or CSV',
+      summary: 'Turn a recipe you keep in a spreadsheet into a benchtop formulation.',
+      blocks: [
+        {
+          type: 'p',
+          text: 'If you already keep formulations in spreadsheets, you don’t have to type them in again. Upload the file, and benchtop reads it and builds a matching formulation for you to check. Nothing is added to your account until you click `Create formulation`.',
+        },
+        {
+          type: 'steps',
+          items: [
+            'On [Projects](/projects), click `Import formulation`. (Or click `Import` on a project page, and the formulation goes into that project.)',
+            'Drop an Excel workbook (.xlsx) or a CSV file on the page, or click to choose one. Reading it can take up to a minute.',
+            'If the file holds several formulations (for example one per sheet), choose the one to import. You can come back for the others.',
+            'Check the **Formulation** details: name, serving size, batch size and notes.',
+            'Choose the **Project**, create a new one on the spot (with its client), or click **Skip for now**.',
+            'Go through the **Ingredients**. Each row shows what the file says and the ingredient it’s linked to in your library (see below).',
+            'Untick any **Process steps** you don’t want, and fix their wording if needed.',
+            'Click `Create formulation`. It opens as version 1, with the version note “Imported from” and the file name.',
+          ],
+        },
+        { type: 'h', text: 'Linking ingredients' },
+        {
+          type: 'terms',
+          items: [
+            { term: 'Green tick', text: 'Linked to an ingredient in your library with the same name (or the same item code). Click `Change` if it’s the wrong one.' },
+            { term: 'Did you mean…', text: 'Close matches from your library. Click one to link it. When there are several rows like this, **Use the first suggestion for all** links them in one go; check the result.' },
+            { term: 'Not in your library', text: 'Click `Pick from library` to choose one yourself, or `Add new ingredient` to add it now from USDA or by typing its details, without leaving the import. Other rows with the same name are linked at the same time.' },
+            { term: 'Skip for now', text: 'Leave it for later, for example while you wait for a spec sheet. The import can then only be saved as a draft.' },
+            { term: '✕ (leave out)', text: 'For rows that aren’t ingredients, such as a total or a note. They’re ignored. Click the arrow to bring a row back.' },
+          ],
+        },
+        {
+          type: 'p',
+          text: 'Amounts can be in **g**, **kg**, **mg**, **lb**, **oz** or **%**. Fix any amount or unit that was read wrongly; a red box means it’s missing. Amounts in mL, cups or pieces can’t be converted, so enter them in grams. When the file gives only percentages, benchtop needs a **Batch size** to turn them into grams; if the file doesn’t give one it starts at 1,000 g. If two rows link to the same ingredient, they’re combined into one line.',
+        },
+        { type: 'h', text: 'Saving a draft' },
+        {
+          type: 'p',
+          text: 'The bar at the bottom lists what’s **Still needed**: a name, a project, an ingredient for every row, and a usable amount for every row (plus a batch size for percentages). Until all of those are there, `Create formulation` stays greyed out, but you can click `Save as draft` at any time. Optional items (serving size, the client, percentages that don’t add up to 100%) are listed but don’t stop you.',
+        },
+        {
+          type: 'p',
+          text: 'A draft isn’t a formulation yet and doesn’t appear in any project. Your drafts are listed under **Unfinished imports** on the import page, and the Projects page reminds you about them. Click `Continue` to pick up where you left off, then `Create formulation` once everything is filled in. Drafts are private to you.',
+        },
+        {
+          type: 'note',
+          text: 'Adding ingredients needs edit access to the ingredient library, and creating a project needs permission to create projects. Without them those buttons don’t appear; pick existing ones, or ask an owner or admin.',
+        },
+        {
+          type: 'tip',
+          text: 'Old Excel files (.xls) can’t be read. Open the file in Excel and save it as .xlsx or .csv first. Hidden sheets are ignored.',
+        },
+      ],
+    },
   ],
   faqs: [
+    {
+      q: 'Can I import formulations I keep in Excel?',
+      a: 'Yes. Click `Import formulation` on [Projects](/projects) and upload the .xlsx or .csv file. benchtop builds a matching formulation for you to check before it’s saved. See [Importing a formulation from Excel or CSV](/help/formulations#import).',
+    },
+    {
+      q: 'An ingredient in my spreadsheet isn’t in my library. What do I do?',
+      a: 'On the import page, click `Add new ingredient` on that row to add it from USDA or by typing its details, without leaving the import. Or click `Skip for now` and save the import as a draft to finish later.',
+    },
+    {
+      q: 'Where did my unfinished import go?',
+      a: 'Click `Import formulation` on [Projects](/projects). Your drafts are listed under **Unfinished imports**; click `Continue`. Drafts aren’t formulations yet, so they don’t show in any project until you click `Create formulation`.',
+    },
     {
       q: 'I made changes and they disappeared. What happened?',
       a: 'Ingredient grid changes only save when you click the blue `Save` button. benchtop asks before you leave with unsaved changes, but if you choose to leave anyway (or the browser closes), they’re lost. Process steps, notes and column choices save on their own.',

@@ -4,7 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { ArrowLeft, Plus, FlaskConical, Lock, FileEdit, Target, Archive, RotateCcw, Edit2, Save, X } from 'lucide-react'
+import {
+  ArrowLeft, Plus, FlaskConical, Lock, FileEdit, Target, Archive, RotateCcw, Edit2, Save, X, FileSpreadsheet,
+} from 'lucide-react'
 import type { Project, Formulation, ProjectTarget } from '@/lib/types'
 import { ProjectTargets } from './project-targets'
 import Link from 'next/link'
@@ -404,6 +406,15 @@ export function ProjectDetail({ id }: { id: string }) {
                       <Archive size={12} />
                       {showArchived ? 'Hide archived' : `Archived (${archived.length})`}
                     </button>
+                  )}
+                  {canEdit && (
+                    <Link
+                      href={`/formulations/import?project=${id}`}
+                      title="Build a formulation from an Excel or CSV file"
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <FileSpreadsheet size={14} /> Import
+                    </Link>
                   )}
                   {canEdit && (
                     <button

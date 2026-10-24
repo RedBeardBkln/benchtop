@@ -3,14 +3,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Plus, FolderOpen } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, FolderOpen, FileSpreadsheet } from 'lucide-react'
 import type { ProjectSummary } from '@/lib/types'
 import { NewProjectDialog } from './new-project-dialog'
+import { useImportDrafts } from '@/components/formulations/import/use-import-drafts'
 
 // `canCreate` is false for team members without edit access to any client or to all projects
 export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
   const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const { data: importDrafts = [] } = useImportDrafts()
 
   const { data: projects, isLoading } = useQuery<ProjectSummary[]>({
     queryKey: ['projects'],
@@ -25,16 +28,36 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
             <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
             <p className="text-sm text-gray-500 mt-1">Formulation projects</p>
           </div>
-          {canCreate && (
-            <button
-              onClick={() => setDialogOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm
-                         font-medium rounded-md hover:bg-blue-700 transition-colors"
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link
+              href="/formulations/import"
+              title="Build a formulation from an Excel or CSV file"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm
+                         font-medium rounded-md hover:bg-gray-50 transition-colors"
             >
-              <Plus size={15} /> New project
-            </button>
-          )}
+              <FileSpreadsheet size={15} /> Import formulation
+            </Link>
+            {canCreate && (
+              <button
+                onClick={() => setDialogOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm
+                           font-medium rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Plus size={15} /> New project
+              </button>
+            )}
+          </div>
         </div>
+
+        {importDrafts.length > 0 && (
+          <Link
+            href="/formulations/import"
+            className="flex items-center gap-2 mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 hover:bg-amber-100"
+          >
+            <FileSpreadsheet size={15} />
+            You have {importDrafts.length} unfinished import{importDrafts.length === 1 ? '' : 's'}. Finish {importDrafts.length === 1 ? 'it' : 'them'} to add the formulation{importDrafts.length === 1 ? '' : 's'} to your account →
+          </Link>
+        )}
 
         {isLoading ? (
           <div className="text-sm text-gray-400">Loading…</div>

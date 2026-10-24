@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
-  accountMembers, batchRuns, feedback, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
+  accountMembers, batchRuns, feedback, formulationImports, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
   ingredientAllergens, ingredientCerts, ingredientDocs, ingredientNutrients, ingredientSuppliers,
   ingredients, intakeItems, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
   subIngredients, supplierContacts, suppliers,
@@ -92,6 +92,7 @@ export async function GET() {
   ])
 
   const feedbackRows = await db.select().from(feedback).where(eq(feedback.accountId, accountId))
+  const importRows = await db.select().from(formulationImports).where(eq(formulationImports.accountId, accountId))
 
   const sub = ctx.subscription
   const payload = {
@@ -149,6 +150,8 @@ export async function GET() {
     ingredientSuppliers: supplierLinkRows.map(x => x.r),
     equipment: equipmentRows,
     feedback: feedbackRows,
+    // Spreadsheet imports saved before they were finished
+    formulationImports: importRows,
   }
 
   const stamp = new Date().toISOString().slice(0, 10)
