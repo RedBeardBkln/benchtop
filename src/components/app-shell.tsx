@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, FolderOpen, FlaskConical, LogOut, MailPlus, Settings, Truck } from 'lucide-react'
+import { Building2, FolderOpen, FlaskConical, LogOut, MailPlus, MessageSquare, Settings, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
+import { FeedbackLink } from '@/components/feedback-link'
 
 const NAV = [
   { href: '/projects', label: 'Projects', icon: FolderOpen },
@@ -17,7 +18,10 @@ const NAV = [
 const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2 }
 
 // Only shown to platform admins
-const ADMIN_NAV = [{ href: '/admin/invitations', label: 'Invitations & accounts', icon: MailPlus }]
+const ADMIN_NAV = [
+  { href: '/admin/invitations', label: 'Invitations & accounts', icon: MailPlus },
+  { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare },
+]
 
 export function AppShell({
   children,
@@ -85,7 +89,10 @@ export function AppShell({
       </aside>
 
       {/* Main content — extra bottom padding on mobile for the nav bar */}
-      <main className="flex-1 min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0 print:pb-0">{children}</main>
+      <main className="flex-1 min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0 print:pb-0 flex flex-col">
+        <div className="flex-1 min-w-0">{children}</div>
+        <FeedbackLink />
+      </main>
 
       {/* Bottom nav — mobile only */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-ink-900 border-t border-ink-700 flex pb-[env(safe-area-inset-bottom)] print:hidden">

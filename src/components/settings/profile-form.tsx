@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { FEEDBACK_CONTEXT_KEY } from '@/components/feedback-link'
 import { readErrorMessage } from '@/lib/utils'
 import { btnPrimary, Card, Field, inputCls } from './ui'
 
@@ -10,6 +12,7 @@ type Values = { fullName: string; company: string; jobTitle: string; phone: stri
 
 export function ProfileForm({ email, initial }: { email: string; initial: Values }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [values, setValues] = useState<Values>(initial)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>({})
@@ -40,6 +43,8 @@ export function ProfileForm({ email, initial }: { email: string; initial: Values
       return
     }
     toast.success('Profile saved')
+    // The feedback link appears once the profile is complete, and pre-fills from it
+    queryClient.invalidateQueries({ queryKey: FEEDBACK_CONTEXT_KEY })
     router.refresh()
   }
 

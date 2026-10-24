@@ -15,6 +15,7 @@ export * from './formulations'
 export * from './reverse'
 export * from './intake'
 export * from './audit'
+export * from './feedback'
 
 // ---- Import tables for relations ----
 import { nutrients } from './nutrients'
