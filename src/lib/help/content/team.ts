@@ -19,7 +19,7 @@ export const team: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: 'Owner', text: 'The person who created the account. There is exactly one. They can do everything, and they are the only one who can rename the account, subscribe or change billing, download all the data, and delete the account.' },
+            { term: 'Owner', text: 'The person who created the account, or who it was handed to. There is exactly one. They can do everything, and they are the only one who can rename the account, subscribe or change billing, download all the data, and delete the account.' },
             { term: 'Admin', text: 'Can see and edit everything: every project, the ingredient library, suppliers, clients and the Team page. Cannot rename the account, handle billing, export data or delete the account.' },
             { term: 'Member', text: 'Sees only the projects and clients they’ve been given, and can either view or edit the ingredient library and suppliers. Members don’t see the Clients page or the Team page.' },
           ],
@@ -40,7 +40,19 @@ export const team: HelpSection = {
         },
         {
           type: 'note',
-          text: 'Nobody can change their own role or remove themselves; another owner or admin has to do it. The owner can’t be changed or removed, and there is no button to hand ownership to someone else. Contact the benchtop team if you need to change the owner.',
+          text: 'Nobody can change their own role or remove themselves; another owner or admin has to do it. The owner can’t be changed or removed by anyone else, but the owner can hand the account over (see below).',
+        },
+        { type: 'h', text: 'Handing the account to someone else' },
+        {
+          type: 'steps',
+          items: [
+            'The owner goes to [Settings → Team](/settings/team). The person taking over must already be on the team (invite them first if not).',
+            'Under **Transfer ownership**, choose them as **New owner** and click `Transfer ownership`, then confirm.',
+          ],
+        },
+        {
+          type: 'p',
+          text: 'The new owner controls billing, the subscription, the data download and account deletion, and billing emails from Stripe go to them. You become an admin and keep full access to everything else. The number of billed seats doesn’t change. Only the new owner can transfer it back.',
         },
       ],
     },
@@ -213,7 +225,7 @@ export const team: HelpSection = {
     },
     {
       q: 'Can I transfer ownership of the account?',
-      a: 'There’s no button for it. Contact the benchtop team using **Report a bug or request a feature** at the bottom of the page.',
+      a: 'Yes, if you’re the owner. On [Settings → Team](/settings/team), choose the new owner under **Transfer ownership** and click `Transfer ownership`. They must already be on the team. You become an admin.',
     },
     {
       q: 'What happens to someone’s work when I remove them?',

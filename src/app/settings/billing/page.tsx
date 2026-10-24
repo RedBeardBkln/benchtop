@@ -1,7 +1,7 @@
 import { BillingPanel } from '@/components/settings/billing-panel'
 import { requirePage } from '@/lib/auth/context'
 import { isDevBypassActive } from '@/lib/billing/entitlement'
-import { isBillingConfigured } from '@/lib/billing/stripe'
+import { isBillingConfigured, planIntervalForPrice } from '@/lib/billing/stripe'
 
 export default async function BillingSettingsPage({
   searchParams,
@@ -28,6 +28,7 @@ export default async function BillingSettingsPage({
               status: ctx.subscription.status,
               currentPeriodEnd: ctx.subscription.currentPeriodEnd?.toISOString() ?? null,
               cancelAtPeriodEnd: ctx.subscription.cancelAtPeriodEnd,
+              interval: planIntervalForPrice(ctx.subscription.priceId),
             }
           : null
       }

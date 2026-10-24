@@ -1,5 +1,6 @@
 'use client'
 
+import { uploadStaged } from '@/lib/upload-file'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -1118,10 +1119,13 @@ export function ReverseWizard({
     const item = deckIngredients.find(d => d.id === deckItemId)
     updateLinkState(deckItemId, { isParsingDoc: true, docParseError: null, parsedDocNutrients: null })
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('ingredientName', item?.rawName ?? '')
-      const r = await fetch('/api/ingredients/parse-doc', { method: 'POST', body: fd })
+      // Straight to storage first: large PDFs would be refused by our own server
+      const stagedPath = await uploadStaged(file)
+      const r = await fetch('/api/ingredients/parse-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stagedPath, ingredientName: item?.rawName ?? '' }),
+      })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error ?? 'Failed to parse document')
       updateLinkState(deckItemId, { parsedDocNutrients: data.nutrients, isParsingDoc: false })
@@ -2853,6 +2857,7 @@ export function ReverseWizard({
       <UsdaSearchDialog
         open={usdaOpen}
         initialQuery={usdaQuery}
+        existingNote="linked"
         onClose={() => { setUsdaOpen(false); setUsdaTargetId(null) }}
         onImported={onUsdaImported}
       />

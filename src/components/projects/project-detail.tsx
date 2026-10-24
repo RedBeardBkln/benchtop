@@ -119,6 +119,8 @@ export function ProjectDetail({ id }: { id: string }) {
   const [nameEdit, setNameEdit] = useState('')
   const [editingClient, setEditingClient] = useState(false)
   const [clientEdit, setClientEdit] = useState<string | null>(null)
+  const [editingObjective, setEditingObjective] = useState(false)
+  const [objectiveEdit, setObjectiveEdit] = useState('')
   const { data: clientOptions } = useClientOptions()
 
   const { data, isLoading, error } = useQuery<ProjectWithFormulations>({
@@ -164,6 +166,25 @@ export function ProjectDetail({ id }: { id: string }) {
       queryClient.invalidateQueries({ queryKey: ['formulation'] })
       setEditingClient(false)
       toast.success('Client updated')
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  const objectiveMutation = useMutation({
+    mutationFn: async (objectiveText: string | null) => {
+      const r = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectiveText }),
+      })
+      if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to update the objective'))
+      return r.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      setEditingObjective(false)
+      toast.success('Objective updated')
     },
     onError: (e: Error) => toast.error(e.message),
   })
@@ -303,8 +324,54 @@ export function ProjectDetail({ id }: { id: string }) {
                 <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">view only</span>
               )}
             </div>
-            {data.objectiveText && (
-              <p className="mt-2 text-sm text-gray-500 max-w-xl">{data.objectiveText}</p>
+            {editingObjective ? (
+              <form
+                className="mt-2 max-w-xl space-y-2"
+                onSubmit={e => {
+                  e.preventDefault()
+                  objectiveMutation.mutate(objectiveEdit.trim() || null)
+                }}
+              >
+                <textarea
+                  autoFocus
+                  rows={3}
+                  maxLength={5000}
+                  value={objectiveEdit}
+                  onChange={e => setObjectiveEdit(e.target.value)}
+                  placeholder="What is this project trying to achieve?"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex gap-2">
+                  <button type="submit" disabled={objectiveMutation.isPending}
+                    className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                    <Save size={12} /> Save
+                  </button>
+                  <button type="button" onClick={() => setEditingObjective(false)}
+                    className="px-3 py-1 text-xs border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : data.objectiveText ? (
+              <div className="mt-2 flex items-start gap-1.5 group/objective max-w-xl">
+                <p className="text-sm text-gray-500 whitespace-pre-line">{data.objectiveText}</p>
+                {canEdit && (
+                  <button
+                    onClick={() => { setObjectiveEdit(data.objectiveText ?? ''); setEditingObjective(true) }}
+                    className="sm:opacity-0 sm:group-hover/objective:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded shrink-0"
+                    title="Edit objective"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </div>
+            ) : canEdit && (
+              <button
+                onClick={() => { setObjectiveEdit(''); setEditingObjective(true) }}
+                className="mt-2 text-xs text-gray-400 hover:text-blue-700"
+              >
+                + Add objective
+              </button>
             )}
           </div>
           {canEdit && (

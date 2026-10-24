@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { equipment } from '@/lib/db/schema'
+import { equipment, processSteps } from '@/lib/db/schema'
 import { and, asc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -14,8 +14,15 @@ export async function GET() {
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
+  // stepCount: how many process steps use it, so removing it can say what it affects
   const rows = await db
-    .select()
+    .select({
+      id: equipment.id,
+      accountId: equipment.accountId,
+      name: equipment.name,
+      createdAt: equipment.createdAt,
+      stepCount: sql<number>`(select count(*)::int from ${processSteps} where ${processSteps.equipmentId} = ${equipment.id})`,
+    })
     .from(equipment)
     .where(eq(equipment.accountId, ctx.account.id))
     .orderBy(asc(sql`lower(${equipment.name})`))

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clearStaging } from '@/lib/staged-upload'
 import { eq, inArray } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
@@ -99,6 +100,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Could not remove stored documents. Account not deleted.' }, { status: 502 })
     }
   }
+  // Uploads that were started but never attached to anything; best effort
+  await clearStaging(accountId).catch(err => console.error('[account delete] staging cleanup failed:', err))
 
   // 3. Database rows, FK-safe, in one transaction.
   //    projects -> cascades formulations, lines, process steps, targets, batch runs, reverse targets

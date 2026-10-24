@@ -9,9 +9,9 @@ import { z } from 'zod'
 type Ctx = { params: Promise<{ id: string; linkId: string }> }
 
 const patchSchema = z.object({
-  packSize: z.number().positive().nullable().optional(),
+  packSize: z.number().positive('Pack size must be more than 0 (leave it blank if you don’t know it)').nullable().optional(),
   packUnit: z.string().max(50).nullable().optional(),
-  costPerUnit: z.number().positive().nullable().optional(),
+  costPerUnit: z.number().positive('Cost must be more than 0 (leave it blank if you don’t know it)').nullable().optional(),
   isPreferred: z.boolean().optional(),
   useForCost: z.boolean().optional(),
   notes: z.string().max(1000).nullable().optional(),
@@ -28,7 +28,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
   const parsed = patchSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid supplier details' }, { status: 400 })
+  }
 
   const d = parsed.data
   const updates: Record<string, unknown> = {}

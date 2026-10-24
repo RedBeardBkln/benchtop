@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
+import { uploadStaged } from '@/lib/upload-file'
 import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 import { IngredientCostPanel } from './ingredient-cost-panel'
@@ -295,14 +296,16 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
   })
 
   const uploadDocMutation = useMutation({
-    mutationFn: ({ file, label }: { file: File; label: string }) => {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('label', label)
-      return fetch(`/api/ingredients/${id}/docs`, { method: 'POST', body: fd }).then(async r => {
-        if (!r.ok) throw new Error(await readErrorMessage(r, 'Upload failed'))
-        return r.json()
+    mutationFn: async ({ file, label }: { file: File; label: string }) => {
+      // The file goes straight to storage; large files would be refused by our own server
+      const stagedPath = await uploadStaged(file)
+      const r = await fetch(`/api/ingredients/${id}/docs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stagedPath, label }),
       })
+      if (!r.ok) throw new Error(await readErrorMessage(r, 'Upload failed'))
+      return r.json()
     },
     onSuccess: row => {
       invalidate()
@@ -331,9 +334,11 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: form.newName.trim(), websiteUrl: form.newWebsite.trim() || null }),
         })
-        if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed to create supplier'))
-        const s = await r.json()
-        supplierId = s.id
+        // A supplier with that name already exists: link to it rather than making a twin
+        const body = await r.json().catch(() => null)
+        if (r.status === 409 && body?.existing?.id) supplierId = body.existing.id
+        else if (!r.ok) throw new Error(body?.error ?? 'Failed to create supplier')
+        else supplierId = body.id
       }
       const r = await fetch(`/api/ingredients/${id}/suppliers`, {
         method: 'POST',

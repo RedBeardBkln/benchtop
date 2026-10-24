@@ -77,9 +77,18 @@ export const billing: HelpSection = {
           type: 'p',
           text: 'If you cancel, you keep full access until the end of the period you’ve paid for. The Billing page shows “Your subscription is set to cancel on …” and **Access until** that date. Fees already paid are not refunded, except where the law requires it.',
         },
+        { type: 'h', text: 'Switching between monthly and annual' },
         {
-          type: 'note',
-          text: 'There’s no button inside benchtop to switch between monthly and yearly. Check whether Stripe’s billing page offers it, or contact the benchtop team.',
+          type: 'steps',
+          items: [
+            'Open [Settings → Billing](/settings/billing). The **Plan** line shows whether you’re billed monthly or annually.',
+            'Click **Switch to annual billing** (or **Switch to monthly billing**).',
+            'Read the summary and click `Switch to annual` (or `Switch to monthly`).',
+          ],
+        },
+        {
+          type: 'p',
+          text: 'You’re charged for the new period straight away, less a credit for the unused part of the current one, and your renewal date moves to a year (or a month) from today. Extra team members switch to the matching price. During a free trial nothing is charged until the trial ends. Only the account owner can switch.',
         },
       ],
     },
@@ -166,7 +175,7 @@ export const billing: HelpSection = {
     },
     {
       q: 'Can I switch from monthly to yearly?',
-      a: 'There’s no button for this inside benchtop. Check under `Manage billing`, or contact the benchtop team.',
+      a: 'Yes. On [Settings → Billing](/settings/billing), click **Switch to annual billing**, then confirm. You’re charged for the year straight away, less a credit for what’s left of your current month. Switching back works the same way.',
     },
     {
       q: 'Is my card information stored by benchtop?',

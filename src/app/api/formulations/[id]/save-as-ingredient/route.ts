@@ -12,6 +12,7 @@ import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
 import { formatIngredientName } from '@/lib/ingredient-name'
 import { toLossStep } from '@/lib/process-loss'
 import { deriveIngredientFromFormulation, type SourceLine } from '@/lib/formulation-to-ingredient'
+import { getIngredientCosts } from '@/lib/costing-server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -72,7 +73,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       labelName: ingredients.labelName,
       verification: ingredients.verification,
       naturallyDerived: ingredients.naturallyDerived,
-      costPerKg: ingredients.defaultCostPerKg,
     })
     .from(formulationLines)
     .innerJoin(ingredients, eq(formulationLines.ingredientId, ingredients.id))
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: 'Formulation has no ingredient lines' }, { status: 422 })
 
   const ingredientIds = [...new Set(lineRows.map(l => l.ingredientId))]
-  const [nutrientRows, allergenRows, subRows, stepRows, allNutrients] = await Promise.all([
+  const [nutrientRows, allergenRows, subRows, stepRows, allNutrients, costs] = await Promise.all([
     db.select({
       ingredientId: ingredientNutrients.ingredientId,
       nutrientId: ingredientNutrients.nutrientId,
@@ -95,6 +95,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       .from(subIngredients).where(inArray(subIngredients.ingredientId, ingredientIds)).orderBy(subIngredients.position),
     db.select().from(processSteps).where(eq(processSteps.formulationId, id)).orderBy(processSteps.stepNo),
     db.select().from(nutrients),
+    // Same cost the COGS tab uses: the supplier price marked "use for cost", else the manual cost
+    getIngredientCosts(ctx.account.id, ingredientIds),
   ])
 
   const group = <T extends { ingredientId: string }>(rows: T[]) => {
@@ -112,7 +114,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     labelName: l.labelName,
     verification: l.verification,
     naturallyDerived: l.naturallyDerived,
-    costPerKg: l.costPerKg != null ? parseFloat(l.costPerKg) : null,
+    costPerKg: costs[l.ingredientId]?.cost?.perKg ?? null,
     nutrients: (nutrientsBy.get(l.ingredientId) ?? []).map(n => ({
       nutrientId: n.nutrientId,
       amountPer100g: parseFloat(n.amountPer100g),

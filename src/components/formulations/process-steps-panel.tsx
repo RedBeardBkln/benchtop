@@ -8,6 +8,7 @@ import type { Equipment, ProcessStepDetail } from '@/lib/types'
 import type { LossType, LossUnit } from '@/lib/process-loss'
 import type { StepParams } from '@/lib/step-measurements'
 import { StepMeasurements } from '@/components/formulations/step-measurements'
+import { EquipmentManagerDialog } from '@/components/formulations/equipment-manager-dialog'
 
 type LossDraft = { type: LossType | ''; amount: string; unit: LossUnit }
 
@@ -155,12 +156,16 @@ export function ProcessStepsPanel({
   formulationId,
   steps,
   isLocked,
+  canEditLibrary,
 }: {
   formulationId: string
   steps: ProcessStepDetail[]
   isLocked: boolean
+  /** The equipment list belongs to the library, so renaming or removing needs library edit access */
+  canEditLibrary: boolean
 }) {
   const queryClient = useQueryClient()
+  const [managingEquipment, setManagingEquipment] = useState(false)
   const [ordered, setOrdered] = useState(steps)
   const [dragKey, setDragKey] = useState<string | null>(null)
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
@@ -394,6 +399,7 @@ export function ProcessStepsPanel({
                         onSelectEquipment={(id) => patchMutation.mutate({ stepId: step.id, body: { equipmentId: id } })}
                         onCreateEquipment={(name) => createEquipment(step.id, name)}
                         onRefreshEquipment={() => queryClient.invalidateQueries({ queryKey: ['equipment'] })}
+                        onManageEquipment={canEditLibrary ? () => setManagingEquipment(true) : undefined}
                       />
                     </div>
 
@@ -461,6 +467,8 @@ export function ProcessStepsPanel({
           <LossFields draft={newLoss} onChange={setNewLoss} disabled={false} />
         </div>
       )}
+
+      {managingEquipment && <EquipmentManagerDialog onClose={() => setManagingEquipment(false)} />}
     </div>
   )
 }

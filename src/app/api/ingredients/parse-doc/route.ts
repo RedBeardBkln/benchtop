@@ -2,39 +2,60 @@ import { NextRequest, NextResponse } from 'next/server'
 import { canonicalNutrientName } from '@/lib/nutrient-names'
 import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
+import { z } from 'zod'
+import { AdminNotConfiguredError } from '@/lib/supabase/admin'
+import { isOwnStagedPath, readStaged, removeStaged, stagedFileName } from '@/lib/staged-upload'
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20 MB
 const ALLOWED_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf',
 ])
+const TYPE_BY_EXT: Record<string, string> = {
+  pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif',
+}
+
+const bodySchema = z.object({
+  // Where the browser uploaded the file (see lib/staged-upload); it's deleted once read
+  stagedPath: z.string().min(1).max(512),
+  ingredientName: z.string().max(255).default(''),
+})
 
 export async function POST(req: NextRequest) {
   const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
+  const { ctx } = auth
 
-  const formData = await req.formData().catch(() => null)
-  if (!formData) return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
+  const parsed = bodySchema.safeParse(await req.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  const { stagedPath, ingredientName } = parsed.data
+  if (!isOwnStagedPath(ctx.account.id, stagedPath)) return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
 
-  const file = formData.get('file') as File | null
-  const ingredientName = (formData.get('ingredientName') as string | null) ?? ''
+  let file: Awaited<ReturnType<typeof readStaged>>
+  try {
+    file = await readStaged(stagedPath)
+    // Only needed for this one read
+    await removeStaged(stagedPath)
+  } catch (err) {
+    if (err instanceof AdminNotConfiguredError) {
+      return NextResponse.json({ error: 'Document storage is not configured', code: 'storage_not_configured' }, { status: 503 })
+    }
+    throw err
+  }
+  if (!file) return NextResponse.json({ error: 'Upload not found or too large (max 20 MB)' }, { status: 422 })
 
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-  if (!ALLOWED_TYPES.has(file.type)) {
+  const ext = stagedFileName(stagedPath).split('.').pop()?.toLowerCase() ?? ''
+  const mediaType = ALLOWED_TYPES.has(file.contentType) ? file.contentType : TYPE_BY_EXT[ext]
+  if (!mediaType || !ALLOWED_TYPES.has(mediaType)) {
     return NextResponse.json(
       { error: 'Unsupported file type. Use PDF, JPEG, PNG, or WEBP.' },
       { status: 422 },
     )
   }
-  if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: 'File too large (max 20 MB)' }, { status: 422 })
-  }
 
-  const bytes = await file.arrayBuffer()
-  const base64 = Buffer.from(bytes).toString('base64')
+  const base64 = file.bytes.toString('base64')
 
   const anthropic = new Anthropic()
 
-  const docPart = file.type === 'application/pdf'
+  const docPart = mediaType === 'application/pdf'
     ? ({
         type: 'document' as const,
         source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: base64 },
@@ -43,7 +64,7 @@ export async function POST(req: NextRequest) {
         type: 'image' as const,
         source: {
           type: 'base64' as const,
-          media_type: file.type as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+          media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
           data: base64,
         },
       })

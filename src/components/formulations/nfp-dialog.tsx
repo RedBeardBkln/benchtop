@@ -96,7 +96,8 @@ type Props = {
   version: number
   clientName: string | null
   servingSizeG: number | undefined
-  batchSizeG: number
+  /** Weight after process losses — what actually ends up packed */
+  finishedWeightG: number
   results: NutrientResult[]
   lines: StatementLine[]
   onClose: () => void
@@ -108,7 +109,7 @@ export function NfpDialog({
   version,
   clientName,
   servingSizeG,
-  batchSizeG,
+  finishedWeightG,
   results,
   lines,
   onClose,
@@ -151,9 +152,10 @@ export function NfpDialog({
 
   const usePerServing = !!servingSizeG
 
+  // Per-serving values are on the finished (after-loss) basis, so the servings count is too
   const servingsPerContainer =
-    servingSizeG && servingSizeG > 0 && batchSizeG > 0
-      ? batchSizeG / servingSizeG
+    servingSizeG && servingSizeG > 0 && finishedWeightG > 0
+      ? finishedWeightG / servingSizeG
       : undefined
 
   // Nutrients available for the extras picker: non-standard, have a value

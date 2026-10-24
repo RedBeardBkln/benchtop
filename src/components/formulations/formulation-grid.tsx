@@ -45,6 +45,9 @@ import { CompleteBatchDialog } from '@/components/formulations/complete-batch-di
 import { SaveAsIngredientDialog } from '@/components/formulations/save-as-ingredient-dialog'
 import { PrintOptionsDialog } from '@/components/formulations/print-options-dialog'
 import { CogsPanel } from '@/components/formulations/cogs-panel'
+import { SolverBoundsDialog } from '@/components/formulations/solver-bounds-dialog'
+import { CompareVersionsDialog } from '@/components/formulations/compare-versions-dialog'
+import { BatchHistoryPanel, batchRunsKey } from '@/components/formulations/batch-history-panel'
 import { usePreferences } from '@/lib/use-preferences'
 
 // Nutrient columns the grid shows until the formulation picks its own
@@ -63,6 +66,9 @@ type LineState = {
   locked: boolean          // quantity lock: keeps its grams
   pctLocked: boolean       // %-lock: always `lockedPct` % of the batch
   lockedPct: number | null
+  // Usage limits Solve must keep to (null = no limit)
+  minPct: number | null
+  maxPct: number | null
   nutrients: Array<{ nutrientId: string; amountPer100g: number; name: string; unit: string; category: string }>
 }
 
@@ -274,6 +280,8 @@ export function FormulationGrid({ id }: { id: string }) {
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [solverResult, setSolverResult] = useState<SolverResult | null>(null)
   const [showSolverPanel, setShowSolverPanel] = useState(false)
+  const [showSolverBounds, setShowSolverBounds] = useState(false)
+  const [showCompare, setShowCompare] = useState(false)
   const [showReverseWizard, setShowReverseWizard] = useState(false)
   const [confirmAction, setConfirmAction] = useState<'finalize' | 'unfinalize' | 'archive' | null>(null)
   const [sidebarIngredientId, setSidebarIngredientId] = useState<string | null>(null)
@@ -342,6 +350,8 @@ export function FormulationGrid({ id }: { id: string }) {
         locked: l.locked,
         pctLocked: l.pctLocked,
         lockedPct: l.pctLocked ? parseFloat(l.pct) : null,
+        minPct: l.minPct != null ? parseFloat(l.minPct) : null,
+        maxPct: l.maxPct != null ? parseFloat(l.maxPct) : null,
         nutrients: l.nutrients.map(n => ({
           nutrientId: n.nutrientId,
           amountPer100g: parseFloat(n.amountPer100g),
@@ -608,6 +618,8 @@ export function FormulationGrid({ id }: { id: string }) {
             locked: l.locked,
             pctLocked: l.pctLocked,
             lockedPct: l.pctLocked ? l.lockedPct : null,
+            minPct: l.minPct,
+            maxPct: l.maxPct,
           })),
         }),
       }).then(async r => {
@@ -783,6 +795,8 @@ export function FormulationGrid({ id }: { id: string }) {
       locked: false,
       pctLocked: false,
       lockedPct: null,
+      minPct: null,
+      maxPct: null,
       nutrients: ing.nutrients,
     }
     applyLines([...lines, newLine])
@@ -817,6 +831,11 @@ export function FormulationGrid({ id }: { id: string }) {
   }
 
   async function swapLineById(lineKey: string, id: string) {
+    const existing = lines.find(l => l.ingredientId === id && l.key !== lineKey)
+    if (existing) {
+      toast.error(`${existing.ingredientName} is already in this formulation — remove one line or pick a different ingredient`)
+      return
+    }
     try {
       const r = await fetch(`/api/ingredients/${id}`)
       if (!r.ok) { toast.error('Could not load ingredient'); return }
@@ -970,6 +989,15 @@ export function FormulationGrid({ id }: { id: string }) {
             ) : (
               <span className="text-sm text-gray-400">v{data.version}</span>
             )}
+            {data.iterations.length > 1 && allNutrients && (
+              <button
+                onClick={() => setShowCompare(true)}
+                title="See what changed between two versions"
+                className="text-sm text-blue-600 hover:underline print:hidden"
+              >
+                Compare
+              </button>
+            )}
             {readOnly
               ? data.iterationNote && <span className="text-sm text-gray-600">{data.iterationNote}</span>
               : <IterationNote formulationId={id} note={data.iterationNote} />}
@@ -1024,6 +1052,22 @@ export function FormulationGrid({ id }: { id: string }) {
               {solveMutation.isPending ? 'Solving…' : 'Solve'}
             </button>
           )}
+          {(data.project?.targets?.length ?? 0) > 0 && lines.length > 0 && !readOnly && (() => {
+            const limited = lines.filter(l => l.minPct != null || l.maxPct != null).length
+            return (
+              <button
+                onClick={() => setShowSolverBounds(true)}
+                title="Set the minimum and maximum usage % Solve may give each ingredient"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 text-violet-600
+                           text-sm rounded-md hover:bg-violet-50 transition-colors"
+              >
+                Limits
+                {limited > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700">{limited}</span>
+                )}
+              </button>
+            )
+          })()}
           {!readOnly && <div className="relative">
             <button
               onClick={() => setShowDuplicateMenu(v => !v)}
@@ -1518,7 +1562,16 @@ export function FormulationGrid({ id }: { id: string }) {
 
       {/* Process steps */}
       <div className="mt-6">
-        <ProcessStepsPanel formulationId={id} steps={data.processSteps ?? []} isLocked={isLocked} />
+        <ProcessStepsPanel
+          formulationId={id}
+          steps={data.processSteps ?? []}
+          isLocked={isLocked}
+          canEditLibrary={data.canEditLibrary ?? false}
+        />
+      </div>
+
+      <div className="mt-6">
+        <BatchHistoryPanel formulationId={id} />
       </div>
 
       {/* Full nutrient profile toggle */}
@@ -1881,6 +1934,7 @@ export function FormulationGrid({ id }: { id: string }) {
       <UsdaSearchDialog
         open={showUsdaDialog}
         initialQuery={usdaInitialQuery}
+        existingNote={swapTargetKey ? 'swapped in' : 'added to formulation'}
         onClose={() => { setShowUsdaDialog(false); setSwapTargetKey(null) }}
         onImported={(id) => {
           setShowUsdaDialog(false)
@@ -1933,12 +1987,41 @@ export function FormulationGrid({ id }: { id: string }) {
         <ReverseWizard
           formulationId={id}
           onApply={(newLines) => {
-            setLines(newLines.map(l => ({ ...l, pctLocked: false, lockedPct: null })))
+            setLines(newLines.map(l => ({ ...l, pctLocked: false, lockedPct: null, minPct: null, maxPct: null })))
             setIsDirty(true)
             setShowReverseWizard(false)
             toast.success('Formula loaded — review and save when ready')
           }}
           onClose={() => setShowReverseWizard(false)}
+        />
+      )}
+
+      {showCompare && allNutrients && (
+        <CompareVersionsDialog
+          currentId={id}
+          iterations={data.iterations}
+          allNutrients={allNutrients}
+          onClose={() => setShowCompare(false)}
+        />
+      )}
+
+      {showSolverBounds && (
+        <SolverBoundsDialog
+          rows={[...lines].sort((a, b) => a.position - b.position).map(l => ({
+            key: l.key,
+            name: l.ingredientName,
+            locked: l.locked || l.pctLocked,
+            minPct: l.minPct,
+            maxPct: l.maxPct,
+          }))}
+          readOnly={isLocked}
+          onClose={() => setShowSolverBounds(false)}
+          onApply={bounds => {
+            setLines(prev => prev.map(l => (bounds[l.key] ? { ...l, ...bounds[l.key] } : l)))
+            markDirty()
+            setShowSolverBounds(false)
+            toast.success('Limits set — save, then Solve')
+          }}
         />
       )}
 
@@ -1949,7 +2032,7 @@ export function FormulationGrid({ id }: { id: string }) {
           version={data.version}
           clientName={data.project?.client ?? null}
           servingSizeG={servingSizeG ? parseFloat(servingSizeG) : undefined}
-          batchSizeG={totalWeightG}
+          finishedWeightG={calcResult.finishedWeightG}
           results={calcResult.results}
           lines={lines}
           onClose={() => setShowNfpDialog(false)}
@@ -1964,6 +2047,7 @@ export function FormulationGrid({ id }: { id: string }) {
         onCompleted={() => {
           setShowCompleteBatch(false)
           queryClient.invalidateQueries({ queryKey: ['ingredients'] })
+          queryClient.invalidateQueries({ queryKey: batchRunsKey(id) })
         }}
       />
 

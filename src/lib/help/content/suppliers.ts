@@ -153,7 +153,7 @@ export const suppliers: HelpSection = {
     },
     {
       q: 'Can two suppliers have the same name?',
-      a: 'Yes, benchtop allows it, but it’s confusing. Search before adding a new one.',
+      a: 'No. benchtop tells you when a supplier with that name already exists (capital letters and spaces at the ends don’t count as a difference). Open the existing supplier instead, or add something to tell them apart, such as the country.',
     },
   ],
 }

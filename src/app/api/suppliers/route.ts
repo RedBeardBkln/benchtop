@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { supplierContacts, suppliers } from '@/lib/db/schema'
 import { asc, eq, sql } from 'drizzle-orm'
 import { normalizeSupplierFields, supplierCreateSchema } from '@/lib/supplier-schemas'
-import { getSupplierIngredientCounts } from '@/lib/suppliers-server'
+import { duplicateSupplierResponse, findSupplierByName, getSupplierIngredientCounts } from '@/lib/suppliers-server'
 
 export async function GET() {
   const auth = await requireApi()
@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid supplier' }, { status: 400 })
   }
   const { contact, ...fields } = parsed.data
+  const same = await findSupplierByName(ctx.account.id, fields.name)
+  if (same) return duplicateSupplierResponse(same)
 
   const row = await db.transaction(async tx => {
     const [created] = await tx

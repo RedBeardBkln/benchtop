@@ -18,11 +18,14 @@ export function UsdaSearchDialog({
   onClose,
   onImported,
   initialQuery = '',
+  existingNote = '',
 }: {
   open: boolean
   onClose: () => void
   onImported: (id?: string) => void
   initialQuery?: string
+  /** What happens with an already-imported food, appended to the message, e.g. "added to formulation" */
+  existingNote?: string
 }) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -101,7 +104,7 @@ export function UsdaSearchDialog({
         }),
       }).then(async r => {
         const body = await r.json()
-        // 409 = already imported; treat as success so it auto-adds to formulation
+        // 409 = already imported; treat as success so the caller can use the existing ingredient
         if (r.status === 409 && body.existingId) {
           return { id: body.existingId, name: body.existingName, nutrientCount: null, alreadyImported: true }
         }
@@ -110,7 +113,7 @@ export function UsdaSearchDialog({
       }),
     onSuccess: data => {
       if (data.alreadyImported) {
-        toast.success(`"${data.name}" is already in your library — added to formulation`)
+        toast.success(`"${data.name}" is already in your library${existingNote ? ` — ${existingNote}` : ''}`)
       } else if (data.repaired) {
         toast.success(`"${data.name}" nutrients updated — ${data.nutrientCount} nutrients mapped`)
       } else {

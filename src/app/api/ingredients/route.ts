@@ -14,17 +14,26 @@ import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingred
 import { duplicateCounts } from '@/lib/ingredient-identity'
 import { formatIngredientName } from '@/lib/ingredient-name'
 
+// Safety cap on one response; far above any real library
+const MAX_LIST = 10000
+
 export async function GET(request: NextRequest) {
   const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const q = request.nextUrl.searchParams.get('q')?.trim()
+  // Searches (the pickers) ask for a handful; the library list gets everything
+  const requested = parseInt(request.nextUrl.searchParams.get('limit') ?? '', 10)
+  const limit = q
+    ? Math.min(Math.max(Number.isFinite(requested) ? requested : 50, 1), 50)
+    : Math.min(Math.max(Number.isFinite(requested) ? requested : MAX_LIST, 1), MAX_LIST)
 
   try {
     const formulationCountSq = db
       .select({ ingredientId: formulationLines.ingredientId, cnt: sql<number>`count(*)::int`.as('cnt') })
       .from(formulationLines)
+      .where(sql`${formulationLines.ingredientId} in (select ${ingredients.id} from ${ingredients} where ${ingredients.accountId} = ${ctx.account.id})`)
       .groupBy(formulationLines.ingredientId)
       .as('fc')
 
@@ -61,7 +70,7 @@ export async function GET(request: NextRequest) {
       )
       // A search (the formulation pickers) lists what's physically on hand first
       .orderBy(...(q ? [desc(ingredients.onHand)] : []), desc(ingredients.createdAt))
-      .limit(500)
+      .limit(limit)
 
     // Flag entries that share name + brand + supplier + item code with another entry. Computed over the
     // whole library (not just this page/search) so a filtered list still shows the flag.

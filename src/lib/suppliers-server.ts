@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server'
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { ingredients, ingredientSuppliers, suppliers } from '@/lib/db/schema'
@@ -109,4 +110,25 @@ export async function getSupplierIngredientCounts(accountId: string): Promise<Ma
   for (const s of supplierRows) sets.set(s.id, new Set(byName.get(nameKey(s.name)) ?? []))
   for (const l of links) sets.get(l.supplierId)?.add(l.ingredientId)
   return new Map([...sets].map(([id, set]) => [id, set.size]))
+}
+
+/** Another supplier in the account with this name (ignoring case and surrounding spaces), if any */
+export async function findSupplierByName(accountId: string, name: string, excludeId?: string) {
+  const [row] = await db
+    .select({ id: suppliers.id, name: suppliers.name })
+    .from(suppliers)
+    .where(and(
+      eq(suppliers.accountId, accountId),
+      sql`lower(trim(${suppliers.name})) = lower(trim(${name}))`,
+      excludeId ? sql`${suppliers.id} <> ${excludeId}` : undefined,
+    ))
+    .limit(1)
+  return row ?? null
+}
+
+export function duplicateSupplierResponse(existing: { id: string; name: string }) {
+  return NextResponse.json(
+    { error: `A supplier called "${existing.name}" already exists`, code: 'duplicate_supplier', existing },
+    { status: 409 },
+  )
 }

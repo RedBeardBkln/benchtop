@@ -98,6 +98,9 @@ export const batchRuns = pgTable('batch_runs', {
   id: uuid('id').primaryKey().defaultRandom(),
   formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),
   batchMultiplier: numeric('batch_multiplier', { precision: 10, scale: 4 }).notNull().default('1'),
+  // Total grams made (saved batch weight × multiplier) and who recorded it; null on older runs
+  batchWeightG: numeric('batch_weight_g', { precision: 14, scale: 4 }),
+  runBy: uuid('run_by'),
   notes: text('notes'),
   runAt: timestamp('run_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

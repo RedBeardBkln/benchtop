@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { ingredients, batchRuns } from '@/lib/db/schema'
+import { ingredients, batchRuns, profiles } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOwnedFormulation, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
@@ -50,6 +50,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       .values({
         formulationId: id,
         batchMultiplier: multiplier.toString(),
+        batchWeightG: (lines.reduce((t, l) => t + parseFloat(l.weightG), 0) * multiplier).toFixed(4),
+        runBy: ctx.user.id,
         notes: notes ?? null,
       })
       .returning({ id: batchRuns.id })
@@ -72,10 +74,13 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .select({
       id: batchRuns.id,
       batchMultiplier: batchRuns.batchMultiplier,
+      batchWeightG: batchRuns.batchWeightG,
       notes: batchRuns.notes,
       runAt: batchRuns.runAt,
+      runByName: profiles.fullName,
     })
     .from(batchRuns)
+    .leftJoin(profiles, eq(profiles.userId, batchRuns.runBy))
     .where(eq(batchRuns.formulationId, id))
     .orderBy(sql`${batchRuns.runAt} desc`)
 

@@ -295,6 +295,7 @@ export const formulations: HelpSection = {
         {
           type: 'steps',
           items: [
+            'Optionally click `Limits` to give ingredients a **Min %** and **Max %**, for example “sweetener at most 2%” or “oats at least 40%”. Leave a box blank for no limit, then click `Apply`. The button shows how many ingredients have limits.',
             'Click `Save` first. Solve works from the saved recipe, so it asks you to save if you haven’t.',
             'Click `Solve` (it only appears when the project has targets).',
             'Read the **LP Solver** panel. **Suggested Weights** compares the current % with the suggested %. **Constraint Audit** shows whether each target is satisfied.',
@@ -304,7 +305,7 @@ export const formulations: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: '“No feasible solution”', text: 'No mix of these ingredients can meet every target at once. Loosen a target, add a different ingredient, or unlock some ingredients.' },
+            { term: '“No feasible solution”', text: 'No mix of these ingredients can meet every target at once within your limits. Loosen a target or a limit, add a different ingredient, or unlock some ingredients.' },
             { term: '“All ingredients are locked”', text: 'Unlock at least one ingredient so Solve has something to change.' },
             { term: '“No weights entered in formulation.”', text: 'Enter amounts and save first.' },
           ],
@@ -336,7 +337,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: 'Copies include the ingredients, amounts, locks, batch and serving size, process steps and nutrient columns. They don’t include the version note, saved Nutrition Facts panels or the COGS unit size.',
+          text: 'Copies include the ingredients, amounts, locks, Solve limits, batch and serving size, process steps and nutrient columns. They don’t include the version note, saved Nutrition Facts panels or the COGS unit size.',
         },
         { type: 'h', text: 'Switching versions and describing them' },
         {
@@ -344,6 +345,7 @@ export const formulations: HelpSection = {
           items: [
             'Use the version dropdown next to the name to open another version. The newest is marked “(latest)” and finalized ones show 🔒.',
             'Type a short note in **How is this iteration different?**, such as “less sugar, more fiber”. It saves when you click away and shows in the version list, which makes versions easy to tell apart.',
+            'Click `Compare` (next to the version dropdown) to see two saved versions side by side: batch and finished weight, serving size, each ingredient’s grams and % (added ones in green, removed ones in red) and the nutrition per 100 g finished. Pick the two versions at the top; **Only show changes** hides rows that are the same.',
           ],
         },
         { type: 'h', text: 'Finalizing (locking) a version' },
@@ -393,7 +395,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: '**Servings per container** is the batch weight (before process losses) divided by the serving size, rounded the FDA way (with “about” when rounded).',
+          text: '**Servings per container** is the finished weight (the batch weight after process losses such as baking or trim) divided by the serving size, rounded the FDA way (with “about” when rounded).',
         },
         { type: 'h', text: 'Saving an approved panel' },
         {
@@ -477,6 +479,10 @@ export const formulations: HelpSection = {
           ],
         },
         {
+          type: 'p',
+          text: 'Every completed batch is listed under **Batch history**, below the process steps, with its date, multiplier, batch weight, who recorded it and your notes. Click the heading to open it. Each version keeps its own history.',
+        },
+        {
           type: 'warning',
           text: 'benchtop doesn’t stop you completing a batch when there isn’t enough stock (Preview warns you), so stock can go below zero. Recorded batches can’t be undone from the app; fix any mistake by correcting the stock on the ingredient’s page.',
         },
@@ -501,7 +507,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: 'benchtop copies the nutrition per 100 g of **finished** product (after process losses), all the allergens, the ingredient list (for your label) and, if every ingredient has a manual cost, the cost per kg. It’s a **snapshot**: later changes to the formulation don’t change the ingredient. To refresh it, open the same version and click `Save as ingredient` → `Update ingredient`.',
+          text: 'benchtop copies the nutrition per 100 g of **finished** product (after process losses), all the allergens, the ingredient list (for your label) and, if every ingredient has a cost, the cost per kg (worked out the same way as the **COGS** tab, using each ingredient’s chosen supplier price or its manual cost). It’s a **snapshot**: later changes to the formulation don’t change the ingredient. To refresh it, open the same version and click `Save as ingredient` → `Update ingredient`.',
         },
         {
           type: 'note',
@@ -635,7 +641,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Can I compare two versions side by side?',
-      a: 'Not yet. Switch between versions with the version dropdown, and use the version note to record what changed.',
+      a: 'Yes. Click `Compare` next to the version dropdown and pick the two versions. It compares what was last saved in each, so save first if you’ve made changes.',
     },
     {
       q: 'Why does my Nutrition Facts panel say “Amount per 100g”?',
@@ -647,7 +653,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'How is “servings per container” worked out?',
-      a: 'The batch weight before any process losses, divided by the serving size, rounded the FDA way.',
+      a: 'The finished weight (after the process losses on the Process tab) divided by the serving size, rounded the FDA way. With no process losses that’s simply the batch weight.',
     },
     {
       q: 'Will a saved Nutrition Facts panel change if I edit an ingredient later?',
@@ -675,7 +681,11 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Solve says “No feasible solution.”',
-      a: 'No mix of your current ingredients meets every target at once. Loosen a target, add an ingredient that helps (for example a protein isolate for a protein target), or unlock ingredients.',
+      a: 'No mix of your current ingredients meets every target at once within your `Limits`. Loosen a target or a limit, add an ingredient that helps (for example a protein isolate for a protein target), or unlock ingredients.',
+    },
+    {
+      q: 'Can I stop Solve using too much (or too little) of an ingredient?',
+      a: 'Yes. Click `Limits` next to `Solve`, enter a **Min %** and/or **Max %** for that ingredient, click `Apply`, then `Save` and `Solve`. Limits are saved with the formulation and copied when you duplicate it.',
     },
     {
       q: 'How do I use one of my recipes inside another?',
@@ -683,7 +693,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Why is the cost blank on an ingredient I saved from a formulation?',
-      a: 'At least one ingredient in it has no manual cost typed in on its Cost tab.',
+      a: 'At least one ingredient in it has no cost: no supplier price chosen for costing (in a weight unit) and no manual cost on its Cost tab. The formulation’s **COGS** tab shows which ones.',
     },
     {
       q: 'Why don’t I see the COGS tab?',
@@ -704,6 +714,10 @@ export const formulations: HelpSection = {
     {
       q: 'Why is “Run AI research” greyed out?',
       a: 'Link at least one label ingredient (or add an extra ingredient) first.',
+    },
+    {
+      q: 'Where can I see the batches I’ve made?',
+      a: 'Open the formulation version you made them from and click **Batch history** below the process steps. It only appears once a batch has been completed for that version.',
     },
     {
       q: 'Does Complete batch check I have enough stock?',

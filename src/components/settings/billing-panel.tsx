@@ -17,7 +17,12 @@ type Props = {
   devBypass: boolean
   entitled: boolean
   hasCustomer: boolean
-  subscription: { status: string; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean } | null
+  subscription: {
+    status: string
+    currentPeriodEnd: string | null
+    cancelAtPeriodEnd: boolean
+    interval: SeatInterval
+  } | null
   reason: string | null
   welcome: boolean
   checkout: 'success' | 'cancelled' | null
@@ -38,7 +43,8 @@ const STATUS_LABEL: Record<string, string> = {
 export function BillingPanel(props: Props) {
   const router = useRouter()
   const { subscription: sub } = props
-  const [busy, setBusy] = useState<null | 'checkout' | 'portal'>(null)
+  const [busy, setBusy] = useState<null | 'checkout' | 'portal' | 'interval'>(null)
+  const [confirmSwitch, setConfirmSwitch] = useState(false)
   const [interval, setBillingInterval] = useState<SeatInterval>('month')
   const [syncing, setSyncing] = useState(props.checkout === 'success' && Boolean(props.sessionId))
   const syncedRef = useRef(false)
@@ -73,6 +79,21 @@ export function BillingPanel(props: Props) {
     }
     const { url } = await res.json()
     window.location.assign(url)
+  }
+
+  // Monthly ↔ annual on the existing subscription; Stripe prorates and invoices the difference now
+  async function switchInterval(to: SeatInterval) {
+    setBusy('interval')
+    const res = await fetch('/api/billing/interval', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interval: to }),
+    })
+    setBusy(null)
+    if (!res.ok) return toast.error(await readErrorMessage(res, 'Could not change the billing interval'))
+    setConfirmSwitch(false)
+    toast.success(to === 'year' ? 'You’re now billed annually' : 'You’re now billed monthly')
+    router.refresh()
   }
 
   const statusLabel = sub
@@ -149,7 +170,10 @@ export function BillingPanel(props: Props) {
               </div>
               <div>
                 <dt className="text-gray-500">Plan</dt>
-                <dd className="text-gray-900">benchtop (all features)</dd>
+                <dd className="text-gray-900">
+                  benchtop (all features)
+                  {sub && props.entitled && ` · ${sub.interval === 'year' ? 'Annual' : 'Monthly'}, ${formatPlanPrice(sub.interval)}`}
+                </dd>
               </div>
               {sub?.currentPeriodEnd && (
                 <div>
@@ -162,6 +186,35 @@ export function BillingPanel(props: Props) {
             {sub?.cancelAtPeriodEnd && sub.currentPeriodEnd && (
               <Notice tone="warning">Your subscription is set to cancel on {formatDate(sub.currentPeriodEnd)}. You keep full access until then.</Notice>
             )}
+
+            {props.isOwner && props.configured && sub && props.entitled && !sub.cancelAtPeriodEnd && (() => {
+              const to: SeatInterval = sub.interval === 'year' ? 'month' : 'year'
+              return confirmSwitch ? (
+                <div className="rounded-md border border-gray-200 p-3 space-y-3 text-sm">
+                  <p className="text-gray-700">
+                    Switch to {to === 'year' ? 'annual' : 'monthly'} billing at {formatPlanPrice(to)}
+                    {' '}(extra team members ${SEAT_PRICE_USD[to]}/{to} each)?{' '}
+                    {sub.status === 'trialing'
+                      ? 'You won’t be charged until your trial ends.'
+                      : `You’ll be charged for the new ${to} straight away, less a credit for the unused part of your current ${sub.interval}.`}
+                  </p>
+                  <div className="flex gap-2">
+                    <button className={btnPrimary} disabled={busy !== null} onClick={() => switchInterval(to)}>
+                      {busy === 'interval' ? 'Switching…' : `Switch to ${to === 'year' ? 'annual' : 'monthly'}`}
+                    </button>
+                    <button className={btnSecondary} disabled={busy !== null} onClick={() => setConfirmSwitch(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button className="text-sm text-blue-600 hover:underline" onClick={() => setConfirmSwitch(true)}>
+                  {to === 'year'
+                    ? `Switch to annual billing and save $${PLAN_PRICE_USD.month * 12 - PLAN_PRICE_USD.year} a year`
+                    : 'Switch to monthly billing'}
+                </button>
+              )
+            })()}
 
             {!props.isOwner && (
               <p className="text-sm text-gray-500">Only the account owner can start or manage the subscription.</p>

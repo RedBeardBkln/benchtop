@@ -48,8 +48,8 @@ export const projects: HelpSection = {
           ],
         },
         {
-          type: 'warning',
-          text: 'The **Objective** can only be written when you create the project; it can’t be edited afterwards. Write it carefully, or leave it blank and keep notes in the formulations instead.',
+          type: 'tip',
+          text: 'You can change the **Objective** later: on the project page, hover over it and click the **pencil** (or click `+ Add objective` if it’s blank).',
         },
         {
           type: 'note',
@@ -195,7 +195,7 @@ export const projects: HelpSection = {
     },
     {
       q: 'Can I change the project objective after creating it?',
-      a: 'No. The objective can only be entered when the project is created. Use formulation notes or iteration notes for anything that changes.',
+      a: 'Yes. On the project page, hover over the objective and click the **pencil**, or click `+ Add objective` if there isn’t one. Edit it and click `Save`.',
     },
     {
       q: 'Why don’t I see a “New project” button?',

@@ -278,7 +278,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'tip',
-          text: 'Leave pack size or cost **blank** if you don’t know them. Don’t type 0.',
+          text: 'Leave pack size or cost **blank** if you don’t know them; benchtop won’t accept 0. If you type a **New supplier** name that already exists, the ingredient is linked to the existing supplier instead of making a second one.',
         },
         {
           type: 'p',
@@ -463,9 +463,14 @@ export const ingredients: HelpSection = {
           type: 'p',
           text: 'Equipment doesn’t have its own page. You add it from any formulation’s process step: open the **Equipment** list, choose **+ Add new equipment…**, type the name, and click `Add`. It’s then available in every formulation on your account. Adding equipment needs edit access to the ingredient library.',
         },
+        { type: 'h', text: 'Renaming or removing equipment' },
         {
-          type: 'note',
-          text: 'Equipment can’t be renamed or deleted at the moment, so check the spelling before adding.',
+          type: 'steps',
+          items: [
+            'Open any formulation and expand a process step’s **Equipment** list.',
+            'Choose **Rename or remove equipment…**. The list shows how many process steps use each item.',
+            'Click the **pencil** to rename it (every step that uses it shows the new name), or the **bin** to remove it. Steps that used removed equipment keep everything else and show no equipment.',
+          ],
         },
       ],
     },

@@ -1,5 +1,6 @@
 'use client'
 
+import { uploadStaged } from '@/lib/upload-file'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -68,10 +69,13 @@ export function NewLibraryIngredientPanel({ rawName, onCreated, onLinkExisting, 
   async function fillFromDoc(file: File) {
     setIsParsing(true)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('ingredientName', name || rawName)
-      const r = await fetch('/api/ingredients/parse-doc', { method: 'POST', body: fd })
+      // Straight to storage first: large PDFs would be refused by our own server
+      const stagedPath = await uploadStaged(file)
+      const r = await fetch('/api/ingredients/parse-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stagedPath, ingredientName: name || rawName }),
+      })
       const data = await r.json()
       if (!r.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Could not read the document')
       const found: Array<{ name: string; amountPer100g: number; unit: string }> = data.nutrients ?? []

@@ -120,9 +120,10 @@ function TempFields({ savedC, disabled, onCommit }: {
 }
 
 const NEW_EQUIPMENT = '__new__'
+const MANAGE_EQUIPMENT = '__manage__'
 
 /** Equipment dropdown with an "Add new equipment…" option that swaps in a name box. */
-function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelect, onCreate, onRefresh }: {
+function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelect, onCreate, onRefresh, onManage }: {
   equipmentId: string | null
   equipmentName: string | null
   options: Equipment[]
@@ -131,6 +132,8 @@ function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelec
   onCreate: (name: string) => Promise<void>
   /** Re-fetch the shared list (it may have grown in another tab or formulation). */
   onRefresh: () => void
+  /** Open the rename/remove list; omitted when the user can't change the library */
+  onManage?: () => void
 }) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -192,6 +195,7 @@ function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelec
         onFocus={onRefresh}
         onChange={(e) => {
           if (e.target.value === NEW_EQUIPMENT) setAdding(true)
+          else if (e.target.value === MANAGE_EQUIPMENT) onManage?.()
           else onSelect(e.target.value || null)
         }}
         className={INPUT}
@@ -199,6 +203,7 @@ function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelec
         <option value="">—</option>
         {choices.map((eq) => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
         {!disabled && <option value={NEW_EQUIPMENT}>+ Add new equipment…</option>}
+        {!disabled && onManage && <option value={MANAGE_EQUIPMENT}>Rename or remove equipment…</option>}
       </select>
     </Field>
   )
@@ -221,7 +226,9 @@ const timeNormalize = (raw: string): Normalized => {
  * The measurement fields for one step, rendered as flex items so they sit on the same
  * row as the loss controls (the parent is a wrapping flex container).
  */
-export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectEquipment, onCreateEquipment, onRefreshEquipment }: {
+export function StepMeasurements({
+  step, disabled, equipment, onPatch, onSelectEquipment, onCreateEquipment, onRefreshEquipment, onManageEquipment,
+}: {
   step: ProcessStepDetail
   disabled: boolean
   equipment: Equipment[]
@@ -230,6 +237,7 @@ export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectE
   onSelectEquipment: (id: string | null) => void
   onCreateEquipment: (name: string) => Promise<void>
   onRefreshEquipment: () => void
+  onManageEquipment?: () => void
 }) {
   const p = (step.params ?? {}) as StepParams
   const one = (key: keyof StepParams) => (v: string | null) => onPatch({ [key]: v })
@@ -248,6 +256,7 @@ export function StepMeasurements({ step, disabled, equipment, onPatch, onSelectE
       <EquipmentField
         equipmentId={step.equipmentId} equipmentName={step.equipmentName} options={equipment} disabled={disabled}
         onSelect={onSelectEquipment} onCreate={onCreateEquipment} onRefresh={onRefreshEquipment}
+        onManage={onManageEquipment}
       />
       <MeasureField label="Notes" maxLength={2000} className="basis-full" saved={p.notes ?? ''} disabled={disabled} onCommit={one('notes')} />
     </>

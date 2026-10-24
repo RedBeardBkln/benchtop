@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredientDocs } from '@/lib/db/schema'
 import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
-import { AdminNotConfiguredError, DOCS_BUCKET, ensureDocsBucket, getSupabaseAdmin } from '@/lib/supabase/admin'
+import { AdminNotConfiguredError, DOCS_BUCKET, getSupabaseAdmin } from '@/lib/supabase/admin'
+import {
+  isOwnStagedPath, moveStaged, removeStaged, stagedFileName, stagedSize, STAGED_MAX_BYTES,
+} from '@/lib/staged-upload'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-const MAX_BYTES = 20 * 1024 * 1024 // 20 MB
+const bodySchema = z.object({
+  // Where the browser uploaded the file (see lib/staged-upload)
+  stagedPath: z.string().min(1).max(512),
+  label: z.string().trim().min(1, 'Label is required').max(255),
+})
 
 export async function POST(req: NextRequest, { params }: Ctx) {
   const auth = await requireApi({ libraryEdit: true })
@@ -18,48 +26,28 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   // Ownership is verified here; the storage calls below use the service role and bypass bucket policies
   if (!(await getOwnedIngredient(ctx, id))) return notFoundResponse()
 
-  let formData: FormData
-  try {
-    formData = await req.formData()
-  } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
-  }
+  const parsed = bodySchema.safeParse(await req.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: 'file and label are required' }, { status: 400 })
+  const { stagedPath, label } = parsed.data
+  if (!isOwnStagedPath(ctx.account.id, stagedPath)) return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
 
-  const file = formData.get('file') as File | null
-  const label = (formData.get('label') as string | null)?.trim()
-
-  if (!file || !label) {
-    return NextResponse.json({ error: 'file and label are required' }, { status: 400 })
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: 'File too large (max 20 MB)' }, { status: 413 })
-  }
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   // New uploads are namespaced by account; existing objects keep their old path (stored in file_path)
-  const filePath = `${ctx.account.id}/${id}/${Date.now()}-${safeName}`
+  const filePath = `${ctx.account.id}/${id}/${Date.now()}-${stagedFileName(stagedPath)}`
 
-  let uploadError: { message: string } | null
   try {
-    const upload = () =>
-      getSupabaseAdmin()
-        .storage.from(DOCS_BUCKET)
-        .upload(filePath, file, { contentType: file.type, upsert: false })
-    let result = await upload()
-    if (result.error && /bucket not found/i.test(result.error.message)) {
-      const createError = await ensureDocsBucket()
-      if (!createError) result = await upload()
+    const size = await stagedSize(stagedPath)
+    if (size == null) return NextResponse.json({ error: 'Upload not found — try again' }, { status: 404 })
+    if (size > STAGED_MAX_BYTES) {
+      await removeStaged(stagedPath)
+      return NextResponse.json({ error: 'File too large (max 20 MB)' }, { status: 413 })
     }
-    uploadError = result.error
+    const moveError = await moveStaged(stagedPath, filePath)
+    if (moveError) return NextResponse.json({ error: `Storage upload failed: ${moveError.message}` }, { status: 500 })
   } catch (err) {
     if (err instanceof AdminNotConfiguredError) {
       return NextResponse.json({ error: 'Document storage is not configured', code: 'storage_not_configured' }, { status: 503 })
     }
     throw err
-  }
-
-  if (uploadError) {
-    return NextResponse.json({ error: `Storage upload failed: ${uploadError.message}` }, { status: 500 })
   }
 
   try {

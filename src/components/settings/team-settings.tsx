@@ -70,6 +70,8 @@ export function TeamSettings() {
   const [editing, setEditing] = useState<{ userId: string; role: 'admin' | 'member'; access: MemberAccess } | null>(null)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [newOwner, setNewOwner] = useState('')
+  const [transferring, setTransferring] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/team')
@@ -133,6 +135,28 @@ export function TeamSettings() {
     else toast.success(`${who} was removed`)
     if (editing?.userId === member.userId) setEditing(null)
     load()
+  }
+
+  async function transferOwnership() {
+    const target = team?.members.find(m => m.userId === newOwner)
+    if (!target) return
+    const who = target.fullName || target.email || 'this person'
+    if (!window.confirm(
+      `Make ${who} the owner of this account? They will control billing, the subscription and account deletion. ` +
+      'You will become an admin and keep full access to everything else. Only the new owner can undo this.',
+    )) return
+    setTransferring(true)
+    const res = await fetch('/api/team/transfer-ownership', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: newOwner }),
+    })
+    setTransferring(false)
+    if (!res.ok) return toast.error(await readErrorMessage(res, 'Could not transfer ownership'))
+    toast.success(`${who} is now the account owner`)
+    setNewOwner('')
+    // The billing and account pages read the role on the server
+    window.location.reload()
   }
 
   async function resync() {
@@ -359,6 +383,31 @@ export function TeamSettings() {
               </li>
             ))}
           </ul>
+        </Card>
+      )}
+
+      {team.members.find(m => m.userId === team.me)?.role === 'owner' && team.members.length > 1 && (
+        <Card
+          title="Transfer ownership"
+          description="Hand the account to another team member, for example when you leave the company. You become an admin."
+        >
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[14rem]">
+              <Field label="New owner" htmlFor="new-owner">
+                <select id="new-owner" value={newOwner} onChange={e => setNewOwner(e.target.value)} className={inputCls}>
+                  <option value="">Choose a team member…</option>
+                  {team.members.filter(m => m.userId !== team.me).map(m => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.fullName ? `${m.fullName}${m.email ? ` (${m.email})` : ''}` : (m.email ?? 'Unknown user')}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <button type="button" onClick={transferOwnership} disabled={!newOwner || transferring} className={btnSecondary}>
+              {transferring ? 'Transferring…' : 'Transfer ownership'}
+            </button>
+          </div>
         </Card>
       )}
     </>

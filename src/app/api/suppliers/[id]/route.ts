@@ -5,7 +5,7 @@ import { suppliers, ingredientSuppliers, supplierContacts } from '@/lib/db/schem
 import { and, asc, eq } from 'drizzle-orm'
 import { isUuid, getOwnedSupplier, notFoundResponse } from '@/lib/tenancy'
 import { normalizeSupplierFields, supplierPatchSchema } from '@/lib/supplier-schemas'
-import { getSupplierIngredients, renameSupplierOnIngredients } from '@/lib/suppliers-server'
+import { duplicateSupplierResponse, findSupplierByName, getSupplierIngredients, renameSupplierOnIngredients } from '@/lib/suppliers-server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -42,6 +42,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   const existing = await getOwnedSupplier(ctx, id)
   if (!existing) return notFoundResponse()
+  if (parsed.data.name !== undefined) {
+    const same = await findSupplierByName(ctx.account.id, parsed.data.name, id)
+    if (same) return duplicateSupplierResponse(same)
+  }
 
   const result = await db.transaction(async tx => {
     const [row] = await tx
