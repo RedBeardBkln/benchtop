@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { IngredientDetail, Nutrient } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
+import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
 
 const CATEGORY_ORDER = ['macros', 'vitamins', 'minerals', 'other'] as const
 
@@ -24,9 +25,7 @@ const STANDARD_CERTS = [
 
 type SidePanelTab = 'nutrients' | 'allergens' | 'info' | 'suppliers'
 
-type NutrientEdit = {
-  amount: string
-  sourceRef: string
+type NutrientEdit = NutrientEditSource & {
   rowId?: string
 }
 
@@ -40,6 +39,7 @@ export function IngredientSidePanel({
   lineKey,
   formulationLocked,
   canEditLibrary,
+  onNutrientsSaved,
   onClose,
   onSwap,
 }: {
@@ -48,6 +48,8 @@ export function IngredientSidePanel({
   formulationLocked: boolean
   /** Nutrient, allergen, cert and verification edits change the shared library ingredient */
   canEditLibrary: boolean
+  /** Called after nutrients are saved, so the open formulation can pick up the new values */
+  onNutrientsSaved?: (ingredientId: string) => void
   onClose: () => void
   onSwap: (lineKey: string, ingredientName: string) => void
 }) {
@@ -82,7 +84,12 @@ export function IngredientSidePanel({
     for (const n of allNutrients) {
       const existing = data.nutrients.find(row => row.nutrientId === n.id)
       edits[n.id] = existing
-        ? { amount: String(parseFloat(existing.amountPer100g)), sourceRef: existing.sourceRef, rowId: existing.id }
+        ? {
+            amount: String(parseFloat(existing.amountPer100g)),
+            sourceRef: existing.sourceRef,
+            originalAmount: String(parseFloat(existing.amountPer100g)),
+            rowId: existing.id,
+          }
         : { amount: '', sourceRef: '' }
     }
     setNutrientEdits(edits)
@@ -128,6 +135,7 @@ export function IngredientSidePanel({
       invalidate()
       setEditingNutrients(false)
       initDoneRef.current = false
+      onNutrientsSaved?.(ingredientId)
       toast.success('Nutrients saved')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -192,7 +200,7 @@ export function IngredientSidePanel({
       } else {
         const amount = parseFloat(edit.amount)
         if (isNaN(amount) || amount < 0) continue
-        const sourceRef = edit.sourceRef || globalSource
+        const sourceRef = nutrientSourceFor(edit, globalSource)
         if (!sourceRef) { toast.error('Enter a source reference before saving'); return }
         values.push({ nutrientId, amountPer100g: amount, sourceRef })
       }

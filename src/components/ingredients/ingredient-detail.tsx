@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
+import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 import { IngredientCostPanel } from './ingredient-cost-panel'
 import { EditIngredientDialog, toEditable, type EditableIngredient } from './edit-ingredient-dialog'
@@ -63,9 +64,8 @@ type SupplierLinkForm = {
   isPreferred: boolean
 }
 
-type NutrientEdit = {
-  amount: string    // '' = no value / delete if rowId exists
-  sourceRef: string // '' = will use globalSource on save
+type NutrientEdit = NutrientEditSource & {
+  // amount '' = no value / delete if rowId exists
   rowId?: string    // existing ingredient_nutrient row id
 }
 
@@ -165,6 +165,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
         ? {
             amount: String(parseFloat(existing.amountPer100g)),
             sourceRef: existing.sourceRef,
+            originalAmount: String(parseFloat(existing.amountPer100g)),
             rowId: existing.id,
           }
         : { amount: '', sourceRef: '' }
@@ -398,7 +399,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
       } else {
         const amount = parseFloat(edit.amount)
         if (isNaN(amount) || amount < 0) continue
-        const sourceRef = edit.sourceRef || globalSource
+        const sourceRef = nutrientSourceFor(edit, globalSource)
         if (!sourceRef) {
           toast.error('Enter a source reference before saving')
           return
@@ -428,6 +429,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           updated[p.nutrientId] = {
             amount: String(p.amountPer100g),
             sourceRef: `Parsed from: ${result.docLabel}`,
+            originalAmount: updated[p.nutrientId]?.originalAmount,
+            fromParse: true,
             rowId: updated[p.nutrientId]?.rowId,
           }
         }
@@ -953,8 +956,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                             {rows.map(n => {
                               const edit = nutrientEdits[n.id] ?? { amount: '', sourceRef: '' }
                               const hasValue = edit.amount !== ''
-                              const sourceDisplay = edit.sourceRef
-                                || (hasValue ? globalSource : '')
+                              const sourceDisplay = hasValue ? nutrientSourceFor(edit, globalSource) : ''
 
                               return (
                                 <tr key={n.id} className={hasValue ? '' : 'opacity-60'}>
@@ -974,8 +976,9 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                                           [n.id]: {
                                             ...prev[n.id],
                                             amount: e.target.value,
-                                            // clear specific source so globalSource applies
+                                            // A retyped value takes the source reference typed above
                                             sourceRef: prev[n.id]?.rowId ? prev[n.id].sourceRef : '',
+                                            fromParse: false,
                                           },
                                         }))
                                       }

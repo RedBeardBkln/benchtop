@@ -148,7 +148,7 @@ export const ingredients: HelpSection = {
           type: 'steps',
           items: [
             'Open the ingredient and go to the **Nutrients** tab. Click `Edit nutrients`.',
-            'At the top, type a **Source reference**, which says where the numbers came from, such as “Supplier COA Q2-2024”. This is required.',
+            'At the top, type a **Source reference**, which says where the numbers came from, such as “Supplier COA Q2-2024”. It’s saved with every value you add or change; values you don’t touch keep the source they already had. New values can’t be saved without one.',
             'Type each value per 100 g in the unit shown. Use **×** to clear a value.',
             'Click `Save nutrients`.',
           ],
@@ -174,7 +174,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'note',
-          text: 'Changing a value that already had a source keeps its old source note. You can also edit nutrients from inside a formulation by clicking the ingredient’s name; that changes the library ingredient everywhere it’s used.',
+          text: 'Values read from a document keep “Parsed from: …” as their source. You can also edit nutrients from inside a formulation by clicking the ingredient’s name; that changes the library ingredient everywhere it’s used.',
         },
       ],
     },

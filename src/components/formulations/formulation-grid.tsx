@@ -9,7 +9,7 @@ import {
   Database, ArrowLeftRight, GitBranch, Target, CheckCircle2, XCircle, AlertCircle,
   GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer, PackagePlus,
 } from 'lucide-react'
-import type { FormulationDetail, IngredientListRow, Nutrient, ProjectTarget } from '@/lib/types'
+import type { FormulationDetail, IngredientDetail, IngredientListRow, Nutrient, ProjectTarget } from '@/lib/types'
 import { categoryPath, onHandAlternatives } from '@/lib/ingredient-categories'
 import { calcNutrientContributions, calcNutrientProfile, formatAmt, type NutrientContribution } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
@@ -638,6 +638,22 @@ export function FormulationGrid({ id }: { id: string }) {
   })
 
   function markDirty() { setIsDirty(true) }
+
+  // The grid keeps each line's nutrient values from when the page loaded; after they're edited in
+  // the side panel, load the new ones so totals update. Not an edit to the formula, so not dirty.
+  async function refreshLineNutrients(ingredientId: string) {
+    const r = await fetch(`/api/ingredients/${ingredientId}`)
+    if (!r.ok) return
+    const ing: IngredientDetail = await r.json()
+    const nutrients = ing.nutrients.map(n => ({
+      nutrientId: n.nutrientId,
+      amountPer100g: parseFloat(n.amountPer100g),
+      name: n.nutrient.name,
+      unit: n.nutrient.unit,
+      category: n.nutrient.category,
+    }))
+    setLines(prev => prev.map(l => (l.ingredientId === ingredientId ? { ...l, nutrients } : l)))
+  }
 
   // Grid edits only persist on Save, so leaving with unsaved ones asks first
   const confirmLeave = useUnsavedChangesWarning(isDirty)
@@ -1900,6 +1916,7 @@ export function FormulationGrid({ id }: { id: string }) {
           lineKey={sidebarLineKey}
           formulationLocked={isLocked}
           canEditLibrary={data?.canEditLibrary ?? false}
+          onNutrientsSaved={refreshLineNutrients}
           onClose={() => { setSidebarIngredientId(null); setSidebarLineKey(null) }}
           onSwap={(lk, name) => {
             setSidebarIngredientId(null)

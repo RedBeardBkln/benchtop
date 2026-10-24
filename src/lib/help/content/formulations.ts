@@ -212,7 +212,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'warning',
-          text: 'Edits made in the side panel change the ingredient in your **library**, so they affect **every** formulation that uses it. Reload the page to see the new nutrient values in the grid.',
+          text: 'Edits made in the side panel change the ingredient in your **library**, so they affect **every** formulation that uses it. The formulation you have open updates straight away.',
         },
       ],
     },
