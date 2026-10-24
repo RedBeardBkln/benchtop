@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
 import { PLAN_PRICE_USD, SEAT_PRICE_USD, formatPlanPrice, type SeatInterval } from '@/lib/billing/seats'
 import { btnPrimary, btnSecondary, Card, formatDate, Notice } from './ui'
+import { Term } from '@/components/term'
 
 type Props = {
   isOwner: boolean
@@ -28,6 +29,19 @@ type Props = {
   checkout: 'success' | 'cancelled' | null
   sessionId: string | null
 }
+
+// What each status means, shown when you hover or tap it
+const STATUS_TIP: Record<string, string> = {
+  Active: 'You’re subscribed and paid up.',
+  Trial: 'You’ve subscribed, but the first charge waits until your free time ends.',
+  'Payment past due': 'Your last payment failed. You keep access while Stripe retries; update the card under Manage billing.',
+  'Free period': 'Your account is free until the date shown. Subscribe before then to keep access.',
+  'Free trial': 'You’re in your free trial. Subscribe before it ends to keep access; you won’t be charged until then.',
+  'No subscription': 'No free time is left and nobody has subscribed, so most of benchtop is locked.',
+}
+const INACTIVE_TIP = 'The subscription isn’t active, so most of benchtop is locked until the owner subscribes again. Your data is kept.'
+
+const PORTAL_TIP = 'Opens Stripe’s billing page, where you can change your card, see and download invoices, or cancel.'
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Active',
@@ -130,7 +144,7 @@ export function BillingPanel(props: Props) {
               </Notice>
             )}
             {props.isOwner && props.configured && props.hasCustomer && (
-              <button className={btnSecondary} disabled={busy !== null} onClick={() => go('portal')}>
+              <button className={btnSecondary} disabled={busy !== null} onClick={() => go('portal')} data-tip={PORTAL_TIP}>
                 {busy === 'portal' ? 'Opening…' : 'Manage billing'}
               </button>
             )}
@@ -164,12 +178,14 @@ export function BillingPanel(props: Props) {
                       props.entitled && (sub || props.freeAccess) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
                     }`}
                   >
-                    {statusLabel}
+                    <Term tip={STATUS_TIP[statusLabel] ?? INACTIVE_TIP}>{statusLabel}</Term>
                   </span>
                 </dd>
               </div>
               <div>
-                <dt className="text-gray-500">Plan</dt>
+                <dt className="text-gray-500">
+                  <Term tip="One plan with every feature, billed monthly or annually. Extra team members are billed as seats.">Plan</Term>
+                </dt>
                 <dd className="text-gray-900">
                   benchtop (all features)
                   {sub && props.entitled && ` · ${sub.interval === 'year' ? 'Annual' : 'Monthly'}, ${formatPlanPrice(sub.interval)}`}
@@ -177,7 +193,11 @@ export function BillingPanel(props: Props) {
               </div>
               {sub?.currentPeriodEnd && (
                 <div>
-                  <dt className="text-gray-500">{sub.cancelAtPeriodEnd ? 'Access until' : 'Renews on'}</dt>
+                  <dt className="text-gray-500">
+                    {sub.cancelAtPeriodEnd
+                      ? <Term tip="Your subscription is cancelled. You keep full access until this date.">Access until</Term>
+                      : <Term tip="The next charge, which starts a new billing period">Renews on</Term>}
+                  </dt>
                   <dd className="text-gray-900">{formatDate(sub.currentPeriodEnd)}</dd>
                 </div>
               )}
@@ -208,7 +228,8 @@ export function BillingPanel(props: Props) {
                   </div>
                 </div>
               ) : (
-                <button className="text-sm text-blue-600 hover:underline" onClick={() => setConfirmSwitch(true)}>
+                <button className="text-sm text-blue-600 hover:underline" onClick={() => setConfirmSwitch(true)}
+                  data-tip="Shows the new price and what you’d be charged. Nothing changes until you confirm.">
                   {to === 'year'
                     ? `Switch to annual billing and save $${PLAN_PRICE_USD.month * 12 - PLAN_PRICE_USD.year} a year`
                     : 'Switch to monthly billing'}
@@ -253,12 +274,16 @@ export function BillingPanel(props: Props) {
             {props.isOwner && props.configured && (
               <div className="flex flex-wrap gap-3">
                 {(!sub || !props.entitled) && (
-                  <button className={btnPrimary} disabled={busy !== null} onClick={() => go('checkout')}>
+                  <button className={btnPrimary} disabled={busy !== null} onClick={() => go('checkout')}
+                    data-tip={props.freeAccess
+                      ? 'Takes you to Stripe to enter your card. Billing starts when your free time ends (straight away if that’s within two days).'
+                      : 'Takes you to Stripe to enter your card and start the subscription. benchtop never sees your card number.'}
+                  >
                     {busy === 'checkout' ? 'Redirecting…' : sub ? 'Resubscribe' : 'Subscribe'}
                   </button>
                 )}
                 {props.hasCustomer && (
-                  <button className={btnSecondary} disabled={busy !== null} onClick={() => go('portal')}>
+                  <button className={btnSecondary} disabled={busy !== null} onClick={() => go('portal')} data-tip={PORTAL_TIP}>
                     {busy === 'portal' ? 'Opening…' : 'Manage billing'}
                   </button>
                 )}

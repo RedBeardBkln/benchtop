@@ -8,6 +8,7 @@ import type { IngredientSupplierWithName } from '@/lib/types'
 import { formatMoney, fromPerKg, pricePerKg, resolveIngredientCost, toPerKg } from '@/lib/costing'
 import type { CostUnit } from '@/lib/preferences'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 // The Cost tab on an ingredient: a manually entered price ($/kg or $/lb), or one of its supplier
 // prices chosen as the cost. Formulations use whichever resolveIngredientCost picks.
@@ -85,7 +86,7 @@ export function IngredientCostPanel({
       <div className="rounded-lg border border-gray-200 bg-white p-4 flex items-start gap-3">
         <DollarSign size={18} className="text-gray-400 mt-0.5 shrink-0" />
         <div className="min-w-0">
-          <div className="text-xs text-gray-500">Cost used in formulations</div>
+          <div className="text-xs text-gray-500"><Term t="costPerKg">Cost</Term> used in formulations</div>
           {cost ? (
             <>
               <div className="text-lg font-semibold text-gray-900 tabular-nums">
@@ -128,6 +129,7 @@ export function IngredientCostPanel({
             value={price}
             onChange={e => setPrice(e.target.value)}
             aria-label="Price"
+            data-tip="Your own price for this ingredient, per kg or lb. Leave blank and save to clear it."
             placeholder="0.00"
             className="w-32 px-2 py-1.5 text-sm border border-gray-300 rounded-md tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -141,6 +143,7 @@ export function IngredientCostPanel({
               setEntryUnit(next)
             }}
             aria-label="Price unit"
+            data-tip="The unit the price is per. Switching converts the number you typed so the price stays the same."
             className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white"
           >
             <option value="kg">kg</option>
@@ -149,6 +152,7 @@ export function IngredientCostPanel({
           <button
             type="submit"
             disabled={!dirty || priceInvalid || saveManual.isPending}
+            data-tip={priceInvalid ? 'Enter a price above zero first.' : !dirty ? 'Nothing has changed yet.' : 'Saves this manual price. It’s used whenever no supplier price is chosen.'}
             className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             {saveManual.isPending ? 'Saving…' : 'Save'}
@@ -159,14 +163,14 @@ export function IngredientCostPanel({
 
       {/* Supplier prices */}
       {canEdit && <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <h3 className="text-sm font-semibold text-gray-900">Use a supplier&apos;s price</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Use a <Term t="useForCost">supplier&apos;s price</Term></h3>
         <p className="text-xs text-gray-500 mb-3">
           Choose one to use instead of the manual price. Prices per kg, g, lb, oz or tonne convert automatically.
         </p>
         {priced.length === 0 ? (
           <p className="text-sm text-gray-500">
             No supplier prices yet.{' '}
-            <button type="button" onClick={onGoToSuppliers} className="text-blue-600 hover:underline">
+            <button type="button" onClick={onGoToSuppliers} data-tip="Opens the Suppliers tab, where you link a supplier and enter its price." className="text-blue-600 hover:underline">
               Add one on the Suppliers tab →
             </button>
           </p>
@@ -191,7 +195,7 @@ export function IngredientCostPanel({
                       type="button"
                       onClick={() => chooseLink.mutate({ linkId: s.id, use: false })}
                       disabled={chooseLink.isPending}
-                      title="Stop using this price"
+                      data-tip="Stops using this supplier’s price. Formulations fall back to the manual price, if there is one."
                       className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
                     >
                       <Check size={12} /> In use
@@ -201,6 +205,7 @@ export function IngredientCostPanel({
                       type="button"
                       onClick={() => chooseLink.mutate({ linkId: s.id, use: true })}
                       disabled={chooseLink.isPending || perKg == null}
+                      data-tip={perKg == null ? 'This price isn’t per kg, g, lb, oz or tonne, so it can’t be converted to a cost.' : 'Makes this supplier’s price the cost formulations use, instead of the manual price.'}
                       className="px-2.5 py-1 text-xs rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
                     >
                       Use this price

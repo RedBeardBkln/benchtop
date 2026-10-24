@@ -92,6 +92,7 @@ export function ClientSelect({
           type="button"
           onClick={() => newName.trim() && create.mutate(newName.trim())}
           disabled={!newName.trim() || create.isPending}
+          data-tip={newName.trim() ? 'Adds this client to your account’s client list and selects it.' : 'Type the client’s name first.'}
           className="shrink-0 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
           {create.isPending ? 'Adding…' : 'Add'}
@@ -117,6 +118,11 @@ export function ClientSelect({
         if (e.target.value === NEW) setAdding(true)
         else onChange(e.target.value || null)
       }}
+      data-tip={[
+        'The customer this project is for. Members can be given access to projects by client.',
+        data?.canChooseNone === false ? 'Your access covers only certain clients, so you must pick one.' : '',
+        data?.canManage ? 'Choose “+ New client…” to add one.' : '',
+      ].filter(Boolean).join(' ')}
       className={fieldCls}
     >
       {isLoading && <option value="">Loading clients…</option>}

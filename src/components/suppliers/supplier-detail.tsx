@@ -10,6 +10,7 @@ import { EMPTY_ADDRESS, type ClientAddress } from '@/lib/client-schemas'
 import type { SupplierIngredient } from '@/lib/suppliers-server'
 import { readErrorMessage } from '@/lib/utils'
 import { AddressFields, Contacts, Field, Section, inputCls, type Contact } from '@/components/records/record-fields'
+import { Term } from '@/components/term'
 
 type SupplierDetailData = {
   id: string
@@ -69,8 +70,10 @@ function Ingredients({ items }: { items: SupplierIngredient[] }) {
               <tr>
                 <th className="px-4 sm:px-5 py-2 text-left font-medium">Ingredient</th>
                 <th className="px-3 py-2 text-left font-medium">Brand / item code</th>
-                <th className="px-3 py-2 text-left font-medium">Pack</th>
-                <th className="px-4 sm:px-5 py-2 text-right font-medium">Cost</th>
+                <th className="px-3 py-2 text-left font-medium"><Term t="packSize">Pack</Term></th>
+                <th className="px-4 sm:px-5 py-2 text-right font-medium">
+                  <Term tip="This supplier’s price per pack unit, recorded on the ingredient’s Suppliers tab. Change it there.">Cost</Term>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -79,12 +82,13 @@ function Ingredients({ items }: { items: SupplierIngredient[] }) {
                   <td className="px-4 sm:px-5 py-2">
                     <Link href={`/ingredients/${i.id}`} className="text-gray-900 hover:text-blue-700 hover:underline">{i.name}</Link>
                     {i.link?.isPreferred && (
-                      <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700">Preferred</span>
+                      <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700">
+                        <Term t="preferredSupplier">Preferred</Term>
+                      </span>
                     )}
                     {!i.link && (
-                      <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-500"
-                        title="This ingredient names the supplier in its Supplier field but has no pack size or cost recorded">
-                        Named
+                      <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-500">
+                        <Term tip="This ingredient names the supplier in its Supplier field but isn’t linked, so it has no pack size or cost here.">Named</Term>
                       </span>
                     )}
                     {i.category && <div className="text-xs text-gray-400">{i.category}</div>}
@@ -167,14 +171,14 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
     <div className="space-y-5 pb-20">
       <Section title="Details">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Supplier name *" htmlFor="supplier-name">
+          <Field label="Supplier name *" htmlFor="supplier-name" hint={ro ? undefined : 'Renaming also updates the Supplier text on ingredients that use the old name.'}>
             <input id="supplier-name" value={form.name} onChange={text('name')} disabled={ro} className={inputCls} />
           </Field>
           <Field label="Website" htmlFor="supplier-website">
             <div className="flex items-center gap-2">
               <input id="supplier-website" value={form.websiteUrl} onChange={text('websiteUrl')} disabled={ro} placeholder="https://" className={inputCls} />
               {supplier.websiteUrl && (
-                <a href={supplier.websiteUrl} target="_blank" rel="noopener noreferrer" title="Open website"
+                <a href={supplier.websiteUrl} target="_blank" rel="noopener noreferrer" data-tip="Open the supplier’s website in a new tab"
                   aria-label="Open website" className="p-1.5 text-gray-400 hover:text-blue-600 shrink-0">
                   <ExternalLink size={14} />
                 </a>
@@ -187,10 +191,10 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
           <Field label="Main phone" htmlFor="supplier-phone">
             <input id="supplier-phone" type="tel" value={form.phone} onChange={text('phone')} disabled={ro} className={inputCls} />
           </Field>
-          <Field label="Our account #" htmlFor="supplier-account" hint="Your customer number with this supplier">
+          <Field label="Our account #" htmlFor="supplier-account" term="accountNumber">
             <input id="supplier-account" value={form.accountNumber} onChange={text('accountNumber')} disabled={ro} className={inputCls} autoComplete="off" />
           </Field>
-          <Field label="Payment terms" htmlFor="supplier-terms">
+          <Field label="Payment terms" htmlFor="supplier-terms" term="paymentTerms">
             <input id="supplier-terms" list="supplier-payment-terms" value={form.paymentTerms} onChange={text('paymentTerms')} disabled={ro} placeholder="e.g. Net 30" className={inputCls} />
             <datalist id="supplier-payment-terms">{PAYMENT_TERMS.map(t => <option key={t} value={t} />)}</datalist>
           </Field>
@@ -228,6 +232,7 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-700">Delete {supplier.name} and its contacts?</span>
               <button type="button" onClick={() => remove.mutate()} disabled={remove.isPending}
+                data-tip="Permanently deletes this supplier and all its contacts. This can’t be undone."
                 className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50">
                 {remove.isPending ? 'Deleting…' : 'Delete'}
               </button>
@@ -238,6 +243,7 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
             </div>
           ) : (
             <button type="button" onClick={() => setConfirmDelete(true)}
+              data-tip="Deletes this supplier and its contacts. You’ll be asked to confirm."
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-md hover:bg-red-50">
               <Trash2 size={14} /> Delete supplier
             </button>
@@ -249,13 +255,14 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
       {dirty && (
         <div className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-lg bg-ink-900 text-white px-4 py-2.5 shadow-lg">
           <span className="text-sm">Unsaved changes</span>
-          <button type="button" onClick={() => setForm(initial)} className="text-sm text-gray-300 hover:text-white">
+          <button type="button" onClick={() => setForm(initial)} data-tip="Undo every unsaved change on this page" className="text-sm text-gray-300 hover:text-white">
             Discard
           </button>
           <button
             type="button"
             onClick={() => save.mutate()}
             disabled={!form.name.trim() || save.isPending}
+            data-tip={form.name.trim() ? 'Saves the supplier’s details and address. Contacts save on their own.' : 'Enter a supplier name first.'}
             className="px-3 py-1.5 text-sm bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             {save.isPending ? 'Saving…' : 'Save'}

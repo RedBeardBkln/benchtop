@@ -46,7 +46,7 @@ export function TaxonomyField({ label, value, onChange, options, placeholder, no
           type="button"
           onClick={() => { onChange(''); setAdding(false) }}
           aria-label="Back to list"
-          title="Back to list"
+          data-tip="Clears what you typed and goes back to picking from the existing list."
           className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
         >
           <X size={14} />
@@ -60,6 +60,7 @@ export function TaxonomyField({ label, value, onChange, options, placeholder, no
   return (
     <select
       aria-label={label}
+      data-tip={`Pick an existing ${label.toLowerCase()}, or choose “Add new…” to type one. New values become options once saved.`}
       value={current}
       onChange={e => {
         if (e.target.value === ADD_NEW) { onChange(''); setAdding(true) } else onChange(e.target.value)

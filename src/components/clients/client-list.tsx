@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Building2, Plus, Search, X } from 'lucide-react'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 type ClientRow = {
   id: string
@@ -72,6 +73,7 @@ function NewClientDialog({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={!name.trim() || create.isPending}
+              data-tip={name.trim() ? 'Adds the client and opens its record so you can fill in the rest. Names must be unique.' : 'Type the client’s name first.'}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {create.isPending ? 'Adding…' : 'Add client'}
@@ -110,6 +112,7 @@ export function ClientList() {
         </div>
         <button
           onClick={() => setDialogOpen(true)}
+          data-tip="Add a customer you formulate for. Link projects to them from each project’s page."
           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shrink-0"
         >
           <Plus size={14} /> New client
@@ -124,6 +127,7 @@ export function ClientList() {
             onChange={e => setQuery(e.target.value)}
             placeholder="Search clients or contacts"
             aria-label="Search clients"
+            data-tip="Finds clients by their name or their primary contact’s name"
             className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -146,9 +150,13 @@ export function ClientList() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Client</th>
-                <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">Primary contact</th>
-                <th className="px-4 py-3 text-right font-medium">Projects</th>
+                <th className="px-4 py-3 text-left font-medium"><Term t="client">Client</Term></th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">
+                  <Term tip="The main person to talk to at this client (or the first contact listed). Change it with the star on a contact card.">Primary contact</Term>
+                </th>
+                <th className="px-4 py-3 text-right font-medium">
+                  <Term tip="How many projects are linked to this client, including archived ones">Projects</Term>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X, CheckCircle2, Loader2, PackageCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 type Depletion = {
   ingredientId: string
@@ -107,7 +108,7 @@ export function CompleteBatchDialog({
             <PackageCheck size={16} className="text-emerald-500" />
             <h2 className="text-sm font-semibold text-gray-900">Complete batch</h2>
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
             <X size={16} />
           </button>
         </div>
@@ -115,11 +116,11 @@ export function CompleteBatchDialog({
         <div className="px-5 py-5 space-y-4">
           <p className="text-xs text-gray-500">
             Recording a completed batch of <span className="font-medium text-gray-800">{formulationName}</span> will
-            deduct the ingredient quantities from tracked stock levels.
+            deduct the ingredient quantities from tracked <Term t="stock">stock</Term> levels. It uses the last saved version.
           </p>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Batch multiplier</label>
+            <span className="text-xs font-medium text-gray-600"><Term t="batchMultiplier">Batch multiplier</Term></span>
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -127,6 +128,8 @@ export function CompleteBatchDialog({
                 step="any"
                 value={multiplier}
                 onChange={e => { setMultiplier(e.target.value); setPreview(null) }}
+                aria-label="Batch multiplier"
+                data-tip="1 = the saved batch, 2 = double, 0.5 = half"
                 className="w-28 px-3 py-1.5 text-sm border border-gray-200 rounded-md
                            focus:outline-none focus:ring-2 focus:ring-blue-500 tabular-nums"
               />
@@ -137,8 +140,9 @@ export function CompleteBatchDialog({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Notes (optional)</label>
+            <label className="text-xs font-medium text-gray-600" htmlFor="complete-batch-notes">Notes (optional)</label>
             <input
+              id="complete-batch-notes"
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="e.g. Trial batch for sampling"
@@ -196,6 +200,7 @@ export function CompleteBatchDialog({
             <button
               onClick={handlePreview}
               disabled={isPreviewing || !multiplier}
+              data-tip={multiplier ? 'Shows how much stock each tracked ingredient will have left. Nothing is recorded yet.' : 'Enter a batch multiplier first'}
               className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700
                          rounded-md hover:bg-gray-200 disabled:opacity-40 transition-colors"
             >
@@ -206,6 +211,9 @@ export function CompleteBatchDialog({
           <button
             onClick={handleComplete}
             disabled={isCompleting || !multiplier}
+            data-tip={multiplier
+              ? 'Records the batch in Batch history and subtracts the amounts from tracked stock. Can’t be undone here.'
+              : 'Enter a batch multiplier first'}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 text-white
                        rounded-md hover:bg-emerald-700 disabled:opacity-40 transition-colors"
           >

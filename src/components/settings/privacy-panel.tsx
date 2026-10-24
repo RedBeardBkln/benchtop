@@ -43,7 +43,8 @@ export function PrivacyPanel({
     <>
       <Card title="Your data" description="Download everything stored in your account as a JSON file: projects, formulations, ingredients and inventory, suppliers, equipment and your profile.">
         {isOwner ? (
-          <a href="/api/account/export" download className={btnSecondary}>
+          <a href="/api/account/export" download className={btnSecondary}
+            data-tip="Downloads everything in this account as one JSON file">
             <Download size={14} className="mr-2" />
             Download my data
           </a>
@@ -70,6 +71,9 @@ export function PrivacyPanel({
               type="submit"
               className={btnDanger}
               disabled={deleting || confirmEmail.trim().toLowerCase() !== email.toLowerCase()}
+              data-tip={confirmEmail.trim().toLowerCase() !== email.toLowerCase()
+                ? 'Type your email exactly as shown to enable this.'
+                : 'Asks once more, then permanently deletes the account, its data and your login, and cancels the subscription.'}
             >
               {deleting ? 'Deleting…' : 'Delete my account'}
             </button>

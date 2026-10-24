@@ -22,6 +22,12 @@ type Account = {
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+const PLAN_TIPS: Record<AccountPlan, string> = {
+  paid: 'Needs a subscription once any free trial ends.',
+  free_lifetime: 'Never needs a subscription. You can cap how many extra users it has.',
+  free_period: 'Free until the date you set, then needs a subscription.',
+}
+
 // <input type="date"> value (local date) <-> ISO timestamp at the end of that day
 function toDateInput(iso: string | null): string {
   if (!iso) return ''
@@ -82,7 +88,7 @@ function EditPlan({ account, onDone }: { account: Account; onDone: () => void })
       <fieldset className="space-y-1">
         <legend className="block text-sm font-medium text-gray-700 mb-1">Account type</legend>
         {ACCOUNT_PLANS.map(p => (
-          <label key={p} className="flex items-center gap-2 text-sm text-gray-900">
+          <label key={p} className="flex items-center gap-2 text-sm text-gray-900" data-tip={PLAN_TIPS[p]}>
             <input type="radio" name={`plan-${account.id}`} checked={plan === p} onChange={() => setPlan(p)} />
             {PLAN_LABELS[p]}
           </label>
@@ -110,13 +116,15 @@ function EditPlan({ account, onDone }: { account: Account; onDone: () => void })
                 key={p.days}
                 type="button"
                 onClick={() => setUntil(daysFromToday(p.days))}
+                data-tip={`Sets the date ${p.label.slice(1)} from today`}
                 className="rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
               >
                 {p.label}
               </button>
             ))}
             {plan === 'paid' && until && (
-              <button type="button" onClick={() => setUntil('')} className="text-xs text-gray-500 hover:underline">
+              <button type="button" onClick={() => setUntil('')} className="text-xs text-gray-500 hover:underline"
+                data-tip="Clears the trial, so the account needs a subscription now">
                 No trial
               </button>
             )}
@@ -150,7 +158,9 @@ function EditPlan({ account, onDone }: { account: Account; onDone: () => void })
       )}
 
       <div className="flex gap-2">
-        <button type="submit" disabled={saving} className={btnPrimary}>{saving ? 'Saving…' : 'Save'}</button>
+        <button type="submit" disabled={saving} className={btnPrimary} data-tip="Applies the new account type straight away">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
         <button type="button" onClick={onDone} className={btnSecondary}>Cancel</button>
       </div>
     </form>
@@ -197,7 +207,8 @@ export function AccountsAdmin() {
                     </div>
                   </div>
                   {!a.billingExempt && editing !== a.id && (
-                    <button onClick={() => setEditing(a.id)} className="text-xs text-blue-600 hover:underline">
+                    <button onClick={() => setEditing(a.id)} className="text-xs text-blue-600 hover:underline"
+                      data-tip="Change this account’s type, free period or user limit">
                       Change
                     </button>
                   )}

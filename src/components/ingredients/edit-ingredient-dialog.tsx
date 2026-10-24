@@ -8,6 +8,7 @@ import { readErrorMessage } from '@/lib/utils'
 import type { Ingredient } from '@/lib/types'
 import { categoryOptions, subcategoryOptions, microCategoryOptions } from '@/lib/ingredient-categories'
 import { TaxonomyField, useTaxonomy } from './taxonomy-field'
+import { Term } from '@/components/term'
 
 export type EditableIngredient = {
   id: string
@@ -117,7 +118,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 max-h-full overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-gray-900">Edit Ingredient</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -134,7 +135,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Category</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5"><Term t="category">Category</Term></label>
             <TaxonomyField
               key={`cat-${ingredient.id}`}
               label="Category"
@@ -171,13 +172,13 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
               </div>
             </div>
           )}
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-gray-700" data-tip="You physically have this ingredient in the lab. On-hand ingredients are listed first and suggested as swaps.">
             <input type="checkbox" checked={onHand} onChange={e => setOnHand(e.target.checked)} className="rounded border-gray-300" />
             On hand in the lab
           </label>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5">
-              Stock on hand (g)
+              <Term t="stock">Stock on hand</Term> (g)
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -186,13 +187,14 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
                 value={stockG}
                 onChange={e => setStockG(e.target.value)}
                 placeholder="—"
+                data-tip="Grams you have now. Leave blank if you don’t track stock. Completing a batch subtracts what it used."
                 className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
               />
               <span className="text-sm text-gray-400">g</span>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Moisture %</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5"><Term t="moisturePct">Moisture %</Term></label>
             <input
               type="number"
               min="0"
@@ -205,7 +207,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
             />
             {moistureInvalid && <p className="mt-1 text-xs text-red-600">Enter a number from 0 to 100.</p>}
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-gray-700" data-tip="Comes from a natural source. Formulations containing anything not naturally derived get flagged as synthetic.">
             <input
               type="checkbox"
               checked={naturallyDerived}

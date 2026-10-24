@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatWeightG } from '@/lib/weight'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 type BatchRun = {
   id: string
@@ -38,6 +39,7 @@ export function BatchHistoryPanel({ formulationId }: { formulationId: string }) 
         type="button"
         onClick={() => setOpen(v => !v)}
         aria-expanded={open}
+        data-tip={open ? 'Hides the batch history' : 'Shows each batch recorded with Complete batch for this version'}
         className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors"
       >
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -53,8 +55,8 @@ export function BatchHistoryPanel({ formulationId }: { formulationId: string }) 
             <thead className="bg-gray-50 text-xs text-gray-500 text-left">
               <tr>
                 <th className="font-medium px-3 py-2">Date</th>
-                <th className="font-medium px-3 py-2 text-right">Multiplier</th>
-                <th className="font-medium px-3 py-2 text-right">Batch weight</th>
+                <th className="font-medium px-3 py-2 text-right"><Term t="batchMultiplier">Multiplier</Term></th>
+                <th className="font-medium px-3 py-2 text-right"><Term tip="The total weight of ingredients used: the saved batch size × the multiplier.">Batch weight</Term></th>
                 <th className="font-medium px-3 py-2">Recorded by</th>
                 <th className="font-medium px-3 py-2">Notes</th>
               </tr>

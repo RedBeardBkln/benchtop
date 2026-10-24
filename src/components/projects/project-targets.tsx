@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react'
 import type { Nutrient, ProjectTarget } from '@/lib/types'
+import { Term } from '@/components/term'
 
 const COMPARATOR_LABELS: Record<string, string> = {
   '>=': '≥ min',
@@ -59,6 +60,7 @@ function TargetForm({
         <select
           value={draft.nutrient ?? ''}
           onChange={e => handleNutrientChange(e.target.value)}
+          data-tip="The nutrient to check. Its unit (g, mg, kcal…) fills in automatically."
           className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
         >
           <option value="">— select nutrient —</option>
@@ -70,6 +72,7 @@ function TargetForm({
           <select
             value={draft.comparator}
             onChange={e => setDraft(d => ({ ...d, comparator: e.target.value as ProjectTarget['comparator'] }))}
+            data-tip="The rule: ≥ min (at least), ≤ max (no more than), = exact, or between (a min and a max)."
             className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
           >
             {Object.entries(COMPARATOR_LABELS).map(([k, v]) => (
@@ -83,6 +86,7 @@ function TargetForm({
             value={draft.value || ''}
             onChange={e => setDraft(d => ({ ...d, value: parseFloat(e.target.value) || 0 }))}
             placeholder={draft.comparator === 'range' ? 'min' : 'value'}
+            data-tip={draft.comparator === 'range' ? 'The lowest allowed amount. Must be greater than 0.' : 'The target amount. Must be greater than 0.'}
             className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
           />
 
@@ -93,6 +97,7 @@ function TargetForm({
               value={draft.valueMax ?? ''}
               onChange={e => setDraft(d => ({ ...d, valueMax: parseFloat(e.target.value) || undefined }))}
               placeholder="max"
+              data-tip="The highest allowed amount"
               className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
             />
           ) : (
@@ -107,6 +112,7 @@ function TargetForm({
               basis: e.target.value as ProjectTarget['basis'],
               servingSizeG: e.target.value === 'per_100g' ? undefined : d.servingSizeG,
             }))}
+            data-tip="per 100g: measured in 100 g of the finished product. per serving: measured in one serving."
             className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
           >
             <option value="per_100g">per 100g</option>
@@ -118,7 +124,9 @@ function TargetForm({
       {/* Serving size — only when per_serving selected */}
       {draft.basis === 'per_serving' && (
         <div className="flex items-center gap-2 pl-1">
-          <span className="text-xs text-gray-500 shrink-0">Serving size:</span>
+          <span className="text-xs text-gray-500 shrink-0">
+            <Term tip="A reference serving in grams. Used only for formulations that don’t have their own serving size.">Serving size</Term>:
+          </span>
           <input
             type="number" min="0.1" step="any"
             value={draft.servingSizeG ?? ''}
@@ -137,6 +145,9 @@ function TargetForm({
         <button
           onClick={() => onSave(draft)}
           disabled={!canSave || saving}
+          data-tip={canSave
+            ? 'Saves the target to the project. Every formulation in it is checked against it.'
+            : 'Choose a nutrient and enter a value greater than 0 first.'}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           <Check size={12} />
@@ -253,8 +264,15 @@ export function ProjectTargets({
               {/* Basis badge */}
               <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded shrink-0">
                 {t.basis === 'per_100g'
-                  ? 'per 100g'
-                  : `per serving${t.servingSizeG ? ` · ${t.servingSizeG}g` : ''}`}
+                  ? <Term tip="Checked against 100 g of the finished product, after process losses.">per 100g</Term>
+                  : (
+                    <Term tip={t.servingSizeG
+                      ? `Checked against one serving. ${t.servingSizeG} g is used when a formulation has no serving size of its own.`
+                      : 'Checked against one serving, using each formulation’s serving size.'}
+                    >
+                      per serving{t.servingSizeG ? ` · ${t.servingSizeG}g` : ''}
+                    </Term>
+                  )}
               </span>
 
               {/* Actions */}
@@ -262,7 +280,8 @@ export function ProjectTargets({
                 <button
                   onClick={() => setEditingIndex(i)}
                   className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Edit"
+                  aria-label="Edit target"
+                  data-tip="Edit this target"
                 >
                   <Edit2 size={13} />
                 </button>
@@ -270,7 +289,8 @@ export function ProjectTargets({
                   onClick={() => handleRemove(i)}
                   disabled={saveMutation.isPending}
                   className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
-                  title="Remove"
+                  aria-label="Remove target"
+                  data-tip="Remove this target (asks first). Formulations stop being checked against it."
                 >
                   <X size={13} />
                 </button>
@@ -292,6 +312,7 @@ export function ProjectTargets({
       ) : (
         <button
           onClick={() => setAddingNew(true)}
+          data-tip="Add a nutrition rule, e.g. protein at least 20 g per serving, that every formulation here is checked against"
           className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 transition-colors pt-1"
         >
           <Plus size={13} /> Add target

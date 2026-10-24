@@ -7,6 +7,8 @@ import type { FormulationDetail, Nutrient } from '@/lib/types'
 import { calcNutrientProfile, formatAmt, type CalcResult } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
+import type { GlossaryKey } from '@/lib/glossary'
+import { Term } from '@/components/term'
 
 type Iteration = FormulationDetail['iterations'][number]
 
@@ -102,22 +104,23 @@ export function CompareVersionsDialog({ currentId, iterations, allNutrients, onC
     : ingredientRows
   const shownNutrients = onlyChanges ? nutrientRows.filter(r => differs(r.a, r.b)) : nutrientRows
 
-  const select = (value: string, onChange: (v: string) => void) => (
+  const select = (value: string, onChange: (v: string) => void, tip: string) => (
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
+      data-tip={tip}
       className="text-sm border border-gray-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[14rem]"
     >
       {iterations.map(it => <option key={it.id} value={it.id}>{versionLabel(it)}</option>)}
     </select>
   )
 
-  const summary: Array<{ label: string; a: number | null; b: number | null; fmt: (n: number) => string }> = [
-    { label: 'Batch weight (g)', a: pa?.totalWeightG ?? null, b: pb?.totalWeightG ?? null, fmt: formatWeightG },
-    { label: 'Finished weight (g)', a: pa?.finishedWeightG ?? null, b: pb?.finishedWeightG ?? null, fmt: n => formatWeightG(Math.round(n * 10) / 10) },
-    { label: 'Serving size (g)', a: a?.servingSizeG ? parseFloat(a.servingSizeG) : null, b: b?.servingSizeG ? parseFloat(b.servingSizeG) : null, fmt: formatWeightG },
+  const summary: Array<{ label: string; t?: GlossaryKey; a: number | null; b: number | null; fmt: (n: number) => string }> = [
+    { label: 'Batch weight (g)', t: 'batchSize', a: pa?.totalWeightG ?? null, b: pb?.totalWeightG ?? null, fmt: formatWeightG },
+    { label: 'Finished weight (g)', t: 'finishedWeight', a: pa?.finishedWeightG ?? null, b: pb?.finishedWeightG ?? null, fmt: n => formatWeightG(Math.round(n * 10) / 10) },
+    { label: 'Serving size (g)', t: 'servingSize', a: a?.servingSizeG ? parseFloat(a.servingSizeG) : null, b: b?.servingSizeG ? parseFloat(b.servingSizeG) : null, fmt: formatWeightG },
     { label: 'Ingredients', a: a?.lines.length ?? null, b: b?.lines.length ?? null, fmt: String },
-    { label: 'Process steps', a: a?.processSteps.length ?? null, b: b?.processSteps.length ?? null, fmt: String },
+    { label: 'Process steps', t: 'processStep', a: a?.processSteps.length ?? null, b: b?.processSteps.length ?? null, fmt: String },
   ]
 
   const th = 'font-medium px-3 py-2 text-right whitespace-nowrap'
@@ -137,10 +140,13 @@ export function CompareVersionsDialog({ currentId, iterations, allNutrients, onC
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-          {select(aId, setAId)}
+          {select(aId, setAId, 'The version to compare from (left)')}
           <span>→</span>
-          {select(bId, setBId)}
-          <label className="flex items-center gap-1.5 ml-auto text-sm text-gray-600 cursor-pointer">
+          {select(bId, setBId, 'The version to compare to (right). Changes are shown from left to right.')}
+          <label
+            className="flex items-center gap-1.5 ml-auto text-sm text-gray-600 cursor-pointer"
+            data-tip="Hides ingredients and nutrients that are the same in both versions"
+          >
             <input type="checkbox" className="rounded border-gray-300" checked={onlyChanges} onChange={e => setOnlyChanges(e.target.checked)} />
             Only show changes
           </label>
@@ -165,7 +171,7 @@ export function CompareVersionsDialog({ currentId, iterations, allNutrients, onC
                 <tbody className="divide-y divide-gray-50">
                   {summary.map(r => (
                     <tr key={r.label}>
-                      <td className="px-3 py-1.5 text-gray-700">{r.label}</td>
+                      <td className="px-3 py-1.5 text-gray-700"><Term t={r.t}>{r.label}</Term></td>
                       <td className={td}>{r.a != null ? r.fmt(r.a) : '—'}</td>
                       <td className={td}>{r.b != null ? r.fmt(r.b) : '—'}</td>
                       <td className={td}><Delta a={r.a} b={r.b} fmt={r.fmt} /></td>
@@ -188,7 +194,7 @@ export function CompareVersionsDialog({ currentId, iterations, allNutrients, onC
                           <th className={th}>v{a.version} %</th>
                           <th className={th}>v{b.version} g</th>
                           <th className={th}>v{b.version} %</th>
-                          <th className={th}>Change (%)</th>
+                          <th className={th}><Term tip="The change in usage % from the left version to the right one, in percentage points.">Change (%)</Term></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -213,7 +219,7 @@ export function CompareVersionsDialog({ currentId, iterations, allNutrients, onC
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold text-gray-800 mb-2">Nutrition per 100 g finished</h4>
+                <h4 className="text-sm font-semibold text-gray-800 mb-2">Nutrition <Term t="per100gFinished">per 100 g finished</Term></h4>
                 {shownNutrients.length === 0 ? (
                   <p className="text-sm text-gray-400">No differences in the nutrition.</p>
                 ) : (

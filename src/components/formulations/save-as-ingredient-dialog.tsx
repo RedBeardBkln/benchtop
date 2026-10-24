@@ -76,8 +76,9 @@ export function SaveAsIngredientDialog({ formulationId, formulationName, onClose
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Ingredient name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="save-as-ingredient-name">Ingredient name</label>
           <input
+            id="save-as-ingredient-name"
             autoFocus
             value={name}
             onChange={e => setName(e.target.value)}
@@ -93,6 +94,9 @@ export function SaveAsIngredientDialog({ formulationId, formulationName, onClose
             Cancel
           </button>
           <button type="submit" disabled={!canSave}
+            data-tip={!name.trim() ? 'Enter an ingredient name first' : updating
+              ? 'Refreshes the existing library ingredient from this version’s current data'
+              : 'Adds this formulation to your ingredient library as a snapshot'}
             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
             {save.isPending ? 'Saving…' : updating ? 'Update ingredient' : 'Save ingredient'}
           </button>

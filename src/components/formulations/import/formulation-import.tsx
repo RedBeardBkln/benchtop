@@ -12,6 +12,7 @@ import { uploadStaged, UPLOAD_MAX_BYTES } from '@/lib/upload-file'
 import type { ImportDraft } from '@/lib/formulation-import'
 import { ImportReview } from './import-review'
 import { IMPORTS_KEY, useImportDrafts } from './use-import-drafts'
+import { Term } from '@/components/term'
 
 /**
  * Import an existing formulation from an Excel or CSV file: upload, pick the formulation if the
@@ -137,7 +138,11 @@ export function FormulationImport({ projectId, draftId, canEditLibrary, canCreat
                     {d.sheet ? `Sheet “${d.sheet}” · ` : ''}{d.lines.length} ingredient{d.lines.length === 1 ? '' : 's'}
                   </div>
                 </div>
-                <button onClick={() => start(d)} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                <button
+                  onClick={() => start(d)}
+                  data-tip="Opens this formulation for checking and fixing. Nothing is saved until you say so."
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
                   Review
                 </button>
               </li>
@@ -185,7 +190,7 @@ export function FormulationImport({ projectId, draftId, canEditLibrary, canCreat
 
       {drafts.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-sm font-semibold text-gray-900 mb-2">Unfinished imports</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-2">Unfinished imports (<Term t="importDraft">drafts</Term>)</h2>
           <p className="text-xs text-gray-500 mb-3">
             Saved as drafts because something was still missing. They aren’t formulations yet; finish them to add them to your account.
           </p>
@@ -202,6 +207,7 @@ export function FormulationImport({ projectId, draftId, canEditLibrary, canCreat
                 </div>
                 <Link
                   href={`/formulations/import?draft=${d.id}${projectId ? `&project=${projectId}` : ''}`}
+                  data-tip="Reopens this draft where you left off, so you can fill in what’s missing and finish it."
                   className="px-3 py-1.5 text-sm border border-gray-200 rounded-md hover:bg-gray-50 text-gray-700 shrink-0"
                 >
                   Continue
@@ -209,6 +215,7 @@ export function FormulationImport({ projectId, draftId, canEditLibrary, canCreat
                 <button
                   onClick={() => { if (window.confirm(`Delete the import draft “${d.name}”?`)) remove.mutate(d.id) }}
                   aria-label={`Delete ${d.name}`}
+                  data-tip="Deletes this unfinished import. Nothing else in your account is affected."
                   className="p-1.5 text-gray-400 hover:text-red-600 rounded shrink-0"
                 >
                   <Trash2 size={14} />

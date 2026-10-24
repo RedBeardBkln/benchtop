@@ -8,12 +8,13 @@ const MAX_TYPED_DECIMALS = 5   // formulation_lines.pct holds 5 decimals
  * Usage-% box. Shows the value to `decimals` places; while you are typing it keeps exactly what you
  * type (up to 5 decimals, max 100) and reports each valid value as it changes.
  */
-export function PctInput({ value, decimals, onChange, disabled, title }: {
+export function PctInput({ value, decimals, onChange, disabled, tip }: {
   value: number
   decimals: number
   onChange: (pct: number) => void
   disabled: boolean
-  title?: string
+  /** Hover / focus hint */
+  tip?: string
 }) {
   const [draft, setDraft] = useState<string | null>(null)   // non-null only while focused
   const shown = draft ?? value.toFixed(decimals)
@@ -25,7 +26,7 @@ export function PctInput({ value, decimals, onChange, disabled, title }: {
         inputMode="decimal"
         value={shown}
         disabled={disabled}
-        title={title}
+        data-tip={tip}
         aria-label="Usage %"
         onFocus={(e) => {
           setDraft(String(Number(value.toFixed(MAX_TYPED_DECIMALS))))

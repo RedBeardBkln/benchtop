@@ -10,12 +10,13 @@ import { formatWeightG, isWeightInput } from '@/lib/weight'
  * `commitOn="change"` (default) reports every keystroke; `"blur"` reports once, when you leave the
  * box or press Enter (for values that trigger a bigger recalculation, like the batch size).
  */
-export function WeightInput({ value, onChange, disabled, commitOn = 'change', title, ariaLabel = 'Weight (g)', className }: {
+export function WeightInput({ value, onChange, disabled, commitOn = 'change', tip, ariaLabel = 'Weight (g)', className }: {
   value: number
   onChange: (grams: number) => void
   disabled: boolean
   commitOn?: 'change' | 'blur'
-  title?: string
+  /** Hover / focus hint */
+  tip?: string
   ariaLabel?: string
   className?: string
 }) {
@@ -34,7 +35,7 @@ export function WeightInput({ value, onChange, disabled, commitOn = 'change', ti
       inputMode="decimal"
       value={draft}
       disabled={disabled}
-      title={title}
+      data-tip={tip}
       placeholder="0"
       aria-label={ariaLabel}
       onChange={(e) => {

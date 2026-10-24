@@ -78,6 +78,7 @@ export function PrintOptionsDialog({
             return (
               <label
                 key={o.key}
+                data-tip={o.disabledHint ? `Unavailable: ${o.disabledHint.toLowerCase()}.` : undefined}
                 className={`flex items-start gap-2 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
               >
                 <input
@@ -102,6 +103,9 @@ export function PrintOptionsDialog({
             Cancel
           </button>
           <button type="submit" disabled={!canPrint}
+            data-tip={canPrint
+              ? 'Opens a printable page with the chosen sections in a new tab, from the last saved version.'
+              : 'Tick at least one section to print.'}
             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
             Print
           </button>

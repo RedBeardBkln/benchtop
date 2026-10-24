@@ -8,6 +8,7 @@ import { CheckCircle2, Upload, X } from 'lucide-react'
 import { formatIngredientName } from '@/lib/ingredient-name'
 import { categoryOptions, subcategoryOptions, microCategoryOptions } from '@/lib/ingredient-categories'
 import { TaxonomyField, useTaxonomy } from '@/components/ingredients/taxonomy-field'
+import { Term } from '@/components/term'
 
 // Nutrients offered for typing in by hand (per 100 g)
 export const MANUAL_NUTRIENTS = [
@@ -147,7 +148,9 @@ export function NewLibraryIngredientPanel({ rawName, onCreated, onLinkExisting, 
   return (
     <div className="mt-2 bg-white border border-violet-200 rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 bg-violet-50 border-b border-violet-100">
-        <span className="text-xs font-medium text-violet-700">Add to library &amp; link</span>
+        <span className="text-xs font-medium text-violet-700">
+          Add to <Term t="ingredientLibrary">library</Term> &amp; <Term tip="Linking ties this name to a library ingredient, so its nutrition and allergens are used here.">link</Term>
+        </span>
         <button type="button" onClick={onClose} aria-label="Close" className="p-1 -m-1 text-gray-400 hover:text-gray-600">
           <X size={14} />
         </button>
@@ -168,7 +171,7 @@ export function NewLibraryIngredientPanel({ rawName, onCreated, onLinkExisting, 
           </div>
         </div>
         <div>
-          <label className={labelClass}>Category</label>
+          <label className={labelClass}><Term t="category">Category</Term></label>
           <TaxonomyField
             label="Category" value={category} onChange={setCategory}
             options={categoryOptions(taxonomy)} placeholder="New category" noneLabel="Uncategorized"
@@ -193,12 +196,15 @@ export function NewLibraryIngredientPanel({ rawName, onCreated, onLinkExisting, 
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-          <label className="flex items-center gap-2 py-2 text-sm text-gray-700">
+          <label
+            className="flex items-center gap-2 py-2 text-sm text-gray-700"
+            data-tip="You physically have this in the lab. On-hand ingredients are listed first and suggested as swaps."
+          >
             <input type="checkbox" checked={onHand} onChange={e => setOnHand(e.target.checked)} className="w-4 h-4 rounded border-gray-300" />
             On hand in the lab
           </label>
           <div>
-            <label className={labelClass}>Stock on hand (g, optional)</label>
+            <label className={labelClass}><Term t="stock">Stock on hand</Term> (g, optional)</label>
             <input
               type="number" inputMode="decimal" min="0" step="any"
               value={stockG} onChange={e => setStockG(e.target.value)} placeholder="—"
@@ -209,8 +215,10 @@ export function NewLibraryIngredientPanel({ rawName, onCreated, onLinkExisting, 
 
         <div className="border-t border-gray-100 pt-3">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-xs font-medium text-gray-500">Nutrition per 100 g</p>
-            <label className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs border rounded-md cursor-pointer ${
+            <p className="text-xs font-medium text-gray-500">Nutrition <Term t="per100g">per 100 g</Term></p>
+            <label
+              data-tip="Upload a spec sheet or COA (PDF or image). Values found replace the typed ones; check them before saving."
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs border rounded-md cursor-pointer ${
               isParsing ? 'border-violet-200 text-violet-400' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}>
               {isParsing
@@ -248,6 +256,7 @@ export function NewLibraryIngredientPanel({ rawName, onCreated, onLinkExisting, 
             <button
               type="button"
               onClick={() => onLinkExisting(existing)}
+              data-tip="Uses the existing library entry instead of creating a duplicate."
               className="w-full sm:w-auto px-3 py-2 sm:py-1 text-sm sm:text-xs bg-white border border-amber-300 rounded-md hover:bg-amber-100"
             >
               Link that one instead
@@ -259,6 +268,9 @@ export function NewLibraryIngredientPanel({ rawName, onCreated, onLinkExisting, 
           type="button"
           onClick={save}
           disabled={isSaving || isParsing}
+          data-tip={isParsing
+            ? 'Wait until the spec sheet has been read.'
+            : 'Creates the ingredient in your library and links it here. At least one nutrient value is needed.'}
           className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
         >
           {isSaving ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 size={13} />}

@@ -72,7 +72,8 @@ export function ProfileForm({ email, initial }: { email: string; initial: Values
           <div className="flex gap-2">
             <input id="timezone" maxLength={64} value={values.timezone} onChange={set('timezone')} className={inputCls} placeholder="America/New_York" />
             {browserTz && (
-              <button type="button" className="text-xs text-blue-600 hover:underline whitespace-nowrap" onClick={() => setValues(v => ({ ...v, timezone: browserTz }))}>
+              <button type="button" className="text-xs text-blue-600 hover:underline whitespace-nowrap" onClick={() => setValues(v => ({ ...v, timezone: browserTz }))}
+                data-tip={`Fills in this device’s time zone (${browserTz})`}>
                 Use mine
               </button>
             )}

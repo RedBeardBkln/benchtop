@@ -43,6 +43,7 @@ export function IterationNote({ formulationId, note }: { formulationId: string; 
       rows={1}
       placeholder="How is this iteration different?"
       aria-label="Iteration note"
+      data-tip="A short note on how this version differs, shown in the version list. Saves when you click away."
       className="flex-1 min-w-[18rem] max-w-xl px-2 py-0.5 text-sm text-gray-700 border border-gray-200 rounded
                  resize-none [field-sizing:content] max-h-32
                  focus:outline-none focus:ring-2 focus:ring-blue-500 print:hidden"

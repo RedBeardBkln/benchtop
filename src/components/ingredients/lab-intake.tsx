@@ -15,6 +15,7 @@ import {
 } from '@/lib/ingredient-categories'
 import { TaxonomyField, useTaxonomy } from './taxonomy-field'
 import type { IngredientListRow } from '@/lib/types'
+import { Term } from '@/components/term'
 
 type IntakeItem = {
   id: string
@@ -40,6 +41,12 @@ const CONFIDENCE_STYLE: Record<string, string> = {
   high: 'bg-green-100 text-green-700',
   medium: 'bg-yellow-100 text-yellow-700',
   low: 'bg-red-100 text-red-700',
+}
+
+const CONFIDENCE_TIP: Record<string, string> = {
+  high: 'High confidence: AI is sure of this name and category.',
+  medium: 'Medium confidence: probably right, but worth a quick check.',
+  low: 'Low confidence: AI isn’t sure. Check the name, category and any match before uploading.',
 }
 
 const inputClass = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white'
@@ -199,6 +206,8 @@ export function LabIntake() {
             onChange={e => setName(e.target.value)}
             onPaste={handlePaste}
             placeholder="Label text, e.g. Tapioca starch"
+            aria-label="Label text"
+            data-tip="Type what the container label says and press Enter. Pasting several lines adds each one."
             className={`${inputClass} sm:flex-1`}
             autoComplete="off"
             enterKeyHint="done"
@@ -212,14 +221,17 @@ export function LabIntake() {
               min="0"
               step="any"
               placeholder="Qty (optional)"
+              aria-label="Quantity"
+              data-tip="Optional. Weights (g, kg, lb, oz) replace the ingredient’s stock on upload; volumes and counts go in its notes."
               className={`${inputClass} w-32`}
             />
-            <select value={unit} onChange={e => setUnit(e.target.value as IntakeUnit)} className={`${inputClass} w-20`}>
+            <select value={unit} onChange={e => setUnit(e.target.value as IntakeUnit)} aria-label="Unit" data-tip="Unit for the quantity." className={`${inputClass} w-20`}>
               {INTAKE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
             <button
               type="submit"
               disabled={!name.trim()}
+              data-tip={!name.trim() ? 'Type the label text first.' : 'Adds this item to the intake list. Nothing goes into the library until you upload.'}
               className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors shrink-0"
             >
               <Plus size={14} /> Add
@@ -229,6 +241,7 @@ export function LabIntake() {
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button
             onClick={() => cameraRef.current?.click()}
+            data-tip="Take or choose photos of container labels (up to 10 at a time). AI reads each name and amount and adds it to the list."
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-orange-200 rounded-md bg-white hover:bg-orange-50 text-orange-600 transition-colors"
           >
             {photosReading > 0 ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
@@ -245,6 +258,7 @@ export function LabIntake() {
           />
           <button
             onClick={() => setBulkOpen(v => !v)}
+            data-tip="Opens a box to paste many items at once, one per line. A quantity at the end of a line is picked up."
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
           >
             <ListPlus size={14} /> Paste a list
@@ -266,6 +280,7 @@ export function LabIntake() {
               <button
                 onClick={addBulk}
                 disabled={!bulkText.trim() || addMutation.isPending}
+                data-tip={!bulkText.trim() ? 'Paste or type at least one line first.' : 'Adds each line to the intake list.'}
                 className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 Add {parseIntakeLines(bulkText).length || ''} items
@@ -290,6 +305,9 @@ export function LabIntake() {
           <button
             onClick={identifyAll}
             disabled={pending.length === 0 || busy}
+            data-tip={pending.length === 0
+              ? 'Nothing waiting to be identified.'
+              : 'AI gives each new item a standard name and category, rates its confidence and spots items already in your library.'}
             className="flex items-center gap-1.5 px-3 py-2 text-sm bg-violet-600 text-white rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
           >
             {progress ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
@@ -300,6 +318,9 @@ export function LabIntake() {
               if (confirm(`Upload ${identified.length} identified item${identified.length === 1 ? '' : 's'} to the ingredient library?`)) importMutation.mutate()
             }}
             disabled={identified.length === 0 || busy}
+            data-tip={identified.length === 0
+              ? 'Identify the items first; only identified items can be uploaded.'
+              : 'Adds identified items to the library, marked on hand. Matches mark the existing ingredient on hand instead. New ones have no nutrition yet.'}
             className="flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors"
           >
             {importMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
@@ -337,12 +358,12 @@ export function LabIntake() {
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                       <span className="text-xs text-violet-700">{categoryPath(item)}</span>
                       {item.confidence && (
-                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${CONFIDENCE_STYLE[item.confidence]}`}>
+                        <span data-tip={CONFIDENCE_TIP[item.confidence]} className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${CONFIDENCE_STYLE[item.confidence]}`}>
                           {item.confidence}
                         </span>
                       )}
                       {item.matchedName && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700">
+                        <span data-tip="On upload this marks the existing ingredient on hand instead of creating a new one. Change it with the pencil." className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700">
                           <Link2 size={10} /> already in library: {item.matchedName}
                         </span>
                       )}
@@ -354,13 +375,14 @@ export function LabIntake() {
                     </p>
                   )}
                 </div>
-                <button onClick={() => setEditing(item)} className="p-2 text-gray-300 hover:text-blue-500 transition-colors" title="Edit">
+                <button onClick={() => setEditing(item)} className="p-2 text-gray-300 hover:text-blue-500 transition-colors" aria-label="Edit" data-tip="Fix the label text, quantity, name, category or library match.">
                   <Edit2 size={14} />
                 </button>
                 <button
                   onClick={() => deleteMutation.mutate(item.id)}
                   className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                  title="Remove from list"
+                  aria-label="Remove from list"
+                  data-tip="Removes this item from the intake list. Nothing in the library changes."
                 >
                   <Trash2 size={14} />
                 </button>
@@ -443,7 +465,7 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-full overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-gray-900">Edit intake item</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         <form
           onSubmit={e => { e.preventDefault(); if (rawName.trim()) saveMutation.mutate() }}
@@ -463,9 +485,11 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
                 type="number" inputMode="decimal" min="0" step="any" placeholder="—"
+                aria-label="Quantity"
+                data-tip="Optional. Weights (g, kg, lb, oz) replace the ingredient’s stock on upload; volumes and counts go in its notes."
                 className={inputClass}
               />
-              <select value={unit} onChange={e => setUnit(e.target.value as IntakeUnit)} className={`${inputClass} w-24`}>
+              <select value={unit} onChange={e => setUnit(e.target.value as IntakeUnit)} aria-label="Unit" data-tip="Unit for the quantity." className={`${inputClass} w-24`}>
                 {INTAKE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
@@ -474,11 +498,11 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
           {identified && !labelChanged && (
             <>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Library name</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5"><Term tip="The clean, standard name the new ingredient gets in your library.">Library name</Term></label>
                 <input value={name} onChange={e => setName(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Category</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5"><Term t="category">Category</Term></label>
                 <TaxonomyField
                   label="Category"
                   value={category}
@@ -512,7 +536,7 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1.5">Same material as a library ingredient</label>
-                <select value={matchedId} onChange={e => setMatchedId(e.target.value)} className={inputClass}>
+                <select value={matchedId} onChange={e => setMatchedId(e.target.value)} aria-label="Same material as a library ingredient" data-tip="Pick the library ingredient this is, or leave it as new." className={inputClass}>
                   <option value="">No, add it as a new ingredient</option>
                   {sortedLibrary.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
@@ -526,6 +550,9 @@ function EditIntakeDialog({ item, onClose, onSaved }: { item: IntakeItem; onClos
               type="button"
               onClick={reidentify}
               disabled={reidentifying || saveMutation.isPending || !rawName.trim()}
+              data-tip={identified
+                ? 'Asks AI to identify this item again from its label text, replacing the current name, category and match.'
+                : 'Asks AI to identify just this item now.'}
               className="flex items-center gap-1.5 px-3 py-2 text-sm border border-violet-200 text-violet-700 rounded-md hover:bg-violet-50 disabled:opacity-50"
             >
               {reidentifying ? <Loader2 size={13} className="animate-spin" /> : identified ? <RotateCcw size={13} /> : <Sparkles size={13} />}

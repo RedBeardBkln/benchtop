@@ -23,13 +23,15 @@ import { PhotoIngredientDialog } from './photo-ingredient-dialog'
 import { EditIngredientDialog, toEditable, type EditableIngredient } from './edit-ingredient-dialog'
 import { categoryOptions, categoryPath } from '@/lib/ingredient-categories'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
+import { GLOSSARY } from '@/lib/glossary'
+import { Term } from '@/components/term'
 
-const SOURCE_LABELS: Record<string, { label: string; className: string }> = {
-  usda:         { label: 'USDA', className: 'bg-blue-100 text-blue-700' },
-  manual:       { label: 'Manual', className: 'bg-gray-100 text-gray-600' },
-  supplier:     { label: 'Supplier', className: 'bg-purple-100 text-purple-700' },
-  ai_extracted: { label: 'AI', className: 'bg-orange-100 text-orange-700' },
-  formulation:  { label: 'Formulation', className: 'bg-teal-100 text-teal-700' },
+const SOURCE_LABELS: Record<string, { label: string; className: string; tip: string }> = {
+  usda:         { label: 'USDA', className: 'bg-blue-100 text-blue-700', tip: 'Imported from the USDA FoodData Central database.' },
+  manual:       { label: 'Manual', className: 'bg-gray-100 text-gray-600', tip: 'Typed in by hand, or added through Lab Intake.' },
+  supplier:     { label: 'Supplier', className: 'bg-purple-100 text-purple-700', tip: 'From a supplier’s web page or spec sheet.' },
+  ai_extracted: { label: 'AI', className: 'bg-orange-100 text-orange-700', tip: 'Read by AI from photos of the package. Check it carefully.' },
+  formulation:  { label: 'Formulation', className: 'bg-teal-100 text-teal-700', tip: 'Saved from one of your finalized formulations.' },
 }
 
 const col = createColumnHelper<IngredientListRow>()
@@ -75,6 +77,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
           <button
             className="flex items-center gap-1 hover:text-gray-900"
             onClick={() => column.toggleSorting()}
+            data-tip="Sorts by name. Click again to reverse."
           >
             Name <ArrowUpDown size={12} />
           </button>
@@ -85,12 +88,12 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
             <span className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-gray-900">{info.getValue()}</span>
               {info.row.original.onHand && (
-                <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">On hand</span>
+                <span data-tip={GLOSSARY.onHand} className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">On hand</span>
               )}
               {dupes > 0 && canEdit && (
                 <button
                   onClick={e => { e.stopPropagation(); setResolvingId(info.row.original.id) }}
-                  title="Another ingredient has the same name, brand, supplier and item code. Click to rename or merge."
+                  data-tip="Another ingredient has the same name, brand, supplier and item code. Opens a dialog to rename this one or merge them."
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
                 >
                   <AlertTriangle size={11} /> Duplicate — rename or merge
@@ -106,6 +109,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
           <button
             className="flex items-center gap-1 hover:text-gray-900"
             onClick={() => column.toggleSorting()}
+            data-tip="Sorts by category. Click again to reverse."
           >
             Category <ArrowUpDown size={12} />
           </button>
@@ -115,20 +119,21 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
           : <span className="text-xs text-gray-300">—</span>,
       }),
       col.accessor('sourceType', {
-        header: 'Source',
+        header: () => <Term t="source">Source</Term>,
         cell: info => {
           const s = SOURCE_LABELS[info.getValue()] ?? { label: info.getValue(), className: 'bg-gray-100 text-gray-600' }
           return (
-            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${s.className}`}>
+            <span data-tip={s.tip} className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${s.className}`}>
               {s.label}
             </span>
           )
         },
       }),
       col.accessor('verification', {
-        header: 'Verified',
+        header: () => <Term tip="Whether someone has checked this ingredient’s data against a reliable source.">Verified</Term>,
         cell: info => (
           <span
+            data-tip={info.getValue() === 'verified' ? GLOSSARY.verified : GLOSSARY.unverified}
             className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
               info.getValue() === 'verified'
                 ? 'bg-green-100 text-green-700'
@@ -140,13 +145,13 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
         ),
       }),
       col.accessor('fdcId', {
-        header: 'FDC ID',
+        header: () => <Term t="fdcId">FDC ID</Term>,
         cell: info => (
           <span className="text-xs text-gray-400 font-mono">{info.getValue() ?? '—'}</span>
         ),
       }),
       col.accessor('stockG', {
-        header: 'Stock',
+        header: () => <Term tip="Grams in stock, if you track it. Completing a batch subtracts what was used; red means below zero.">Stock</Term>,
         cell: info => {
           const v = info.getValue()
           if (v == null) return <span className="text-xs text-gray-300">—</span>
@@ -163,6 +168,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
           <button
             className="flex items-center gap-1 hover:text-gray-900"
             onClick={() => column.toggleSorting()}
+            data-tip="Sorts by how many formulations use each ingredient. Click again to reverse."
           >
             Formulations <ArrowUpDown size={12} />
           </button>
@@ -187,7 +193,8 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
                   setEditingIngredient(toEditable(row.original))
                 }}
                 className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
-                title="Edit"
+                aria-label="Edit"
+                data-tip="Quick edit: category, on hand, stock, moisture, naturally derived and notes."
               >
                 <Edit2 size={14} />
               </button>
@@ -199,7 +206,8 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
                   }
                 }}
                 className="p-2 text-gray-300 hover:text-red-500 transition-colors"
-                title="Delete"
+                aria-label="Delete"
+                data-tip="Deletes this ingredient with its nutrients, documents and supplier links. Not allowed while a formulation uses it."
               >
                 <Trash2 size={14} />
               </button>
@@ -252,6 +260,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
           </div>
           <button
             onClick={() => setOnlyDuplicates(v => !v)}
+            data-tip={onlyDuplicates ? 'Shows every ingredient again.' : 'Lists only the duplicated entries, so you can rename or merge them.'}
             className="px-3 py-1.5 text-xs font-medium border border-amber-300 rounded-md bg-white text-amber-800 hover:bg-amber-100 shrink-0"
           >
             {onlyDuplicates ? 'Show all' : 'Show duplicates only'}
@@ -267,6 +276,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
             value={globalFilter}
             onChange={e => setGlobalFilter(e.target.value)}
             placeholder="Filter ingredients…"
+            aria-label="Filter ingredients"
             className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md
                        focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           />
@@ -275,6 +285,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
           <div className="flex gap-2 flex-wrap">
             <Link
               href="/ingredients/intake"
+              data-tip="Add many ingredients at once from typed names, a pasted list or photos of container labels."
               className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200
                          rounded-md bg-white hover:bg-emerald-50 text-emerald-700 transition-colors"
             >
@@ -283,6 +294,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
             </Link>
             <button
               onClick={() => setUsdaOpen(true)}
+              data-tip="Imports an ingredient with complete nutrition from the USDA database. Arrives verified."
               className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200
                          rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
             >
@@ -291,6 +303,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
             </button>
             <button
               onClick={() => setPhotoOpen(true)}
+              data-tip="Adds an ingredient from photos of its package. AI reads the name, nutrition and ingredient list."
               className="flex items-center gap-1.5 px-3 py-2 text-sm border border-orange-200
                          rounded-md bg-white hover:bg-orange-50 text-orange-600 transition-colors"
             >
@@ -299,6 +312,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
             </button>
             <button
               onClick={() => setAddOpen(true)}
+              data-tip="Adds an ingredient by typing it in, or from a supplier’s product web page."
               className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600
                          text-white rounded-md hover:bg-blue-700 transition-colors"
             >
@@ -312,13 +326,15 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
         <select
           value={categoryFilter}
           onChange={e => setCategoryFilter(e.target.value)}
+          aria-label="Category filter"
+          data-tip="Shows only ingredients in one category, or those without one."
           className="px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All categories</option>
           {usedCategories.map(c => <option key={c} value={c}>{c}</option>)}
           <option value="__none">Uncategorized</option>
         </select>
-        <label className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-pointer">
+        <label data-tip="Shows only ingredients marked as physically in your lab." className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white text-gray-700 cursor-pointer">
           <input type="checkbox" checked={onlyOnHand} onChange={e => setOnlyOnHand(e.target.checked)} className="rounded border-gray-300" />
           On hand only
         </label>

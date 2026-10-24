@@ -6,6 +6,7 @@ import {
   combineItems, isDescendingByWeight, moveItem, removeFromGroup, renameItem, separateGroup, setSubIngredients,
   sortByWeight, splitIngredientList, type StatementItem,
 } from '@/lib/label-statements'
+import { Term } from '@/components/term'
 
 // Arrange the NFP ingredient statement: drag an entry near the top or bottom edge of another to move it,
 // or onto the middle of another to combine them into a parenthetical group ("Almond Milk (Water, Almonds)").
@@ -79,7 +80,7 @@ function NameEditor({ item, editing, onEdit, onRename, onSubs, onDone }: {
     <button
       type="button"
       onClick={onEdit}
-      title="Edit on this label"
+      data-tip="Edit how this entry is written on this label only. The ingredient library isn’t changed."
       className="group/name max-w-full text-left text-sm text-gray-900 hover:text-blue-700 break-words"
     >
       <span className={item.name.trim() ? '' : 'italic text-gray-400'}>
@@ -158,7 +159,12 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
               }`}
             >
               <div className="flex items-start gap-2">
-                <GripVertical size={14} className="shrink-0 mt-0.5 text-gray-300 cursor-grab active:cursor-grabbing" />
+                <span
+                  className="shrink-0 mt-0.5 text-gray-300 cursor-grab active:cursor-grabbing"
+                  data-tip="Drag to the top or bottom edge of another entry to move it, or onto its middle to group them."
+                >
+                  <GripVertical size={14} />
+                </span>
                 <div className="flex-1 min-w-0">
                   <NameEditor
                     item={item}
@@ -175,12 +181,17 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
                 {isTarget && hover?.zone === 'combine' && (
                   <span className="shrink-0 text-xs font-medium text-green-700">Combine</span>
                 )}
-                <span className="shrink-0 font-mono text-xs text-gray-400 tabular-nums">{pct(item.weightG)}</span>
+                <span
+                  className="shrink-0 font-mono text-xs text-gray-400 tabular-nums"
+                  data-tip="This entry’s share of the total ingredient weight, which sets its place in the statement."
+                >
+                  {pct(item.weightG)}
+                </span>
                 {isGroup && (
                   <button
                     type="button"
                     onClick={() => onChange(separateGroup(items, item.id))}
-                    title="Separate this group"
+                    data-tip="Splits this group back into separate entries, where the group was."
                     aria-label={`Separate ${item.name || 'group'}`}
                     className="shrink-0 p-1 text-gray-400 hover:text-blue-600"
                   >
@@ -212,7 +223,7 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
                       <button
                         type="button"
                         onClick={() => onChange(removeFromGroup(items, item.id, child.id))}
-                        title="Take out of this group"
+                        data-tip="Takes this ingredient out of the group and lists it on its own, just after the group."
                         aria-label={`Take ${child.name} out of ${item.name || 'the group'}`}
                         className="shrink-0 p-1 text-gray-400 hover:text-blue-600"
                       >
@@ -229,12 +240,15 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {!descending && (
-          <span className="text-xs text-amber-700">Not in descending order by weight.</span>
+          <span className="text-xs text-amber-700">
+            Not in <Term tip="FDA rules list ingredients by weight, heaviest first (21 CFR 101.4).">descending order by weight</Term>.
+          </span>
         )}
         {!descending && (
           <button
             type="button"
             onClick={() => onChange(sortByWeight(items))}
+            data-tip="Reorders the entries heaviest first. Groups and names are kept."
             className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
           >
             <ArrowDownWideNarrow size={12} /> Sort by weight
@@ -243,6 +257,7 @@ export function IngredientStatementEditor({ items, onChange, onReset }: {
         <button
           type="button"
           onClick={onReset}
+          data-tip="Discards your reordering, groups and renamed entries and rebuilds the list from the formulation."
           className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 hover:underline"
         >
           <RotateCcw size={12} /> Reset from formulation

@@ -3,6 +3,7 @@
 import { forwardRef } from 'react'
 import { abbreviate, allergenBody, splitTabularRows, type NfpModel, type NfpRow } from '@/lib/nfp-model'
 import { RuleTip } from './rule-tip'
+import { Term } from '@/components/term'
 
 // Pure renderer for an NfpModel (see lib/nfp-model.ts). Every number on the label is already
 // FDA-rounded in the model; hovering a value shows the rule that produced it. The model's layout
@@ -141,7 +142,7 @@ function StandardPanel({ model }: { model: NfpModel }) {
 
       {/* %DV header */}
       <div style={{ textAlign: 'right', fontSize: '8px', fontWeight: 'bold', marginBottom: '1px' }}>
-        % Daily Value*
+        <Term t="dv">% Daily Value*</Term>
       </div>
 
       {main.map(row => (
@@ -174,7 +175,7 @@ function TabularColumn({ rows, basisLabel }: { rows: NfpRow[]; basisLabel: strin
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', fontWeight: 'bold' }}>
         <span>{basisLabel}</span>
-        <span>% Daily Value*</span>
+        <span><Term t="dv">% Daily Value*</Term></span>
       </div>
       {rows.map(row => (
         <div key={row.key}><Row row={row} first={false} short /></div>

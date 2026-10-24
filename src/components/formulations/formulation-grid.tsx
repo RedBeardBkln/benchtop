@@ -28,6 +28,8 @@ import { IterationNote } from '@/components/formulations/iteration-note'
 import { GridColumnPicker } from '@/components/formulations/grid-column-picker'
 import { readErrorMessage } from '@/lib/utils'
 import { useUnsavedChangesWarning } from '@/lib/use-unsaved-changes-warning'
+import { GLOSSARY } from '@/lib/glossary'
+import { Term } from '@/components/term'
 
 function statusIcon(s: ValidationStatus) {
   if (s === 'pass') return <CheckCircle2 size={14} className="text-green-500" />
@@ -35,6 +37,20 @@ function statusIcon(s: ValidationStatus) {
   if (s === 'warn') return <AlertCircle size={14} className="text-yellow-500" />
   return <span className="text-gray-300 text-xs">—</span>
 }
+
+const STATUS_TIP: Record<ValidationStatus, string> = {
+  pass: GLOSSARY.pass,
+  warn: GLOSSARY.warn,
+  fail: GLOSSARY.fail,
+  'no-data': 'Can’t check yet: no value for this nutrient, or no serving size for a per-serving target.',
+}
+
+const AUDIT_TIP = {
+  satisfied: 'Satisfied: the target is met with room to spare.',
+  binding: 'Binding: met, but right at the limit.',
+  violated: 'Violated: the suggestion misses this target.',
+  'no-data': 'No data for this nutrient, so it couldn’t be checked.',
+} as const
 
 import { AddIngredientDialog } from '@/components/ingredients/add-ingredient-dialog'
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
@@ -154,10 +170,10 @@ function IngredientSearchDropdown({
               </span>
               <span className="flex items-center gap-1.5 shrink-0 ml-2">
                 {ing.onHand && (
-                  <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700">On hand</span>
+                  <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700" data-tip={GLOSSARY.onHand}>On hand</span>
                 )}
                 {ing.verification === 'verified' && (
-                  <span className="text-xs text-green-600">✓</span>
+                  <span className="text-xs text-green-600" data-tip={GLOSSARY.verified} aria-label="Verified">✓</span>
                 )}
               </span>
             </button>
@@ -169,6 +185,7 @@ function IngredientSearchDropdown({
             <button
               onMouseDown={e => e.preventDefault()}
               onClick={() => { onClose(); onAddManually(query) }}
+              data-tip="Type in a new ingredient. It’s added to your library and to this formulation."
               className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 flex items-center gap-2"
             >
               <Plus size={13} className="text-blue-500 shrink-0" />
@@ -177,6 +194,7 @@ function IngredientSearchDropdown({
             <button
               onMouseDown={e => e.preventDefault()}
               onClick={() => { onClose(); onImportUsda(query) }}
+              data-tip="Look it up in USDA FoodData Central. It’s added to your library and to this formulation."
               className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 flex items-center gap-2 border-t border-gray-100"
             >
               <Database size={13} className="text-blue-500 shrink-0" />
@@ -208,10 +226,14 @@ function NutrientContributionList({
         <thead className="text-gray-400">
           <tr>
             <th className="text-left font-medium py-1">Ingredient</th>
-            <th className="text-left font-medium py-1 w-2/5 min-w-32">Share</th>
-            <th className="text-right font-medium py-1 pl-3">In batch</th>
-            <th className="text-right font-medium py-1 pl-3">Per 100 g</th>
-            {servingSizeG && <th className="text-right font-medium py-1 pl-3">Per serving</th>}
+            <th className="text-left font-medium py-1 w-2/5 min-w-32">
+              <Term tip="This ingredient’s part of the formulation’s total for this nutrient.">Share</Term>
+            </th>
+            <th className="text-right font-medium py-1 pl-3">
+              <Term tip="How much of this nutrient the ingredient adds to the whole batch.">In batch</Term>
+            </th>
+            <th className="text-right font-medium py-1 pl-3"><Term t="per100gFinished">Per 100 g</Term></th>
+            {servingSizeG && <th className="text-right font-medium py-1 pl-3"><Term t="perServing">Per serving</Term></th>}
           </tr>
         </thead>
         <tbody>
@@ -911,6 +933,10 @@ export function FormulationGrid({ id }: { id: string }) {
   // View-only team members get the same read-only grid as a finalized formulation
   const readOnly = data.canEdit === false
   const isLocked = data.status === 'locked' || readOnly
+  // Why the grid's controls are disabled, for their hints
+  const lockedReason = readOnly
+    ? 'View only: you can’t change this formulation'
+    : 'Finalized. Unlock it, or make a new iteration, to change it.'
   const pctRemaining = totalWeightG > 0
     ? 100 - lines.reduce((s, l) => s + (l.weightG / totalWeightG) * 100, 0)
     : 100
@@ -948,19 +974,30 @@ export function FormulationGrid({ id }: { id: string }) {
                 <Save size={12} /> Save
               </button>
               <button type="button" onClick={() => setEditingName(false)}
+                aria-label="Cancel renaming" data-tip="Cancel renaming"
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded shrink-0">
                 <X size={14} />
               </button>
             </form>
           ) : (
             <div className="flex items-center gap-2 group/name mb-0.5">
-              <h1 className="text-xl font-semibold text-gray-900 truncate min-w-0" title={data.name}>{data.name}</h1>
-              {isLocked && <Lock size={13} className="text-gray-400 shrink-0" />}
+              <h1 className="text-xl font-semibold text-gray-900 truncate min-w-0" data-tip={data.name}>{data.name}</h1>
+              {isLocked && (
+                <span
+                  className="shrink-0"
+                  role="img"
+                  aria-label={readOnly ? 'View only' : 'Locked'}
+                  data-tip={readOnly ? 'View only: you can’t change this formulation' : GLOSSARY.lockedStatus}
+                >
+                  <Lock size={13} className="text-gray-400" />
+                </span>
+              )}
               {!isLocked && (
                 <button
                   onClick={() => { setNameEdit(data.name); setEditingName(true) }}
                   className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded shrink-0"
-                  title="Rename formulation"
+                  aria-label="Rename formulation"
+                  data-tip="Rename this formulation. The new name applies to every version."
                 >
                   <Edit2 size={13} />
                 </button>
@@ -976,7 +1013,8 @@ export function FormulationGrid({ id }: { id: string }) {
                   if (!confirmLeave()) { e.target.value = data.id; return }
                   router.push(`/formulations/${e.target.value}`)
                 }}
-                title="Switch iteration"
+                aria-label="Version"
+                data-tip="Opens another version of this formulation. Finalized versions show a padlock."
                 className="text-sm text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 print:hidden"
               >
@@ -987,12 +1025,12 @@ export function FormulationGrid({ id }: { id: string }) {
                 ))}
               </select>
             ) : (
-              <span className="text-sm text-gray-400">v{data.version}</span>
+              <span className="text-sm text-gray-400"><Term t="version">v{data.version}</Term></span>
             )}
             {data.iterations.length > 1 && allNutrients && (
               <button
                 onClick={() => setShowCompare(true)}
-                title="See what changed between two versions"
+                data-tip="Shows two saved versions side by side: weights, %, and nutrition per 100 g"
                 className="text-sm text-blue-600 hover:underline print:hidden"
               >
                 Compare
@@ -1001,13 +1039,19 @@ export function FormulationGrid({ id }: { id: string }) {
             {readOnly
               ? data.iterationNote && <span className="text-sm text-gray-600">{data.iterationNote}</span>
               : <IterationNote formulationId={id} note={data.iterationNote} />}
-            <span className="capitalize">{data.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</span>
+            <span className="capitalize">
+              {data.mode === 'ground_up' ? <Term t="groundUp">Ground up</Term> : <Term t="reverse">Reverse</Term>}
+            </span>
             <span className={`px-1.5 py-0.5 rounded font-medium ${
               isLocked ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'
             }`}>
-              {data.status}
+              <Term t={data.status === 'locked' ? 'lockedStatus' : 'draftStatus'}>{data.status}</Term>
             </span>
-            {readOnly && <span className="px-1.5 py-0.5 rounded font-medium bg-amber-50 text-amber-700">view only</span>}
+            {readOnly && (
+              <span className="px-1.5 py-0.5 rounded font-medium bg-amber-50 text-amber-700">
+                <Term t="viewOnly">view only</Term>
+              </span>
+            )}
           </div>
         </div>
 
@@ -1016,6 +1060,7 @@ export function FormulationGrid({ id }: { id: string }) {
             <button
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
+              data-tip="Saves the ingredients, amounts, order, locks, Solve limits, batch and serving size"
               className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-sm
                          rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
@@ -1026,7 +1071,9 @@ export function FormulationGrid({ id }: { id: string }) {
           {data.mode === 'reverse' && !readOnly && (
             <button
               onClick={() => setShowReverseWizard(true)}
-              title="Run the reverse-engineer wizard to find an ingredient blend matching a target label"
+              data-tip={hasReverseDraft
+                ? 'Opens the reverse-engineer wizard, where you can resume your saved draft'
+                : 'Opens the wizard that works out a recipe matching an existing product label'}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 text-violet-600
                          text-sm rounded-md hover:bg-violet-50 transition-colors"
             >
@@ -1044,7 +1091,7 @@ export function FormulationGrid({ id }: { id: string }) {
                 solveMutation.mutate()
               }}
               disabled={solveMutation.isPending}
-              title="Run LP solver to find ingredient weights that satisfy nutritional targets"
+              data-tip={`${GLOSSARY.solve} Locked ingredients stay fixed. Works from the last saved version.`}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white
                          text-sm rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
             >
@@ -1057,7 +1104,7 @@ export function FormulationGrid({ id }: { id: string }) {
             return (
               <button
                 onClick={() => setShowSolverBounds(true)}
-                title="Set the minimum and maximum usage % Solve may give each ingredient"
+                data-tip={`Set the minimum and maximum usage % Solve may give each ingredient${limited > 0 ? ` (${limited} ingredient${limited === 1 ? ' has' : 's have'} limits)` : ''}`}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 text-violet-600
                            text-sm rounded-md hover:bg-violet-50 transition-colors"
               >
@@ -1072,7 +1119,8 @@ export function FormulationGrid({ id }: { id: string }) {
             <button
               onClick={() => setShowDuplicateMenu(v => !v)}
               disabled={iterateMutation.isPending || forkMutation.isPending}
-              title="Duplicate this formulation"
+              aria-expanded={showDuplicateMenu}
+              data-tip="Copies the last saved version, as the next version (iteration) or as a new formulation"
               className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
                          text-sm rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
@@ -1117,7 +1165,7 @@ export function FormulationGrid({ id }: { id: string }) {
           {readOnly ? null : isLocked ? (
             <button
               onClick={() => setConfirmAction('unfinalize')}
-              title="Unlock this formulation to allow editing"
+              data-tip="Returns this version to draft so it can be edited (asks to confirm). A new iteration keeps the approved one intact."
               className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-600
                          text-sm rounded-md hover:bg-amber-50 transition-colors"
             >
@@ -1126,7 +1174,7 @@ export function FormulationGrid({ id }: { id: string }) {
           ) : (
             <button
               onClick={() => setConfirmAction('finalize')}
-              title="Finalize and lock this formulation"
+              data-tip="Marks this version approved and locks it against changes (asks to confirm). You can still print, duplicate and record batches."
               className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
                          text-sm rounded-md hover:bg-gray-50 transition-colors"
             >
@@ -1136,7 +1184,7 @@ export function FormulationGrid({ id }: { id: string }) {
           {data.status === 'locked' && lines.length > 0 && (
             <button
               onClick={() => setShowSaveAsIngredient(true)}
-              title="Save this finalized formulation as an ingredient for use in other formulations"
+              data-tip={GLOSSARY.saveAsIngredient}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-blue-200 text-blue-700
                          text-sm rounded-md hover:bg-blue-50 transition-colors"
             >
@@ -1146,7 +1194,7 @@ export function FormulationGrid({ id }: { id: string }) {
           {calcResult && (
             <button
               onClick={() => setShowNfpDialog(true)}
-              title="Generate and download a Nutrition Facts Panel"
+              data-tip="Builds the Nutrition Facts panel (FDA rounding) from what’s on screen, to download, print or save"
               className="flex items-center gap-1.5 px-3 py-1.5 border border-green-200 text-green-700
                          text-sm rounded-md hover:bg-green-50 transition-colors"
             >
@@ -1155,7 +1203,7 @@ export function FormulationGrid({ id }: { id: string }) {
           )}
           <button
             onClick={handlePrint}
-            title="Open a print-friendly view in a new tab"
+            data-tip="Opens a print-friendly sheet of the last saved version in a new tab. You choose the sections first."
             className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
                        text-sm rounded-md hover:bg-gray-50 transition-colors"
           >
@@ -1164,7 +1212,7 @@ export function FormulationGrid({ id }: { id: string }) {
           {lines.length > 0 && !readOnly && (
             <button
               onClick={() => setShowCompleteBatch(true)}
-              title="Record a completed batch — deplete ingredient stock"
+              data-tip={`${GLOSSARY.completeBatch} Uses the last saved version.`}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-200 text-emerald-700
                          text-sm rounded-md hover:bg-emerald-50 transition-colors"
             >
@@ -1174,7 +1222,7 @@ export function FormulationGrid({ id }: { id: string }) {
           {!readOnly && (
             <button
               onClick={() => setConfirmAction('archive')}
-              title="Archive this formulation"
+              data-tip="Hides every version of this formulation from the project (asks to confirm). Restore it from the project’s Archived list."
               className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500
                          text-sm rounded-md hover:bg-gray-50 transition-colors"
             >
@@ -1187,14 +1235,16 @@ export function FormulationGrid({ id }: { id: string }) {
       {/* Settings bar */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm print:hidden">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-gray-500">Batch (g)</span>
+          <span className="text-xs font-medium text-gray-500"><Term t="batchSize">Batch (g)</Term></span>
           <WeightInput
             value={batchLocked && batchTargetG != null ? batchTargetG : totalWeightG}
             onChange={commitBatchSize}
             commitOn="blur"
             disabled={isLocked}
             ariaLabel="Batch size (g)"
-            title={batchLocked ? 'Locked batch size — quantities rebalance to always total this' : 'Type a batch size to scale the formula to it'}
+            tip={isLocked ? undefined : batchLocked
+              ? 'Locked batch size: unlocked ingredients rebalance so the total stays at this. Type a new size and press Enter to change it.'
+              : 'Type a batch size and press Enter to scale the whole recipe to it, keeping the same proportions'}
             className="w-28 px-2 py-0.5 text-right text-sm border border-gray-200 rounded focus:outline-none
                        focus:ring-1 focus:ring-blue-500 disabled:opacity-60 disabled:bg-gray-50 tabular-nums"
           />
@@ -1202,14 +1252,16 @@ export function FormulationGrid({ id }: { id: string }) {
             active={batchLocked}
             disabled={isLocked}
             onClick={toggleBatchLock}
-            lockedTitle="Batch size locked — click to unlock"
-            unlockedTitle="Lock the batch size so quantities and usage % always rebalance to it"
+            lockedTitle="Batch size locked: changing one ingredient makes the unlocked ones grow or shrink to keep this total. Click to unlock."
+            unlockedTitle="Lock the batch size, so the total stays fixed while you change ingredients"
+            disabledTip={lockedReason}
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-500">Serving (g)</label>
+          <span className="text-xs font-medium text-gray-500"><Term t="servingSize">Serving (g)</Term></span>
           <input
             type="number"
+            aria-label="Serving size (g)"
             min="0"
             step="any"
             value={servingSizeG}
@@ -1220,14 +1272,14 @@ export function FormulationGrid({ id }: { id: string }) {
                        focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
           />
         </div>
-        <div
-          className="flex items-center gap-2"
-          title={calcResult
-            ? `Production loss ${calcResult.processYield.productionLossG.toFixed(1)} g · moisture loss ${calcResult.processYield.moistureLossG.toFixed(1)} g — set per step in Process steps`
-            : 'Set loss per step in Process steps'}
-        >
-          <span className="text-xs font-medium text-gray-500">Yield</span>
-          <span className="font-medium text-gray-700">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-500"><Term t="yield">Yield</Term></span>
+          <span
+            className="font-medium text-gray-700"
+            data-tip={calcResult
+              ? `Production loss ${calcResult.processYield.productionLossG.toFixed(1)} g · moisture loss ${calcResult.processYield.moistureLossG.toFixed(1)} g. Set losses on each process step.`
+              : 'Set losses on each process step'}
+          >
             {calcResult && calcResult.totalWeightG > 0
               ? `${calcResult.processYield.yieldPct.toFixed(1)}% · ${calcResult.finishedWeightG.toFixed(1)} g`
               : '—'}
@@ -1249,6 +1301,7 @@ export function FormulationGrid({ id }: { id: string }) {
               role="tab"
               aria-selected={activeTab === t}
               onClick={() => setTab(t)}
+              data-tip={t === 'cogs' ? GLOSSARY.cogs : 'The recipe: ingredients, amounts, nutrition and process steps'}
               className={`px-4 py-2 text-sm border-b-2 -mb-px transition-colors ${
                 activeTab === t ? 'border-blue-500 text-blue-600 font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
@@ -1282,12 +1335,14 @@ export function FormulationGrid({ id }: { id: string }) {
               <span className="text-xs text-gray-400 mr-0.5">Sort:</span>
               <button
                 onClick={() => sortLines('weight')}
+                data-tip="Reorders the rows heaviest first. Click Save to keep the order."
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
               >
                 <ArrowDownNarrowWide size={11} /> By weight
               </button>
               <button
                 onClick={() => sortLines('pct')}
+                data-tip="Reorders the rows by usage %, largest first (the same order as by weight). Click Save to keep it."
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
               >
                 <ArrowDownNarrowWide size={11} /> By %
@@ -1317,29 +1372,35 @@ export function FormulationGrid({ id }: { id: string }) {
               <th className="px-2 py-2.5 w-6 print:hidden" />
               <th className="px-3 py-2.5 text-left font-medium w-6">#</th>
               <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2.5 text-left font-medium">Ingredient</th>
-              <th className="px-3 py-2.5 text-right font-medium w-36">Weight (g)</th>
+              <th className="px-3 py-2.5 text-right font-medium w-36"><Term t="weightG">Weight (g)</Term></th>
               <th className="px-3 py-2.5 text-right font-medium w-40">
                 <span className="inline-flex items-center gap-1">
-                  %
+                  <Term t="usagePct">%</Term>
                   <button
                     type="button"
                     onClick={() => changePctDecimals(-1)}
                     disabled={pctDecimals <= PCT_DECIMALS_MIN}
-                    title="Show fewer decimal places"
+                    aria-label="Show fewer decimal places"
+                    data-tip="Show fewer decimal places in the % column"
                     className="px-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 print:hidden"
                   >−</button>
-                  <span className="text-gray-400 font-normal tabular-nums">{pctDecimals} dp</span>
+                  <span className="text-gray-400 font-normal tabular-nums" data-tip="Decimal places shown in the % column. Remembered in this browser.">{pctDecimals} dp</span>
                   <button
                     type="button"
                     onClick={() => changePctDecimals(1)}
                     disabled={pctDecimals >= PCT_DECIMALS_MAX}
-                    title="Show more decimal places (up to 4)"
+                    aria-label="Show more decimal places"
+                    data-tip="Show more decimal places in the % column (up to 4)"
                     className="px-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 print:hidden"
                   >+</button>
                 </span>
               </th>
               {gridNutrients.map(n => (
-                <th key={n.id} className="px-3 py-2.5 text-right font-medium w-24 whitespace-nowrap" title={n.name}>
+                <th
+                  key={n.id}
+                  className="px-3 py-2.5 text-right font-medium w-24 whitespace-nowrap"
+                  data-tip={`${n.name} (${n.unit}) each ingredient adds to the whole batch. The Total row shows it per 100 g finished.`}
+                >
                   {GRID_HEADER_LABELS[n.name] ?? n.name}
                   <span className="text-gray-400 font-normal ml-0.5">/{n.unit}</span>
                 </th>
@@ -1366,7 +1427,10 @@ export function FormulationGrid({ id }: { id: string }) {
                     'bg-white hover:bg-gray-50'
                   }`}
                 >
-                  <td className={`px-2 py-2 print:hidden ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+                  <td
+                    className={`px-2 py-2 print:hidden ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    data-tip={!isLocked ? 'Drag onto another row to reorder' : undefined}
+                  >
                     {!isLocked && (
                       <GripVertical size={14} className="text-gray-200 group-hover:text-gray-400 transition-colors" />
                     )}
@@ -1378,16 +1442,17 @@ export function FormulationGrid({ id }: { id: string }) {
                         setSidebarIngredientId(line.ingredientId)
                         setSidebarLineKey(line.key)
                       }}
+                      data-tip="Opens this ingredient’s nutrients, allergens, suppliers and info in a side panel, where you can also swap it"
                       className="flex items-center gap-1.5 group/name text-left hover:text-blue-600 transition-colors min-w-44 max-w-xs"
                     >
                       <span className="font-medium text-gray-800 group-hover/name:text-blue-600 transition-colors">
                         {line.ingredientName}
                       </span>
                       {line.ingredientVerification !== 'verified' && (
-                        <span className="text-xs text-yellow-500" title="Unverified">⚠</span>
+                        <span className="text-xs text-yellow-500" aria-label="Unverified" data-tip={GLOSSARY.unverified}>⚠</span>
                       )}
                       {libraryById.get(line.ingredientId)?.onHand && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="On hand in the lab" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-label="On hand" data-tip={GLOSSARY.onHand} />
                       )}
                     </button>
                     {!isLocked && (() => {
@@ -1399,7 +1464,7 @@ export function FormulationGrid({ id }: { id: string }) {
                         <button
                           onClick={() => { setSwapTargetKey(line.key); setShowLibraryPicker(true) }}
                           className="mt-0.5 block text-left text-[11px] text-emerald-700 hover:underline print:hidden max-w-xs truncate"
-                          title={`Not on hand. On-hand ${libIng.category} you could use instead: ${alts.map(a => a.name).join(', ')}`}
+                          data-tip={`Not on hand. On-hand ${libIng.category} you could use instead: ${alts.map(a => a.name).join(', ')}. Click to swap one in.`}
                         >
                           On hand instead: {alts.map(a => a.name).join(', ')}
                         </button>
@@ -1412,14 +1477,15 @@ export function FormulationGrid({ id }: { id: string }) {
                         value={line.weightG}
                         onChange={g => updateWeight(line.key, String(g))}
                         disabled={isLocked || line.locked || line.pctLocked}
-                        title={line.pctLocked ? 'Set by the locked usage % — unlock the % to edit' : undefined}
+                        tip={line.pctLocked ? 'Set by the locked usage %. Unlock the % to edit.' : undefined}
                       />
                       <LockToggle
                         active={line.locked}
                         disabled={isLocked}
                         onClick={() => toggleQtyLock(line.key)}
-                        lockedTitle="Quantity locked — click to unlock"
-                        unlockedTitle="Lock this quantity"
+                        lockedTitle="Weight locked: this ingredient keeps exactly these grams. Click to unlock."
+                        unlockedTitle="Lock the weight, so this ingredient keeps the same grams whatever else changes"
+                        disabledTip={lockedReason}
                       />
                     </div>
                   </td>
@@ -1430,14 +1496,15 @@ export function FormulationGrid({ id }: { id: string }) {
                         decimals={pctDecimals}
                         onChange={p => updatePct(line.key, p)}
                         disabled={isLocked || line.locked}
-                        title={line.locked ? 'Set by the locked quantity — unlock the quantity to edit' : undefined}
+                        tip={line.locked ? 'Set by the locked weight. Unlock the weight to edit.' : undefined}
                       />
                       <LockToggle
                         active={line.pctLocked}
                         disabled={isLocked}
                         onClick={() => togglePctLock(line.key)}
-                        lockedTitle="Usage % locked — click to unlock"
-                        unlockedTitle="Lock this usage % so it is always this share of the batch"
+                        lockedTitle="Usage % locked: this ingredient always stays this share of the batch. Click to unlock."
+                        unlockedTitle="Lock the usage %, so this ingredient always stays the same share of the batch"
+                        disabledTip={lockedReason}
                       />
                     </div>
                   </td>
@@ -1453,6 +1520,8 @@ export function FormulationGrid({ id }: { id: string }) {
                     {!isLocked && (
                       <button
                         onClick={() => removeLine(line.key)}
+                        aria-label={`Remove ${line.ingredientName}`}
+                        data-tip="Removes this ingredient from the formula. Click Save to keep the change."
                         className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all"
                       >
                         <X size={14} />
@@ -1468,7 +1537,10 @@ export function FormulationGrid({ id }: { id: string }) {
               <tr className="bg-gray-50 border-t-2 border-gray-200 font-medium text-xs text-gray-600">
                 <td className="px-2 py-2" />
                 <td className="px-3 py-2" />
-                <td className="sticky left-0 z-10 bg-inherit px-3 py-2">Total ({lines.length} ingredient{lines.length !== 1 ? 's' : ''})</td>
+                <td className="sticky left-0 z-10 bg-inherit px-3 py-2">
+                  <Term tip="The total batch weight. For nutrients this row shows the amount per 100 g finished, not the sum of the column.">Total</Term>
+                  {' '}({lines.length} ingredient{lines.length !== 1 ? 's' : ''})
+                </td>
                 <td className="px-3 py-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   <span className={Math.abs(100 - (totalWeightG > 0 ? 100 : 0)) < 0.01 ? 'text-green-600' : 'text-gray-500'}>
@@ -1492,7 +1564,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <tr className="bg-blue-50 text-xs font-semibold text-blue-700">
                 <td className="px-2 py-2" />
                 <td className="px-3 py-2" />
-                <td className="sticky left-0 z-10 bg-inherit px-3 py-2">Per 100 g finished</td>
+                <td className="sticky left-0 z-10 bg-inherit px-3 py-2"><Term t="per100gFinished">Per 100 g finished</Term></td>
                 <td className="px-3 py-2 text-right tabular-nums">—</td>
                 <td className="px-3 py-2 text-right">—</td>
                 {gridNutrients.map(n => {
@@ -1512,7 +1584,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <tr className="bg-emerald-50 text-xs font-semibold text-emerald-700">
                 <td className="px-2 py-2" />
                 <td className="px-3 py-2" />
-                <td className="sticky left-0 z-10 bg-inherit px-3 py-2">Per serving ({servingSizeG} g)</td>
+                <td className="sticky left-0 z-10 bg-inherit px-3 py-2"><Term t="perServing">Per serving</Term> ({servingSizeG} g)</td>
                 <td className="px-3 py-2 text-right tabular-nums">—</td>
                 <td className="px-3 py-2 text-right">—</td>
                 {gridNutrients.map(n => {
@@ -1543,6 +1615,8 @@ export function FormulationGrid({ id }: { id: string }) {
               />
               <button
                 onClick={() => setShowAddRow(false)}
+                aria-label="Close search"
+                data-tip="Close the ingredient search"
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={14} />
@@ -1551,6 +1625,7 @@ export function FormulationGrid({ id }: { id: string }) {
           ) : (
             <button
               onClick={() => setShowAddRow(true)}
+              data-tip="Search your ingredient library, or add a new one by hand or from USDA"
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600
                          hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
             >
@@ -1580,6 +1655,8 @@ export function FormulationGrid({ id }: { id: string }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <button
               onClick={() => setShowProfile(p => !p)}
+              aria-expanded={showProfile}
+              data-tip={showProfile ? 'Hides the full nutrient profile' : 'Shows every nutrient per 100 g finished and per serving, and which ingredients it comes from'}
               className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
             >
               {showProfile ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -1615,9 +1692,9 @@ export function FormulationGrid({ id }: { id: string }) {
                         <thead className="bg-gray-50 text-xs text-gray-500">
                           <tr>
                             <th className="px-4 py-2 text-left font-medium">Nutrient</th>
-                            <th className="px-4 py-2 text-right font-medium">Per 100 g</th>
+                            <th className="px-4 py-2 text-right font-medium"><Term t="per100gFinished">Per 100 g</Term></th>
                             {servingSizeG && parseFloat(servingSizeG) > 0 && (
-                              <th className="px-4 py-2 text-right font-medium">Per serving</th>
+                              <th className="px-4 py-2 text-right font-medium"><Term t="perServing">Per serving</Term></th>
                             )}
                             <th className="px-4 py-2 text-right font-medium text-gray-400">Unit</th>
                           </tr>
@@ -1690,12 +1767,12 @@ export function FormulationGrid({ id }: { id: string }) {
           <div className="mt-6">
             <div className="flex items-center gap-2 mb-3">
               <Target size={14} className="text-gray-400" />
-              <span className="text-sm font-medium text-gray-700">Validation</span>
-              <span className="text-xs text-gray-400">vs. project targets</span>
+              <span className="text-sm font-medium text-gray-700"><Term t="validation">Validation</Term></span>
+              <span className="text-xs text-gray-400">vs. project <Term t="target">targets</Term></span>
               <span className="ml-auto flex items-center gap-2 text-xs">
-                {passes > 0 && <span className="text-green-600">{passes} pass</span>}
-                {warns > 0  && <span className="text-yellow-600">{warns} warn</span>}
-                {fails > 0  && <span className="text-red-600">{fails} fail</span>}
+                {passes > 0 && <span className="text-green-600">{passes} <Term t="pass">pass</Term></span>}
+                {warns > 0  && <span className="text-yellow-600">{warns} <Term t="warn">warn</Term></span>}
+                {fails > 0  && <span className="text-red-600">{fails} <Term t="fail">fail</Term></span>}
               </span>
             </div>
             <div className="overflow-x-auto">
@@ -1704,7 +1781,9 @@ export function FormulationGrid({ id }: { id: string }) {
                   <tr>
                     <th className="px-4 py-2 text-left font-medium">Nutrient</th>
                     <th className="px-4 py-2 text-left font-medium">Requirement</th>
-                    <th className="px-4 py-2 text-right font-medium">Actual</th>
+                    <th className="px-4 py-2 text-right font-medium">
+                      <Term tip="This formulation’s value, from what’s on screen (including unsaved changes).">Actual</Term>
+                    </th>
                     <th className="px-4 py-2 text-center font-medium w-16">Status</th>
                   </tr>
                 </thead>
@@ -1728,7 +1807,9 @@ export function FormulationGrid({ id }: { id: string }) {
                             </span>
                         }
                       </td>
-                      <td className="px-4 py-2 flex justify-center">{statusIcon(status)}</td>
+                      <td className="px-4 py-2 flex justify-center">
+                        <span data-tip={STATUS_TIP[status]} aria-label={status}>{statusIcon(status)}</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1744,12 +1825,18 @@ export function FormulationGrid({ id }: { id: string }) {
           {/* Panel header */}
           <div className="bg-violet-50 px-4 py-3 flex items-center gap-2">
             <Zap size={14} className="text-violet-500" />
-            <span className="text-sm font-medium text-violet-700">LP Solver</span>
+            <span className="text-sm font-medium text-violet-700"><Term t="solve">LP Solver</Term></span>
             <span className={`text-xs px-2 py-0.5 rounded font-medium ${
               solverResult.status === 'optimal'    ? 'bg-green-100 text-green-700' :
               solverResult.status === 'infeasible' ? 'bg-red-100 text-red-700' :
                                                      'bg-gray-100 text-gray-600'
-            }`}>
+            }`}
+              data-tip={solverResult.status === 'optimal'
+                ? 'Optimal: found amounts that meet the targets with the smallest change to your recipe'
+                : solverResult.status === 'infeasible'
+                  ? 'Infeasible: no mix of these ingredients meets every target within your limits'
+                  : undefined}
+            >
               {solverResult.status}
             </span>
             {solverResult.status === 'optimal' && (
@@ -1757,6 +1844,8 @@ export function FormulationGrid({ id }: { id: string }) {
             )}
             <button
               onClick={() => setShowSolverPanel(false)}
+              aria-label="Close solver results"
+              data-tip="Close the solver results without applying them"
               className="ml-auto text-gray-400 hover:text-gray-600"
             >
               <X size={14} />
@@ -1784,9 +1873,15 @@ export function FormulationGrid({ id }: { id: string }) {
                     <tr className="text-xs text-gray-400">
                       <th className="text-left font-medium pb-1.5">Ingredient</th>
                       <th className="text-right font-medium pb-1.5 pr-2">Current %</th>
-                      <th className="text-right font-medium pb-1.5 pr-2">Suggested %</th>
-                      <th className="text-right font-medium pb-1.5 pr-2">New weight (g)</th>
-                      <th className="text-right font-medium pb-1.5">Δ</th>
+                      <th className="text-right font-medium pb-1.5 pr-2">
+                        <Term tip="The usage % Solve suggests for this ingredient.">Suggested %</Term>
+                      </th>
+                      <th className="text-right font-medium pb-1.5 pr-2">
+                        <Term tip="The weight at the suggested %, keeping the same batch total.">New weight (g)</Term>
+                      </th>
+                      <th className="text-right font-medium pb-1.5">
+                        <Term tip="The change in usage %, in percentage points.">Δ</Term>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -1799,7 +1894,7 @@ export function FormulationGrid({ id }: { id: string }) {
                         <tr key={l.key} className={l.locked ? 'opacity-50' : ''}>
                           <td className="py-1.5 text-gray-800">
                             {l.ingredientName}
-                            {l.locked && <span className="ml-1 text-xs text-gray-400">(locked)</span>}
+                            {l.locked && <span className="ml-1 text-xs text-gray-400" data-tip="Weight-locked, so Solve keeps its amount">(locked)</span>}
                           </td>
                           <td className="py-1.5 text-right tabular-nums text-gray-500 pr-2">
                             {curPct.toFixed(1)}%
@@ -1831,7 +1926,7 @@ export function FormulationGrid({ id }: { id: string }) {
           {solverResult.auditTrace.length > 0 && (
             <div className="px-4 py-3 border-b border-violet-100">
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Constraint Audit
+                <Term tip="Each project target checked against the suggested recipe.">Constraint Audit</Term>
               </h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1839,8 +1934,12 @@ export function FormulationGrid({ id }: { id: string }) {
                     <tr className="text-xs text-gray-400">
                       <th className="text-left font-medium pb-1.5">Target</th>
                       <th className="text-left font-medium pb-1.5">Requirement</th>
-                      <th className="text-right font-medium pb-1.5 pr-2">Achieved</th>
-                      <th className="text-right font-medium pb-1.5 pr-2">Slack</th>
+                      <th className="text-right font-medium pb-1.5 pr-2">
+                        <Term tip="The value the suggested recipe reaches.">Achieved</Term>
+                      </th>
+                      <th className="text-right font-medium pb-1.5 pr-2">
+                        <Term tip="Room to spare against the target. Positive = headroom, negative = shortfall.">Slack</Term>
+                      </th>
                       <th className="text-center font-medium pb-1.5 w-14">Status</th>
                     </tr>
                   </thead>
@@ -1866,7 +1965,7 @@ export function FormulationGrid({ id }: { id: string }) {
                             ? (entry.slack >= 0 ? `+${entry.slack.toFixed(2)}` : entry.slack.toFixed(2))
                             : '—'}
                         </td>
-                        <td className="py-1.5 flex justify-center">
+                        <td className="py-1.5 flex justify-center" data-tip={AUDIT_TIP[entry.status]}>
                           {entry.status === 'satisfied' && <CheckCircle2 size={13} className="text-green-500" />}
                           {entry.status === 'binding'   && <AlertCircle  size={13} className="text-yellow-500" />}
                           {entry.status === 'violated'  && <XCircle      size={13} className="text-red-500" />}
@@ -1888,6 +1987,7 @@ export function FormulationGrid({ id }: { id: string }) {
               </p>
               <button
                 onClick={() => applySolution(solverResult)}
+                data-tip="Fills the suggested weights into the grid, keeping the same batch total. Click Save to keep them."
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-violet-600 text-white text-sm
                            rounded-md hover:bg-violet-700 transition-colors"
               >
@@ -2104,6 +2204,7 @@ export function FormulationGrid({ id }: { id: string }) {
                   Cancel
                 </button>
                 <button type="submit" disabled={!canCreate}
+                  data-tip={!trimmed ? 'Enter a name first' : sameName ? 'Use a different name' : 'Copies the last saved version into a new formulation at v1, in this project'}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                   {forkMutation.isPending ? 'Creating…' : 'Create formulation'}
                 </button>

@@ -12,6 +12,7 @@ import { ProjectTargets } from './project-targets'
 import Link from 'next/link'
 import { ClientSelect, useClientOptions } from '@/components/clients/client-select'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 // formulations holds the latest iteration of each formulation
 type ProjectWithFormulations = Project & {
@@ -88,6 +89,7 @@ function NewFormulationDialog({
             <select
               value={mode}
               onChange={e => setMode(e.target.value as 'ground_up' | 'reverse')}
+              data-tip="Ground up: you build the recipe yourself. Reverse: start from an existing product label and match it. Can’t be changed later."
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ground_up">Ground up — build from ingredients</option>
@@ -101,6 +103,7 @@ function NewFormulationDialog({
             <button
               type="submit"
               disabled={!name.trim() || mutation.isPending}
+              data-tip={name.trim() ? 'Creates the formulation in this project and opens it.' : 'Type a name first.'}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {mutation.isPending ? 'Creating…' : 'Create'}
@@ -263,6 +266,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   <Save size={12} /> Save
                 </button>
                 <button type="button" onClick={() => setEditingName(false)}
+                  aria-label="Cancel renaming" data-tip="Cancel renaming"
                   className="p-1.5 text-gray-400 hover:text-gray-600 rounded shrink-0">
                   <X size={14} />
                 </button>
@@ -274,7 +278,8 @@ export function ProjectDetail({ id }: { id: string }) {
                   <button
                     onClick={() => { setNameEdit(data.name); setEditingName(true) }}
                     className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded"
-                    title="Rename project"
+                    aria-label="Rename project"
+                    data-tip="Rename this project"
                   >
                     <Edit2 size={14} />
                   </button>
@@ -293,10 +298,11 @@ export function ProjectDetail({ id }: { id: string }) {
                   current={data.clientId && data.client ? { id: data.clientId, name: data.client } : null}
                 />
                 <button type="submit" disabled={clientMutation.isPending || clientEdit === data.clientId}
+                  data-tip="Links this project to the chosen client. This can change which teammates can see it."
                   className="flex items-center gap-1 px-3 py-2 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 shrink-0">
                   <Save size={12} /> Save
                 </button>
-                <button type="button" onClick={() => setEditingClient(false)} aria-label="Cancel"
+                <button type="button" onClick={() => setEditingClient(false)} aria-label="Cancel" data-tip="Cancel without changing the client"
                   className="p-1.5 text-gray-400 hover:text-gray-600 rounded shrink-0">
                   <X size={14} />
                 </button>
@@ -312,7 +318,10 @@ export function ProjectDetail({ id }: { id: string }) {
                 <button
                   onClick={() => { setClientEdit(data.clientId ?? null); setEditingClient(true) }}
                   className="text-xs text-gray-400 hover:text-blue-700"
-                  title="Change client"
+                  aria-label={data.client ? 'Change client' : undefined}
+                  data-tip={data.client
+                    ? 'Change or remove the client. This can change which teammates can see the project.'
+                    : 'Link this project to a client. Members can be given access by client.'}
                 >
                   {data.client ? <Edit2 size={12} /> : '+ Add client'}
                 </button>
@@ -320,10 +329,19 @@ export function ProjectDetail({ id }: { id: string }) {
               <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                 data.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
               }`}>
-                {data.status}
+                <Term tip={data.status === 'active'
+                  ? 'Active: the project is in progress.'
+                  : 'Archived: marked finished or on hold. It can still be opened and edited, and restored any time.'}
+                >
+                  {data.status}
+                </Term>
               </span>
               {!canEdit && (
-                <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">view only</span>
+                <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">
+                  <Term t="viewOnly">
+                    view only
+                  </Term>
+                </span>
               )}
             </div>
             {editingObjective ? (
@@ -361,7 +379,8 @@ export function ProjectDetail({ id }: { id: string }) {
                   <button
                     onClick={() => { setObjectiveEdit(data.objectiveText ?? ''); setEditingObjective(true) }}
                     className="sm:opacity-0 sm:group-hover/objective:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded shrink-0"
-                    title="Edit objective"
+                    aria-label="Edit objective"
+                    data-tip="Edit the project’s objective"
                   >
                     <Edit2 size={12} />
                   </button>
@@ -370,6 +389,7 @@ export function ProjectDetail({ id }: { id: string }) {
             ) : canEdit && (
               <button
                 onClick={() => { setObjectiveEdit(''); setEditingObjective(true) }}
+                data-tip="Write the goal for this product, e.g. “30 g protein per serving, nut-free”."
                 className="mt-2 text-xs text-gray-400 hover:text-blue-700"
               >
                 + Add objective
@@ -381,6 +401,9 @@ export function ProjectDetail({ id }: { id: string }) {
               <button
                 onClick={() => archiveMutation.mutate()}
                 disabled={archiveMutation.isPending}
+                data-tip={data.status === 'active'
+                  ? 'Marks the project archived (finished or on hold). It stays in the list and can still be edited.'
+                  : 'Makes this project active again.'}
                 className="px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors"
               >
                 {data.status === 'active' ? 'Archive' : 'Restore'}
@@ -396,11 +419,12 @@ export function ProjectDetail({ id }: { id: string }) {
           return (
             <>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-semibold text-gray-700">Formulations</h2>
+                <h2 className="text-base font-semibold text-gray-700"><Term t="formulation">Formulations</Term></h2>
                 <div className="flex items-center gap-2">
                   {archived.length > 0 && (
                     <button
                       onClick={() => setShowArchived(v => !v)}
+                      data-tip={showArchived ? 'Hide archived formulations from the list' : 'Show archived formulations, faded, so you can restore them'}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-gray-200 rounded-md text-gray-500 hover:bg-gray-50 transition-colors"
                     >
                       <Archive size={12} />
@@ -410,7 +434,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   {canEdit && (
                     <Link
                       href={`/formulations/import?project=${id}`}
-                      title="Build a formulation from an Excel or CSV file"
+                      data-tip="Build a formulation in this project from an Excel or CSV file. You review it before it’s created."
                       className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
                     >
                       <FileSpreadsheet size={14} /> Import
@@ -419,6 +443,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   {canEdit && (
                     <button
                       onClick={() => setDialogOpen(true)}
+                      data-tip="Start a new formulation in this project, built from ingredients or matched to a label"
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                     >
                       <Plus size={14} /> New formulation
@@ -444,9 +469,13 @@ export function ProjectDetail({ id }: { id: string }) {
                     <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium">Name</th>
-                        <th className="px-4 py-3 text-left font-medium">Mode</th>
-                        <th className="px-4 py-3 text-left font-medium">Version</th>
-                        <th className="px-4 py-3 text-left font-medium">Status</th>
+                        <th className="px-4 py-3 text-left font-medium">
+                          <Term tip="Ground up: you build the recipe yourself. Reverse: benchtop works out a recipe that matches an existing label.">Mode</Term>
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium"><Term t="version">Version</Term></th>
+                        <th className="px-4 py-3 text-left font-medium">
+                          <Term tip="Draft: can still be edited. Locked: finalized and protected from changes.">Status</Term>
+                        </th>
                         <th className="px-4 py-3 text-left font-medium">Updated</th>
                         <th className="px-4 py-3" />
                       </tr>
@@ -501,6 +530,7 @@ export function ProjectDetail({ id }: { id: string }) {
                             {canEdit && (
                               <button
                                 onClick={e => { e.stopPropagation(); restoreFormulationMutation.mutate(f.id) }}
+                                data-tip="Brings this formulation back into the active list"
                                 className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-200 rounded hover:bg-white text-gray-500 transition-colors"
                               >
                                 <RotateCcw size={11} /> Restore
@@ -521,7 +551,7 @@ export function ProjectDetail({ id }: { id: string }) {
         <div className="mt-10">
           <div className="flex items-center gap-2 mb-4">
             <Target size={15} className="text-gray-400" />
-            <h2 className="text-base font-semibold text-gray-700">Nutritional targets</h2>
+            <h2 className="text-base font-semibold text-gray-700">Nutritional <Term t="target">targets</Term></h2>
             <span className="text-xs text-gray-400 font-normal">
               — validates every formulation in this project
             </span>

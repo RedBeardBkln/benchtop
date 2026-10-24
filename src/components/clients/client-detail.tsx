@@ -9,6 +9,7 @@ import { ArrowLeft, Copy, Plus, Trash2, X } from 'lucide-react'
 import { EMPTY_ADDRESS, type CarrierAccount, type ClientAddress } from '@/lib/client-schemas'
 import { readErrorMessage } from '@/lib/utils'
 import { AddressFields, Contacts, Field, Section, inputCls, type Contact } from '@/components/records/record-fields'
+import { Term } from '@/components/term'
 
 type ClientDetailData = {
   id: string
@@ -167,21 +168,22 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           <Field label="Legal / billing name" htmlFor="client-legal">
             <input id="client-legal" value={form.legalName} onChange={text('legalName')} placeholder="If different from the client name" className={inputCls} />
           </Field>
-          <Field label="Tax ID / EIN" htmlFor="client-tax">
+          <Field label="Tax ID / EIN" htmlFor="client-tax" tip="The client’s tax number (in the US, their Employer Identification Number), for invoices and records.">
             <input id="client-tax" value={form.taxId} onChange={text('taxId')} className={inputCls} autoComplete="off" />
           </Field>
-          <Field label="Payment terms" htmlFor="client-terms">
+          <Field label="Payment terms" htmlFor="client-terms" term="paymentTerms">
             <input id="client-terms" list="payment-terms" value={form.paymentTerms} onChange={text('paymentTerms')} placeholder="e.g. Net 30" className={inputCls} />
             <datalist id="payment-terms">{PAYMENT_TERMS.map(t => <option key={t} value={t} />)}</datalist>
           </Field>
-          <Field label="Currency" htmlFor="client-currency">
+          <Field label="Currency" htmlFor="client-currency" tip="The currency you invoice this client in, as a code such as USD or CAD.">
             <input id="client-currency" list="currencies" value={form.currency} onChange={text('currency')} placeholder="USD" maxLength={10} className={inputCls} />
             <datalist id="currencies">{CURRENCIES.map(t => <option key={t} value={t} />)}</datalist>
           </Field>
-          <Field label="Invoices go to" htmlFor="client-billing-email">
+          <Field label="Invoices go to" htmlFor="client-billing-email" tip="The email address this client wants invoices sent to, usually accounts payable. For your records; benchtop doesn’t send invoices.">
             <input id="client-billing-email" type="email" value={form.billingEmail} onChange={text('billingEmail')} placeholder="ap@client.com" className={inputCls} />
           </Field>
-          <label className="flex items-center gap-2 text-sm text-gray-700 sm:mt-6">
+          <label className="flex items-center gap-2 text-sm text-gray-700 sm:mt-6"
+            data-tip="Tick if this client needs their purchase order number on every invoice. A reminder for your records.">
             <input type="checkbox" checked={form.poRequired} onChange={e => setForm(f => ({ ...f, poRequired: e.target.checked }))} className="rounded border-gray-300" />
             Purchase order required on invoices
           </label>
@@ -201,6 +203,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           <button
             type="button"
             onClick={() => setForm(f => ({ ...f, shippingAddress: { ...f.billingAddress } }))}
+            data-tip="Copies the billing address into the ship-to address, once. Later billing changes aren’t copied over."
             className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
           >
             <Copy size={12} /> Same as billing
@@ -209,11 +212,11 @@ function ClientForm({ client }: { client: ClientDetailData }) {
         <AddressFields prefix="shipping" value={form.shippingAddress} onChange={shippingAddress => setForm(f => ({ ...f, shippingAddress }))} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-          <Field label="Preferred carrier" htmlFor="client-carrier">
+          <Field label="Preferred carrier" htmlFor="client-carrier" tip="The shipping company this client normally wants you to use.">
             <input id="client-carrier" list="carriers" value={form.preferredCarrier} onChange={text('preferredCarrier')} className={inputCls} />
             <datalist id="carriers">{CARRIERS.map(t => <option key={t} value={t} />)}</datalist>
           </Field>
-          <Field label="UPS account #" htmlFor="client-ups">
+          <Field label="UPS account #" htmlFor="client-ups" tip="The client’s own UPS account number, so shipments can be billed to them.">
             <input id="client-ups" value={form.upsAccount} onChange={text('upsAccount')} className={inputCls} autoComplete="off" />
           </Field>
           <Field label="FedEx account #" htmlFor="client-fedex">
@@ -249,6 +252,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
                   type="button"
                   onClick={() => setForm(f => ({ ...f, otherCarrierAccounts: f.otherCarrierAccounts.filter((_, j) => j !== i) }))}
                   aria-label={`Remove carrier account ${i + 1}`}
+                  data-tip="Remove this carrier account"
                   className="p-1.5 text-gray-400 hover:text-red-600 shrink-0"
                 >
                   <X size={14} />
@@ -259,6 +263,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           <button
             type="button"
             onClick={() => setForm(f => ({ ...f, otherCarrierAccounts: [...f.otherCarrierAccounts, { carrier: '', accountNumber: '' }] }))}
+            data-tip="Add another carrier and the client’s account number with it"
             className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:underline"
           >
             <Plus size={12} /> Add carrier account
@@ -284,7 +289,11 @@ function ClientForm({ client }: { client: ClientDetailData }) {
                 <Link href={`/projects/${p.id}`} className="text-gray-900 hover:text-blue-700 hover:underline">{p.name}</Link>
                 <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                   p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                }`}>{p.status}</span>
+                }`}>
+                  <Term tip={p.status === 'active' ? 'Active: the project is in progress.' : 'Archived: marked finished or on hold. It still counts as linked to this client.'}>
+                    {p.status}
+                  </Term>
+                </span>
               </li>
             ))}
           </ul>
@@ -300,6 +309,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-gray-700">Delete {client.name} and its contacts?</span>
             <button type="button" onClick={() => remove.mutate()} disabled={remove.isPending}
+              data-tip="Permanently deletes this client and all its contacts. This can’t be undone."
               className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50">
               {remove.isPending ? 'Deleting…' : 'Delete'}
             </button>
@@ -310,6 +320,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           </div>
         ) : (
           <button type="button" onClick={() => setConfirmDelete(true)}
+            data-tip="Deletes this client and its contacts. You’ll be asked to confirm."
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-md hover:bg-red-50">
             <Trash2 size={14} /> Delete client
           </button>
@@ -320,13 +331,18 @@ function ClientForm({ client }: { client: ClientDetailData }) {
       {dirty && (
         <div className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-lg bg-ink-900 text-white px-4 py-2.5 shadow-lg">
           <span className="text-sm">Unsaved changes</span>
-          <button type="button" onClick={() => setForm(initial)} className="text-sm text-gray-300 hover:text-white">
+          <button type="button" onClick={() => setForm(initial)} data-tip="Undo every unsaved change on this page" className="text-sm text-gray-300 hover:text-white">
             Discard
           </button>
           <button
             type="button"
             onClick={() => save.mutate()}
             disabled={!form.name.trim() || incompleteCarrier || save.isPending}
+            data-tip={!form.name.trim()
+              ? 'Enter a client name first.'
+              : incompleteCarrier
+                ? 'Fill in or remove the half-finished carrier account first.'
+                : 'Saves your changes to Details, Accounting and Shipping. Contacts save on their own.'}
             className="px-3 py-1.5 text-sm bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             {save.isPending ? 'Saving…' : 'Save'}

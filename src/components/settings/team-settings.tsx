@@ -8,6 +8,7 @@ import { DEFAULT_MEMBER_ACCESS, summarizeAccess, type MemberAccess } from '@/lib
 import { formatSeatPrice, SEAT_PRICE_USD, type SeatInterval } from '@/lib/billing/seats'
 import { AccessEditor, type ProjectOption } from './access-editor'
 import { btnPrimary, btnSecondary, Card, Field, formatDate, inputCls, Notice } from './ui'
+import { Term } from '@/components/term'
 
 type TeamRole = 'owner' | 'admin' | 'member'
 type SeatState = 'exempt' | 'free' | 'dev_bypass' | 'ready' | 'not_configured' | 'no_subscription'
@@ -53,7 +54,13 @@ const PRICE_TEXT = `$${SEAT_PRICE_USD.month} per month or $${SEAT_PRICE_USD.year
 
 function RoleSelect({ value, onChange, id }: { value: 'admin' | 'member'; onChange: (v: 'admin' | 'member') => void; id: string }) {
   return (
-    <select id={id} value={value} onChange={e => onChange(e.target.value as 'admin' | 'member')} className={inputCls}>
+    <select
+      id={id}
+      value={value}
+      onChange={e => onChange(e.target.value as 'admin' | 'member')}
+      data-tip="Member: sees only the projects and clients you choose. Admin: sees and edits everything and manages the team, but not billing."
+      className={inputCls}
+    >
       <option value="member">Member — only the projects and clients you choose</option>
       <option value="admin">Admin — everything, including team and access</option>
     </select>
@@ -220,7 +227,7 @@ export function TeamSettings() {
           )}
           <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
             <div>
-              <dt className="text-gray-500">Additional users</dt>
+              <dt className="text-gray-500"><Term t="seat">Additional users</Term></dt>
               <dd className="text-gray-900">{seats.used}</dd>
             </div>
             {seats.state === 'ready' && seatPrice && (
@@ -244,7 +251,8 @@ export function TeamSettings() {
                 <span>
                   Your subscription bills {seats.billed} additional user{seats.billed === 1 ? '' : 's'}, but the team has {seats.used}.
                 </span>
-                <button type="button" onClick={resync} disabled={syncing} className={btnSecondary}>
+                <button type="button" onClick={resync} disabled={syncing} className={btnSecondary}
+                  data-tip="Sets the number of seats on your subscription to match your team. The change is prorated.">
                   {syncing ? 'Updating…' : 'Update billing'}
                 </button>
               </div>
@@ -256,7 +264,8 @@ export function TeamSettings() {
       <Card title="Invite a teammate">
         <form onSubmit={invite} className="space-y-4">
           <Field label="Email" htmlFor="teamInviteEmail">
-            <input id="teamInviteEmail" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} disabled={!canInvite} />
+            <input id="teamInviteEmail" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} disabled={!canInvite}
+              data-tip="The invitation link works only for this email address. It can’t already have a benchtop login." />
           </Field>
           <Field label="Role" htmlFor="teamInviteRole">
             <RoleSelect id="teamInviteRole" value={role} onChange={setRole} />
@@ -271,7 +280,15 @@ export function TeamSettings() {
               When they accept, {seatPrice} is added to your subscription (prorated for the current period).
             </p>
           )}
-          <button type="submit" disabled={inviting || !canInvite} className={btnPrimary}>
+          <button type="submit" disabled={inviting || !canInvite} className={btnPrimary}
+            data-tip={canInvite
+              ? 'Creates a link the person can use to join your team. Nothing is emailed: you copy the link and send it.'
+              : atCap
+                ? 'Your plan’s user limit is reached. Remove a user or revoke an invitation first.'
+                : seats.state === 'no_subscription'
+                  ? 'Start a subscription on the Billing page first.'
+                  : 'Team seat billing isn’t set up here, so people can’t be added.'}
+          >
             {inviting ? 'Creating…' : 'Create invitation'}
           </button>
         </form>
@@ -283,7 +300,8 @@ export function TeamSettings() {
             </Notice>
             <div className="flex gap-2">
               <input readOnly value={link.url} onFocus={e => e.currentTarget.select()} className={`${inputCls} font-mono text-xs`} />
-              <button type="button" onClick={() => copy(link.url)} className={btnSecondary}>
+              <button type="button" onClick={() => copy(link.url)} className={btnSecondary}
+                data-tip="Copies the link. Send it to them yourself by email or chat; it’s shown only once.">
                 <Copy size={14} className="mr-2" />
                 Copy
               </button>
@@ -303,7 +321,9 @@ export function TeamSettings() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-900 truncate">{m.fullName || m.email || 'Unknown user'}</span>
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_CLS[m.role]}`}>{ROLE_LABEL[m.role]}</span>
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_CLS[m.role]}`}>
+                        <Term t={m.role}>{ROLE_LABEL[m.role]}</Term>
+                      </span>
                       {m.userId === team.me && <span className="text-xs text-gray-400">(you)</span>}
                     </div>
                     {m.fullName && m.email && <div className="text-xs text-gray-500 truncate">{m.email}</div>}
@@ -323,10 +343,12 @@ export function TeamSettings() {
                           })
                         }
                         className="text-blue-600 hover:underline"
+                        data-tip="Change this person’s role and which projects, clients and library access they have"
                       >
                         Edit access
                       </button>
-                      <button type="button" onClick={() => remove(m)} className="text-red-600 hover:underline">
+                      <button type="button" onClick={() => remove(m)} className="text-red-600 hover:underline"
+                        data-tip="Removes them after you confirm. Their login is deleted and any paid seat comes off the bill; their work stays.">
                         Remove
                       </button>
                     </div>
@@ -346,7 +368,8 @@ export function TeamSettings() {
                       />
                     )}
                     <div className="flex gap-3">
-                      <button type="button" onClick={saveMember} disabled={saving} className={btnPrimary}>
+                      <button type="button" onClick={saveMember} disabled={saving} className={btnPrimary}
+                        data-tip="Saves the role and access. The change takes effect right away.">
                         {saving ? 'Saving…' : 'Save'}
                       </button>
                       <button type="button" onClick={() => setEditing(null)} disabled={saving} className={btnSecondary}>
@@ -370,14 +393,15 @@ export function TeamSettings() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-900 truncate">{i.email}</span>
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_CLS[i.role ?? 'member']}`}>
-                      {ROLE_LABEL[i.role ?? 'member']}
+                      <Term t={i.role ?? 'member'}>{ROLE_LABEL[i.role ?? 'member']}</Term>
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">
                     {i.role === 'member' && i.access ? `${summarizeAccess(i.access)} · ` : ''}Expires {formatDate(i.expiresAt)}
                   </div>
                 </div>
-                <button type="button" onClick={() => revoke(i.id)} className="text-xs text-red-600 hover:underline">
+                <button type="button" onClick={() => revoke(i.id)} className="text-xs text-red-600 hover:underline"
+                  data-tip="Cancels this invitation after you confirm. The link stops working.">
                   Revoke
                 </button>
               </li>
@@ -394,7 +418,8 @@ export function TeamSettings() {
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[14rem]">
               <Field label="New owner" htmlFor="new-owner">
-                <select id="new-owner" value={newOwner} onChange={e => setNewOwner(e.target.value)} className={inputCls}>
+                <select id="new-owner" value={newOwner} onChange={e => setNewOwner(e.target.value)} className={inputCls}
+                  data-tip="The person must already be on the team. Invite them first if they aren’t.">
                   <option value="">Choose a team member…</option>
                   {team.members.filter(m => m.userId !== team.me).map(m => (
                     <option key={m.userId} value={m.userId}>
@@ -404,7 +429,11 @@ export function TeamSettings() {
                 </select>
               </Field>
             </div>
-            <button type="button" onClick={transferOwnership} disabled={!newOwner || transferring} className={btnSecondary}>
+            <button type="button" onClick={transferOwnership} disabled={!newOwner || transferring} className={btnSecondary}
+              data-tip={newOwner
+                ? 'Makes them the owner after you confirm. You become an admin, and only they can transfer it back.'
+                : 'Choose the new owner first.'}
+            >
               {transferring ? 'Transferring…' : 'Transfer ownership'}
             </button>
           </div>

@@ -6,6 +6,7 @@ import { AlertTriangle, GitMerge, Pencil, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { DuplicateIngredientEntry, IngredientDetail } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 // Resolves a pre-existing duplicate: either make this entry different (rename / change brand,
 // supplier or item code) or merge the duplicates into the one entry that is kept.
@@ -155,7 +156,7 @@ export function DuplicateResolveDialog({
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={18} className="text-amber-500 mt-0.5 shrink-0" />
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Duplicate ingredient</h2>
+              <h2 className="text-base font-semibold text-gray-900"><Term t="duplicate">Duplicate</Term> ingredient</h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 {entries.length > 1
                   ? `${entries.length} entries have the same name, brand, supplier and item code.`
@@ -186,6 +187,9 @@ export function DuplicateResolveDialog({
                 <button
                   key={m}
                   onClick={() => setMode(m)}
+                  data-tip={m === 'rename'
+                    ? 'Change this entry’s name, brand, supplier or item code so it’s no longer a duplicate.'
+                    : 'Combine the duplicates into one entry. Formulations that used the others switch to the kept one.'}
                   className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                     mode === m ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'
                   }`}
@@ -227,6 +231,7 @@ export function DuplicateResolveDialog({
                   <button
                     type="submit"
                     disabled={!name.trim() || unchanged || renameMutation.isPending}
+                    data-tip={unchanged ? 'Change at least one field first.' : 'Saves these details on this entry, so it no longer matches the others.'}
                     className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                   >
                     {renameMutation.isPending ? 'Saving…' : 'Save changes'}
@@ -288,6 +293,7 @@ export function DuplicateResolveDialog({
                   <button
                     onClick={() => { setMergeError(null); mergeMutation.mutate() }}
                     disabled={mergeMutation.isPending}
+                    data-tip="Moves every use of the other entries onto the kept one, then deletes them. This can’t be undone."
                     className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                   >
                     {mergeMutation.isPending

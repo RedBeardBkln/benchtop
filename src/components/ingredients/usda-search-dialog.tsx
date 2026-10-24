@@ -5,12 +5,13 @@ import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, X, Download, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { FdcFood, FdcSearchResult } from '@/lib/types'
+import { Term } from '@/components/term'
 
-const DATA_TYPE_META: Record<string, { label: string; className: string }> = {
-  'Foundation':    { label: 'Foundation', className: 'bg-green-100 text-green-700' },
-  'SR Legacy':     { label: 'SR Legacy',  className: 'bg-blue-100 text-blue-700'  },
-  'Survey (FNDDS)':{ label: 'Survey',     className: 'bg-gray-100 text-gray-500'  },
-  'Branded':       { label: 'Branded',    className: 'bg-orange-100 text-orange-600' },
+const DATA_TYPE_META: Record<string, { label: string; className: string; tip: string }> = {
+  'Foundation':    { label: 'Foundation', className: 'bg-green-100 text-green-700', tip: 'USDA Foundation Foods: analysed lab data for basic foods. The most reliable choice.' },
+  'SR Legacy':     { label: 'SR Legacy',  className: 'bg-blue-100 text-blue-700', tip: 'USDA Standard Reference: the long-standing USDA nutrient database. Complete and reliable.' },
+  'Survey (FNDDS)':{ label: 'Survey',     className: 'bg-gray-100 text-gray-500', tip: 'USDA survey data for foods as eaten (FNDDS), often prepared dishes. Less suited to raw materials.' },
+  'Branded':       { label: 'Branded',    className: 'bg-orange-100 text-orange-600', tip: 'Values from a brand’s own label, so often incomplete and rounded.' },
 }
 
 export function UsdaSearchDialog({
@@ -146,12 +147,12 @@ export function UsdaSearchDialog({
           <div>
             <h2 className="text-base font-semibold text-gray-900">Search USDA FoodData Central</h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              Nutrients imported per 100 g. Prefer{' '}
-              <span className="text-green-600 font-medium">Foundation</span> or{' '}
-              <span className="text-blue-600 font-medium">SR Legacy</span> results — most complete and reliable.
+              Nutrients imported <Term t="per100g">per 100 g</Term>. Prefer{' '}
+              <Term tip={DATA_TYPE_META['Foundation'].tip} className="text-green-600 font-medium">Foundation</Term> or{' '}
+              <Term tip={DATA_TYPE_META['SR Legacy'].tip} className="text-blue-600 font-medium">SR Legacy</Term> results — most complete and reliable.
             </p>
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
             <X size={18} />
           </button>
         </div>
@@ -165,6 +166,8 @@ export function UsdaSearchDialog({
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="e.g. soy protein, oat flour, sunflower oil…"
+              aria-label="Search USDA foods"
+              data-tip="Searches USDA FoodData Central as you type."
               className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md
                          focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -203,11 +206,11 @@ export function UsdaSearchDialog({
                     {food.description}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-400 font-mono">#{food.fdcId}</span>
+                    <span className="text-xs text-gray-400 font-mono" data-tip="USDA FoodData Central ID (FDC ID)">#{food.fdcId}</span>
                     {(() => {
                       const meta = DATA_TYPE_META[food.dataType]
                       return (
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${meta?.className ?? 'bg-gray-100 text-gray-500'}`}>
+                        <span data-tip={meta?.tip} className={`text-xs px-1.5 py-0.5 rounded font-medium ${meta?.className ?? 'bg-gray-100 text-gray-500'}`}>
                           {meta?.label ?? food.dataType}
                         </span>
                       )
@@ -226,6 +229,8 @@ export function UsdaSearchDialog({
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage(p => p - 1)}
+                  aria-label="Previous page"
+                  data-tip="Previous page of results"
                   className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                 >
                   <ChevronLeft size={14} />
@@ -236,6 +241,8 @@ export function UsdaSearchDialog({
                 <button
                   disabled={page >= results.totalPages}
                   onClick={() => setPage(p => p + 1)}
+                  aria-label="Next page"
+                  data-tip="Next page of results"
                   className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                 >
                   <ChevronRight size={14} />
@@ -252,13 +259,14 @@ export function UsdaSearchDialog({
                   <div>
                     <div className="text-sm font-semibold text-gray-900">{selected.description}</div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-mono text-gray-400">FDC {selected.fdcId}</span>
+                      <span className="text-xs font-mono text-gray-400"><Term t="fdcId">FDC</Term> {selected.fdcId}</span>
                       <a
                         href={`https://fdc.nal.usda.gov/food-details/${selected.fdcId}/nutrients`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-blue-500 hover:underline flex items-center gap-0.5"
                         onClick={e => e.stopPropagation()}
+                        data-tip="Opens this food’s full USDA nutrient page in a new tab."
                       >
                         View on USDA <ExternalLink size={10} />
                       </a>
@@ -277,14 +285,15 @@ export function UsdaSearchDialog({
                       value={nameOverride}
                       onChange={e => setNameOverride(e.target.value)}
                       placeholder={selected.description}
+                      data-tip="The name it gets in your library. Leave blank to keep the USDA description."
                       className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md
                                  focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <p className="text-xs text-gray-400">
-                    Nutrients will be imported per 100 g. Source reference will be recorded as
-                    "USDA FDC {selected.fdcId}". Status: <strong>Verified</strong>.
+                    Nutrients will be imported per 100 g. <Term t="sourceRef">Source reference</Term> will be recorded as
+                    &quot;USDA FDC {selected.fdcId}&quot;. Status: <strong><Term t="verified">Verified</Term></strong>.
                   </p>
                 </div>
 
@@ -292,6 +301,7 @@ export function UsdaSearchDialog({
                   <button
                     onClick={() => importMutation.mutate(selected)}
                     disabled={importMutation.isPending}
+                    data-tip="Adds this food to your ingredient library with its USDA nutrients. If it’s already there, the existing one is used."
                     className="w-full flex items-center justify-center gap-2 py-2 text-sm
                                bg-blue-600 text-white rounded-md hover:bg-blue-700
                                disabled:opacity-50 transition-colors"

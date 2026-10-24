@@ -8,6 +8,7 @@ import { Plus, FolderOpen, FileSpreadsheet } from 'lucide-react'
 import type { ProjectSummary } from '@/lib/types'
 import { NewProjectDialog } from './new-project-dialog'
 import { useImportDrafts } from '@/components/formulations/import/use-import-drafts'
+import { Term } from '@/components/term'
 
 // `canCreate` is false for team members without edit access to any client or to all projects
 export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
@@ -31,7 +32,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
           <div className="flex flex-wrap justify-end gap-2">
             <Link
               href="/formulations/import"
-              title="Build a formulation from an Excel or CSV file"
+              data-tip="Build a formulation from an Excel or CSV file. You choose its project and review it before it’s created."
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm
                          font-medium rounded-md hover:bg-gray-50 transition-colors"
             >
@@ -40,6 +41,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
             {canCreate && (
               <button
                 onClick={() => setDialogOpen(true)}
+                data-tip="Create a folder for a new product idea, to hold its formulations and nutrition targets"
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm
                            font-medium rounded-md hover:bg-blue-700 transition-colors"
               >
@@ -52,6 +54,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
         {importDrafts.length > 0 && (
           <Link
             href="/formulations/import"
+            data-tip="Imports saved before they were complete. Open the import page to finish or discard them."
             className="flex items-center gap-2 mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 hover:bg-amber-100"
           >
             <FileSpreadsheet size={15} />
@@ -81,11 +84,17 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Project</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">Client</th>
-                  <th className="px-4 py-3 text-left font-medium">Formulations</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">Status</th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">Updated</th>
+                  <th className="px-4 py-3 text-left font-medium"><Term t="project">Project</Term></th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium"><Term t="client">Client</Term></th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    <Term tip="How many formulations the project holds. All versions of one formulation count once; archived ones are included.">Formulations</Term>
+                  </th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">
+                    <Term tip="Active: in progress. Archived: marked finished or on hold, but still open to view and edit.">Status</Term>
+                  </th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">
+                    <Term tip="When the project itself last changed (name, client, targets, status). Editing a formulation doesn’t change it.">Updated</Term>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

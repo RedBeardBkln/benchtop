@@ -98,6 +98,7 @@ export function EquipmentManagerDialog({ onClose }: { onClose: () => void }) {
                         className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <button type="submit" disabled={!nameEdit.trim() || renameMutation.isPending}
+                        data-tip="Renames it in every process step that uses it"
                         className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                         Save
                       </button>
@@ -118,6 +119,7 @@ export function EquipmentManagerDialog({ onClose }: { onClose: () => void }) {
                         <button
                           onClick={() => deleteMutation.mutate(row.id)}
                           disabled={deleteMutation.isPending}
+                          data-tip="Removes it from the shared list. Steps that used it will show no equipment."
                           className="px-3 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
                         >
                           Remove
@@ -131,19 +133,19 @@ export function EquipmentManagerDialog({ onClose }: { onClose: () => void }) {
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="flex-1 text-sm text-gray-800">{row.name}</span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-400" data-tip="How many process steps use this equipment">
                         {row.stepCount ?? 0} step{row.stepCount === 1 ? '' : 's'}
                       </span>
                       <button
                         onClick={() => { setEditingId(row.id); setNameEdit(row.name); setConfirmDeleteId(null) }}
-                        title="Rename" aria-label={`Rename ${row.name}`}
+                        data-tip="Rename. The new name shows in every step that uses it." aria-label={`Rename ${row.name}`}
                         className="p-1 text-gray-400 hover:text-gray-700 rounded"
                       >
                         <Edit2 size={13} />
                       </button>
                       <button
                         onClick={() => { setConfirmDeleteId(row.id); setEditingId(null) }}
-                        title="Remove" aria-label={`Remove ${row.name}`}
+                        data-tip="Remove from the list (asks to confirm)" aria-label={`Remove ${row.name}`}
                         className="p-1 text-gray-400 hover:text-red-600 rounded"
                       >
                         <Trash2 size={13} />

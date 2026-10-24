@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { X, Camera, Loader2, Check, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { compressImage } from '@/lib/compress-image'
+import { Term } from '@/components/term'
 
 type ParsedIngredient = {
   name: string
@@ -132,7 +133,7 @@ export function PhotoIngredientDialog({
               {step === 'review' && 'Review & confirm'}
             </h2>
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
             <X size={16} />
           </button>
         </div>
@@ -145,19 +146,21 @@ export function PhotoIngredientDialog({
             </p>
 
             {[
-              { label: 'Product Label', ref: labelRef, file: labelPhoto, set: setLabelPhoto, key: 'label' },
-              { label: 'Nutrition Facts Panel', ref: panelRef, file: panelPhoto, set: setPanelPhoto, key: 'panel' },
-              { label: 'Ingredient Deck', ref: deckRef, file: deckPhoto, set: setDeckPhoto, key: 'deck' },
+              { label: 'Product Label', ref: labelRef, file: labelPhoto, set: setLabelPhoto, key: 'label', tip: 'The front of the package, for the product name and brand.' },
+              { label: 'Nutrition Facts Panel', ref: panelRef, file: panelPhoto, set: setPanelPhoto, key: 'panel', tip: 'The nutrition table, for nutrient values. They’re converted to per 100 g.' },
+              { label: 'Ingredient Deck', ref: deckRef, file: deckPhoto, set: setDeckPhoto, key: 'deck', tip: 'The “Ingredients:” list, for sub-ingredients and allergens.' },
             ].map(slot => (
               <div key={slot.key} className="flex items-center gap-3">
                 <div className={`w-2 h-2 rounded-full shrink-0 ${slot.file ? 'bg-green-400' : 'bg-gray-200'}`} />
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{slot.label}</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1"><Term tip={slot.tip}>{slot.label}</Term></label>
                   <input
                     ref={slot.ref}
                     type="file"
                     accept="image/*"
                     capture="environment"
+                    aria-label={slot.label}
+                    data-tip="Choose a photo, or take one with your phone’s camera."
                     onChange={e => slot.set(e.target.files?.[0] ?? null)}
                     className="text-sm text-gray-600 file:mr-3 file:px-3 file:py-1 file:rounded-md
                                file:border-0 file:text-xs file:bg-gray-100 file:text-gray-700
@@ -180,6 +183,7 @@ export function PhotoIngredientDialog({
               <button
                 onClick={handleAnalyze}
                 disabled={!labelPhoto && !panelPhoto && !deckPhoto}
+                data-tip={!labelPhoto && !panelPhoto && !deckPhoto ? 'Attach at least one photo first.' : 'Reads the photos with AI and fills in the ingredient for you to check. Nothing is saved yet.'}
                 className="flex items-center gap-2 px-4 py-2 text-sm bg-orange-500 text-white
                            rounded-md hover:bg-orange-600 disabled:opacity-40 transition-colors"
               >
@@ -214,7 +218,7 @@ export function PhotoIngredientDialog({
 
             {parsed.labelName && (
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-500">Label name</label>
+                <label className="text-xs font-medium text-gray-500"><Term t="labelName">Label name</Term></label>
                 <input
                   value={parsed.labelName ?? ''}
                   onChange={e => setParsed(p => p ? { ...p, labelName: e.target.value || null } : p)}
@@ -226,7 +230,7 @@ export function PhotoIngredientDialog({
 
             {/* Flags */}
             <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer" data-tip="Comes from a natural source. Formulations containing anything not naturally derived get flagged as synthetic.">
                 <input type="checkbox" checked={parsed.naturallyDerived}
                   onChange={e => setParsed(p => p ? { ...p, naturallyDerived: e.target.checked } : p)}
                   className="rounded border-gray-300 text-blue-600" />
@@ -236,7 +240,7 @@ export function PhotoIngredientDialog({
 
             {/* Opening stock */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500">Opening stock (g)</label>
+              <label className="text-xs font-medium text-gray-500">Opening <Term t="stock">stock</Term> (g)</label>
               <input
                 type="number"
                 min="0"
@@ -275,13 +279,14 @@ export function PhotoIngredientDialog({
             {/* Sub-ingredients count */}
             {parsed.subIngredients.length > 0 && (
               <div className="text-xs text-gray-500">
-                {parsed.subIngredients.length} sub-ingredient{parsed.subIngredients.length !== 1 ? 's' : ''} detected
+                {parsed.subIngredients.length} <Term t="subIngredients">sub-ingredient{parsed.subIngredients.length !== 1 ? 's' : ''}</Term> detected
               </div>
             )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <button
                 onClick={() => setStep('upload')}
+                data-tip="Goes back to the photo step so you can change the photos and analyze again."
                 className="px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50"
               >
                 Re-scan
@@ -289,6 +294,7 @@ export function PhotoIngredientDialog({
               <button
                 onClick={handleCreate}
                 disabled={!parsed.name.trim() || isSaving}
+                data-tip={!parsed.name.trim() ? 'Enter a product name first.' : 'Adds it to your ingredient library as Unverified, with the nutrients, allergens and sub-ingredients read from the photos.'}
                 className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white
                            rounded-md hover:bg-blue-700 disabled:opacity-40 transition-colors"
               >

@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { Edit2, Plus, Star, Trash2 } from 'lucide-react'
 import type { ClientAddress } from '@/lib/client-schemas'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
+import type { GlossaryKey } from '@/lib/glossary'
 
 // Form pieces shared by the client and supplier records: fields, sections, addresses and contacts.
 
@@ -22,15 +24,20 @@ export type Contact = {
 export const inputCls =
   'w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-600'
 
-export function Field({ label, htmlFor, children, hint }: {
+// `term` (a glossary key) or `tip` (one-off text) gives the label a dotted underline and a definition
+export function Field({ label, htmlFor, children, hint, term, tip }: {
   label: string
   htmlFor: string
   children: React.ReactNode
   hint?: string
+  term?: GlossaryKey
+  tip?: string
 }) {
   return (
     <div>
-      <label htmlFor={htmlFor} className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label htmlFor={htmlFor} className="block text-xs font-medium text-gray-600 mb-1">
+        {term || tip ? <Term t={term} tip={tip}>{label}</Term> : label}
+      </label>
       {children}
       {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
     </div>
@@ -133,7 +140,8 @@ export function ContactForm({ initial, onSave, onCancel, saving }: {
       <Field label="Notes" htmlFor="contact-notes">
         <textarea id="contact-notes" value={c.notes} onChange={set('notes')} rows={2} className={`${inputCls} resize-y`} />
       </Field>
-      <label className="flex items-center gap-2 text-sm text-gray-700">
+      <label className="flex items-center gap-2 text-sm text-gray-700"
+        data-tip="The main person to talk to. Only one contact can be primary, so this replaces the current one.">
         <input type="checkbox" checked={c.isPrimary} onChange={e => setC({ ...c, isPrimary: e.target.checked })} className="rounded border-gray-300" />
         Primary contact
       </label>
@@ -142,6 +150,7 @@ export function ContactForm({ initial, onSave, onCancel, saving }: {
           Cancel
         </button>
         <button type="submit" disabled={!c.name.trim() || saving}
+          data-tip={c.name.trim() ? 'Saves this contact straight away. It doesn’t wait for the page’s Save bar.' : 'Enter a name first.'}
           className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
           {saving ? 'Saving…' : 'Save contact'}
         </button>
@@ -204,7 +213,9 @@ export function Contacts({ endpoint, contacts, description, onChange, readOnly }
       title="Contacts"
       description={description}
       action={!readOnly && editing === null && (
-        <button onClick={() => setEditing('new')} className="flex items-center gap-1 text-sm text-blue-600 hover:underline shrink-0">
+        <button onClick={() => setEditing('new')}
+          data-tip="Add a person you work with here. Contacts save on their own, separate from the rest of the record."
+          className="flex items-center gap-1 text-sm text-blue-600 hover:underline shrink-0">
           <Plus size={14} /> Add contact
         </button>
       )}
@@ -231,28 +242,30 @@ export function Contacts({ endpoint, contacts, description, onChange, readOnly }
                 <span className="font-medium text-gray-900">{c.name}</span>
                 {c.title && <span className="text-gray-500">{c.title}</span>}
                 {c.isPrimary && (
-                  <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700">Primary</span>
+                  <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700">
+                    <Term tip="The main person to talk to here. Only one contact can be primary.">Primary</Term>
+                  </span>
                 )}
               </div>
               <div className="text-gray-600 mt-0.5 break-words">
-                {c.email && <a href={`mailto:${c.email}`} className="hover:underline">{c.email}</a>}
+                {c.email && <a href={`mailto:${c.email}`} data-tip="Start an email to this contact" className="hover:underline">{c.email}</a>}
                 {c.email && c.phone && <span className="text-gray-300"> · </span>}
-                {c.phone && <a href={`tel:${c.phone}`} className="hover:underline">{c.phone}</a>}
+                {c.phone && <a href={`tel:${c.phone}`} data-tip="Call this number" className="hover:underline">{c.phone}</a>}
               </div>
               {c.notes && <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{c.notes}</p>}
             </div>
             {!readOnly && <div className="flex items-center gap-1 shrink-0">
               {!c.isPrimary && (
-                <button onClick={() => makePrimary.mutate(c.id)} title="Make primary contact" aria-label={`Make ${c.name} the primary contact`}
+                <button onClick={() => makePrimary.mutate(c.id)} data-tip="Make this the primary contact, replacing the current one" aria-label={`Make ${c.name} the primary contact`}
                   className="p-1.5 text-gray-400 hover:text-blue-600 rounded">
                   <Star size={14} />
                 </button>
               )}
-              <button onClick={() => setEditing(c.id)} title="Edit contact" aria-label={`Edit ${c.name}`}
+              <button onClick={() => setEditing(c.id)} data-tip="Edit this contact" aria-label={`Edit ${c.name}`}
                 className="p-1.5 text-gray-400 hover:text-gray-700 rounded">
                 <Edit2 size={14} />
               </button>
-              <button onClick={() => remove.mutate(c.id)} title="Remove contact" aria-label={`Remove ${c.name}`}
+              <button onClick={() => remove.mutate(c.id)} data-tip="Removes this contact straight away, with no confirmation" aria-label={`Remove ${c.name}`}
                 className="p-1.5 text-gray-400 hover:text-red-600 rounded">
                 <Trash2 size={14} />
               </button>

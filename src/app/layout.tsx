@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, DM_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { Providers } from '@/lib/providers'
+import { TooltipLayer } from '@/components/tooltip-layer'
 import './globals.css'
 
 const bricolage = Bricolage_Grotesque({
@@ -40,6 +41,7 @@ export default function RootLayout({
           {children}
         </Providers>
         <Toaster richColors position="top-right" />
+        <TooltipLayer />
       </body>
     </html>
   )

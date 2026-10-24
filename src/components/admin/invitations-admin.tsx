@@ -8,6 +8,7 @@ import { btnPrimary, btnSecondary, Card, Field, formatDate, inputCls, Notice } f
 import {
   ACCOUNT_PLANS, describePlan, MAX_FREE_PERIOD_DAYS, MAX_USER_CAP, MIN_FREE_PERIOD_DAYS, PAID_TRIAL_DAYS, PLAN_LABELS, type AccountPlan,
 } from '@/lib/billing/plans'
+import { Term } from '@/components/term'
 
 const PLAN_HINTS: Record<AccountPlan, string> = {
   paid: `Starts with a ${PAID_TRIAL_DAYS}-day free trial, then needs a subscription.`,
@@ -154,6 +155,7 @@ export function InvitationsAdmin() {
                     key={p.days}
                     type="button"
                     onClick={() => setFreeDays(String(p.days))}
+                    data-tip={`Free for ${p.days} days from signup`}
                     className={`rounded-full border px-2.5 py-0.5 text-xs ${
                       Number(freeDays) === p.days ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
@@ -182,9 +184,11 @@ export function InvitationsAdmin() {
             </Field>
           )}
           <Field label="Invitation link expires in (days)" htmlFor="inviteDays">
-            <input id="inviteDays" type="number" min={1} max={60} value={days} onChange={e => setDays(e.target.value)} className={inputCls} />
+            <input id="inviteDays" type="number" min={1} max={60} value={days} onChange={e => setDays(e.target.value)} className={inputCls}
+              data-tip="How long the sign-up link works, from 1 to 60 days" />
           </Field>
-          <button type="submit" disabled={creating} className={btnPrimary}>
+          <button type="submit" disabled={creating} className={btnPrimary}
+            data-tip="Creates a one-time sign-up link for a new account of this type. Nothing is emailed: copy the link and send it.">
             {creating ? 'Creating…' : 'Create invitation'}
           </button>
         </form>
@@ -196,7 +200,8 @@ export function InvitationsAdmin() {
             </Notice>
             <div className="flex gap-2">
               <input readOnly value={link.url} onFocus={e => e.currentTarget.select()} className={`${inputCls} font-mono text-xs`} />
-              <button type="button" onClick={() => copy(link.url)} className={btnSecondary}>
+              <button type="button" onClick={() => copy(link.url)} className={btnSecondary}
+                data-tip="Copies the link. It’s shown only once.">
                 <Copy size={14} className="mr-2" />
                 Copy
               </button>
@@ -217,9 +222,11 @@ export function InvitationsAdmin() {
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="py-2 pr-4 font-medium">Email</th>
                   <th className="py-2 pr-4 font-medium">Account type</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium">
+                    <Term tip="pending: not used yet. accepted: the account was created. expired: the link ran out. revoked: cancelled.">Status</Term>
+                  </th>
                   <th className="py-2 pr-4 font-medium">Created</th>
-                  <th className="py-2 pr-4 font-medium">Expires</th>
+                  <th className="py-2 pr-4 font-medium"><Term tip="When the sign-up link stops working">Expires</Term></th>
                   <th className="py-2 font-medium" />
                 </tr>
               </thead>
@@ -246,7 +253,8 @@ export function InvitationsAdmin() {
                     <td className="py-2 pr-4 whitespace-nowrap">{formatDate(i.expiresAt)}</td>
                     <td className="py-2 text-right">
                       {i.status === 'pending' && (
-                        <button onClick={() => revoke(i.id)} className="text-xs text-red-600 hover:underline">
+                        <button onClick={() => revoke(i.id)} className="text-xs text-red-600 hover:underline"
+                          data-tip="Cancels this invitation after you confirm. The link stops working.">
                           Revoke
                         </button>
                       )}

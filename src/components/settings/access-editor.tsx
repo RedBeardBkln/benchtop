@@ -15,14 +15,16 @@ function LevelSelect<T extends string>({
   onChange,
   options,
   label,
+  tip,
 }: {
   value: T
   onChange: (v: T) => void
   options: Array<[T, string]>
   label: string
+  tip?: string
 }) {
   return (
-    <select aria-label={label} value={value} onChange={e => onChange(e.target.value as T)} className={selectCls}>
+    <select aria-label={label} data-tip={tip} value={value} onChange={e => onChange(e.target.value as T)} className={selectCls}>
       {options.map(([v, text]) => (
         <option key={v} value={v}>{text}</option>
       ))}
@@ -58,6 +60,7 @@ export function AccessEditor({
           <span className="font-medium text-gray-700">All projects</span>
           <LevelSelect
             label="Access to all projects"
+            tip="The starting level for every project, including new ones. No access hides them, Can view is read-only, Can edit allows changes. The highest level wins."
             value={value.allProjects}
             onChange={allProjects => onChange({ ...value, allProjects })}
             options={ALL_OPTIONS}
@@ -67,6 +70,7 @@ export function AccessEditor({
           <span className="font-medium text-gray-700">Ingredient library &amp; suppliers</span>
           <LevelSelect
             label="Ingredient library access"
+            tip="Covers ingredients, suppliers, equipment and lab intake. Everyone can at least view, since formulations need their ingredients."
             value={value.library}
             onChange={library => onChange({ ...value, library })}
             options={GRANT_OPTIONS}
@@ -83,6 +87,7 @@ export function AccessEditor({
               <span className="flex-1 min-w-0 truncate text-gray-900">{g.client}</span>
               <LevelSelect
                 label={`Access to ${g.client}`}
+                tip="Can view: open this client’s projects read-only. Can edit: change them. Includes new projects for the client."
                 value={g.level}
                 onChange={level =>
                   onChange({ ...value, clients: value.clients.map((c, j) => (j === i ? { ...c, level } : c)) })
@@ -92,6 +97,7 @@ export function AccessEditor({
               <button
                 type="button"
                 aria-label={`Remove ${g.client}`}
+                data-tip="Remove access to this client’s projects (unless All projects still gives it)"
                 onClick={() => onChange({ ...value, clients: value.clients.filter((_, j) => j !== i) })}
                 className="p-1 text-gray-400 hover:text-red-600"
               >
@@ -103,6 +109,7 @@ export function AccessEditor({
         {clients.some(c => !grantedClients.has(c.toLowerCase())) ? (
           <select
             aria-label="Add a client"
+            data-tip="Give access to every project for a client, including future ones. It starts at Can view."
             value=""
             onChange={e => {
               if (e.target.value) onChange({ ...value, clients: [...value.clients, { client: e.target.value, level: 'view' }] })
@@ -127,6 +134,7 @@ export function AccessEditor({
               <span className="flex-1 min-w-0 truncate text-gray-900">{projectName(g.projectId)}</span>
               <LevelSelect
                 label={`Access to ${projectName(g.projectId)}`}
+                tip="Can view: open this project read-only. Can edit: change it."
                 value={g.level}
                 onChange={level =>
                   onChange({ ...value, projects: value.projects.map((p, j) => (j === i ? { ...p, level } : p)) })
@@ -136,6 +144,7 @@ export function AccessEditor({
               <button
                 type="button"
                 aria-label={`Remove ${projectName(g.projectId)}`}
+                data-tip="Remove access to this project (unless All projects or its client still gives it)"
                 onClick={() => onChange({ ...value, projects: value.projects.filter((_, j) => j !== i) })}
                 className="p-1 text-gray-400 hover:text-red-600"
               >
@@ -147,6 +156,7 @@ export function AccessEditor({
         {projects.some(p => !grantedProjects.has(p.id)) && (
           <select
             aria-label="Add a project"
+            data-tip="Give access to one project. It starts at Can view."
             value=""
             onChange={e => {
               if (e.target.value) {

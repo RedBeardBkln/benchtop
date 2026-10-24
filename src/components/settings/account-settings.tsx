@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PASSWORD_MIN_LENGTH } from '@/lib/account-schemas'
 import { readErrorMessage } from '@/lib/utils'
 import { btnPrimary, btnSecondary, Card, Field, formatDate, inputCls, Notice } from './ui'
+import { Term } from '@/components/term'
 
 export function AccountSettings({
   email,
@@ -88,16 +89,22 @@ export function AccountSettings({
     <>
       <Card title="Account" description="The workspace your projects, ingredients and inventory live in. Nothing in it is visible to other accounts.">
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm mb-5">
-          <div><dt className="text-gray-500">Your role</dt><dd className="text-gray-900 capitalize">{role}</dd></div>
+          <div>
+            <dt className="text-gray-500">Your role</dt>
+            <dd className="text-gray-900 capitalize">
+              {role === 'owner' || role === 'admin' || role === 'member' ? <Term t={role}>{role}</Term> : role}
+            </dd>
+          </div>
           <div><dt className="text-gray-500">Created</dt><dd className="text-gray-900">{formatDate(createdAt)}</dd></div>
-          <div className="sm:col-span-2"><dt className="text-gray-500">Account ID</dt><dd className="text-gray-900 font-mono text-xs break-all">{accountId}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-gray-500"><Term tip="Your account’s unique ID. Quote it if you contact benchtop about this account.">Account ID</Term></dt><dd className="text-gray-900 font-mono text-xs break-all">{accountId}</dd></div>
         </dl>
         <form onSubmit={saveName} className="space-y-3 max-w-lg">
           <Field label="Account name" htmlFor="accountName" hint={isOwner ? undefined : 'Only the account owner can rename the account.'}>
             <input id="accountName" required maxLength={120} value={name} onChange={e => setName(e.target.value)} disabled={!isOwner} className={inputCls} />
           </Field>
           {isOwner && (
-            <button type="submit" disabled={savingName || name.trim() === accountName} className={btnPrimary}>
+            <button type="submit" disabled={savingName || name.trim() === accountName} className={btnPrimary}
+              data-tip={name.trim() === accountName ? 'Change the name first.' : 'Renames the account for everyone on the team.'}>
               {savingName ? 'Saving…' : 'Save name'}
             </button>
           )}
@@ -109,7 +116,8 @@ export function AccountSettings({
           <Field label="New email" htmlFor="newEmail">
             <input id="newEmail" type="email" required value={newEmail} onChange={e => setNewEmail(e.target.value)} className={inputCls} autoComplete="email" />
           </Field>
-          <button type="submit" disabled={emailSending || !newEmail} className={btnPrimary}>
+          <button type="submit" disabled={emailSending || !newEmail} className={btnPrimary}
+            data-tip={newEmail ? 'Sends a confirmation link to the new address. Your sign-in email changes once you click it.' : 'Type the new email first.'}>
             {emailSending ? 'Sending…' : 'Change email'}
           </button>
           {emailNotice && <Notice tone="info">{emailNotice}</Notice>}
@@ -124,7 +132,8 @@ export function AccountSettings({
           <Field label="Confirm new password" htmlFor="confirmPassword">
             <input id="confirmPassword" type="password" required value={confirm} onChange={e => setConfirm(e.target.value)} className={inputCls} autoComplete="new-password" />
           </Field>
-          <button type="submit" disabled={savingPw} className={btnPrimary}>
+          <button type="submit" disabled={savingPw} className={btnPrimary}
+            data-tip="Changes your password straight away. Use the new one next time you sign in.">
             {savingPw ? 'Updating…' : 'Update password'}
           </button>
         </form>

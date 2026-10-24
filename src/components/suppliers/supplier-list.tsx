@@ -12,6 +12,7 @@ import { shortAddress } from '@/lib/supplier-schemas'
 import { readErrorMessage } from '@/lib/utils'
 import { AddressFields, Field, emptyContact, inputCls } from '@/components/records/record-fields'
 import { PAYMENT_TERMS } from './supplier-detail'
+import { Term } from '@/components/term'
 
 type SupplierRow = Supplier & {
   ingredientCount: number
@@ -82,10 +83,10 @@ function NewSupplierDialog({ onClose }: { onClose: () => void }) {
             <Field label="Main phone" htmlFor="new-supplier-phone">
               <input id="new-supplier-phone" type="tel" value={f.phone} onChange={text('phone')} className={inputCls} />
             </Field>
-            <Field label="Our account #" htmlFor="new-supplier-account">
+            <Field label="Our account #" htmlFor="new-supplier-account" term="accountNumber">
               <input id="new-supplier-account" value={f.accountNumber} onChange={text('accountNumber')} className={inputCls} autoComplete="off" />
             </Field>
-            <Field label="Payment terms" htmlFor="new-supplier-terms">
+            <Field label="Payment terms" htmlFor="new-supplier-terms" term="paymentTerms">
               <input id="new-supplier-terms" list="new-supplier-payment-terms" value={f.paymentTerms} onChange={text('paymentTerms')}
                 placeholder="e.g. Net 30" className={inputCls} />
               <datalist id="new-supplier-payment-terms">{PAYMENT_TERMS.map(t => <option key={t} value={t} />)}</datalist>
@@ -98,7 +99,9 @@ function NewSupplierDialog({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold text-gray-700 mb-2">Primary contact</h4>
+            <h4 className="text-xs font-semibold text-gray-700 mb-2">
+              <Term tip="Your main person at this supplier. Optional; if you fill in any contact field, a name is needed.">Primary contact</Term>
+            </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Name" htmlFor="new-supplier-contact-name">
                 <input id="new-supplier-contact-name" value={contact.name} onChange={contactText('name')} className={inputCls} />
@@ -129,6 +132,11 @@ function NewSupplierDialog({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={!f.name.trim() || contactIncomplete || create.isPending}
+              data-tip={!f.name.trim()
+                ? 'Enter the company name first.'
+                : contactIncomplete
+                  ? 'Add the contact’s name, or clear the contact fields.'
+                  : 'Adds the supplier and opens its record. Names must be unique.'}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {create.isPending ? 'Adding…' : 'Add supplier'}
@@ -164,6 +172,7 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
         {canEdit && (
           <button
             onClick={() => setDialogOpen(true)}
+            data-tip="Add a company you buy ingredients from, with its contacts and terms"
             className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shrink-0"
           >
             <Plus size={14} /> New supplier
@@ -192,6 +201,7 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
               onChange={e => setQuery(e.target.value)}
               placeholder="Search suppliers, contacts, locations…"
               aria-label="Search suppliers"
+              data-tip="Finds suppliers by name, contact name, email, or city, state or country"
               className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -200,10 +210,14 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium">Supplier</th>
-                    <th className="px-4 py-3 text-left font-medium">Contact</th>
+                    <th className="px-4 py-3 text-left font-medium"><Term t="supplier">Supplier</Term></th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      <Term tip="The primary contact, with their email and phone (or the supplier’s main ones if they have none)">Contact</Term>
+                    </th>
                     <th className="px-4 py-3 text-left font-medium">Location</th>
-                    <th className="px-4 py-3 text-right font-medium">Ingredients</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      <Term tip="How many library ingredients come from this supplier">Ingredients</Term>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">

@@ -19,6 +19,7 @@ import { LibraryPickerDialog } from '@/components/formulations/swap-source-dialo
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
 import { AddIngredientDialog } from '@/components/ingredients/add-ingredient-dialog'
 import { IMPORTS_KEY } from './use-import-drafts'
+import { Term } from '@/components/term'
 
 type ProjectRow = { id: string; name: string; client: string | null; clientId: string | null; canEdit: boolean }
 
@@ -30,7 +31,7 @@ const numOrNull = (s: string) => {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Section({ title, hint, children }: { title: React.ReactNode; hint?: string; children: React.ReactNode }) {
   return (
     <section className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5 space-y-3">
       <div>
@@ -209,6 +210,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
     <div className="px-4 py-5 sm:px-8 sm:py-8 max-w-5xl pb-40">
       <button
         onClick={() => { if (confirmLeave()) onBack() }}
+        data-tip="Goes back to the upload screen. Unsaved changes here are lost unless you save a draft first."
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6"
       >
         <ArrowLeft size={14} /> Back
@@ -235,14 +237,17 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
               <span className="block text-xs font-medium text-gray-600 mb-1">Name <span className="text-red-400">*</span></span>
               <input value={draft.name} maxLength={255} onChange={e => change({ name: e.target.value })} className={`${input} w-full`} />
             </label>
-            <label className="block">
+            <label className="block" data-tip="How much one serving weighs, in grams. Needed for per-serving nutrition, the Nutrition Facts panel and cost.">
               <span className="block text-xs font-medium text-gray-600 mb-1">Serving size (g) <span className="font-normal text-gray-400">optional</span></span>
               <input
                 inputMode="decimal" defaultValue={draft.servingSizeG ?? ''} placeholder="e.g. 40"
                 onChange={e => change({ servingSizeG: numOrNull(e.target.value) })} className={`${input} w-full`}
               />
             </label>
-            <label className="block">
+            <label
+              className="block"
+              data-tip="The total weight of all ingredients, in grams. Needed to turn % amounts into grams; otherwise it comes from the amounts."
+            >
               <span className="block text-xs font-medium text-gray-600 mb-1">
                 Batch size (g){' '}
                 {lines.some(l => l.unit === '%')
@@ -266,7 +271,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
         </Section>
 
         <Section
-          title="Project"
+          title={<Term t="project">Project</Term>}
           hint="Every formulation lives in a project. Pick one, create one here, or skip it for now."
         >
           {chosenProject ? (
@@ -274,7 +279,11 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
               <CheckCircle2 size={15} className="text-green-600" />
               <span className="font-medium text-gray-900">{chosenProject.name}</span>
               {chosenProject.client && <span className="text-gray-500">· {chosenProject.client}</span>}
-              <button className="text-xs text-blue-600 hover:underline ml-1" onClick={() => change({ project: { ...draft.project, id: null } })}>
+              <button
+                className="text-xs text-blue-600 hover:underline ml-1"
+                data-tip="Choose a different project, or create one, for this formulation."
+                onClick={() => change({ project: { ...draft.project, id: null } })}
+              >
                 Change
               </button>
             </div>
@@ -290,7 +299,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
               </label>
               <div>
                 <span className="block text-xs font-medium text-gray-600 mb-1">
-                  Client {clientOptions?.canChooseNone !== false && <span className="font-normal text-gray-400">(optional)</span>}
+                  <Term t="client">Client</Term> {clientOptions?.canChooseNone !== false && <span className="font-normal text-gray-400">(optional)</span>}
                 </span>
                 <ClientSelect value={newProject.clientId} onChange={id => setNewProject({ ...newProject, clientId: id })} />
                 {draft.client.rawName && !newProject.clientId && !draft.client.skipped && (
@@ -298,11 +307,13 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                     The file names the client “{draft.client.rawName}”.
                     {clientOptions?.canManage && (
                       <button type="button" className="text-blue-600 hover:underline" disabled={createClient.isPending}
+                        data-tip="Adds this client to your account now and files the new project under it."
                         onClick={() => createClient.mutate(draft.client.rawName!)}>
                         Add “{draft.client.rawName}” as a client
                       </button>
                     )}
                     <button type="button" className="text-gray-500 hover:underline"
+                      data-tip="Creates the project without the client named in the file. You can link a client later."
                       onClick={() => change({ client: { ...draft.client, skipped: true } })}>
                       Skip the client
                     </button>
@@ -312,6 +323,11 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
               <div className="flex gap-2">
                 <button type="submit" disabled={!newProject.name.trim() || createProject.isPending ||
                   (clientOptions?.canChooseNone === false && !newProject.clientId)}
+                  data-tip={!newProject.name.trim()
+                    ? 'Enter a project name first.'
+                    : clientOptions?.canChooseNone === false && !newProject.clientId
+                      ? 'Choose a client first; your account needs every project to have one.'
+                      : 'Creates the project now (it’s kept even if you don’t finish the import) and files this formulation in it.'}
                   className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                   {createProject.isPending ? 'Creating…' : 'Create project'}
                 </button>
@@ -334,6 +350,8 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                 <select
                   value=""
                   onChange={e => e.target.value && change({ project: { ...draft.project, id: e.target.value, skipped: false } })}
+                  aria-label="Project"
+                  data-tip="Files the imported formulation in one of your projects. Only projects you can edit are listed."
                   className={`${input} min-w-[14rem]`}
                 >
                   <option value="">Choose an existing project…</option>
@@ -347,13 +365,18 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                       name: draft.project.rawName ?? draft.name,
                       clientId: draft.client.skipped ? null : draft.client.id,
                     })}
+                    data-tip="Opens a short form to create a new project (and pick its client) without leaving the import."
                     className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-200 rounded-md hover:bg-gray-50"
                   >
                     <Plus size={13} /> {draft.project.rawName ? `Create “${draft.project.rawName}”` : 'New project'}
                   </button>
                 )}
                 {!draft.project.skipped && (
-                  <button onClick={() => change({ project: { ...draft.project, skipped: true } })} className="text-sm text-gray-500 hover:underline">
+                  <button
+                    onClick={() => change({ project: { ...draft.project, skipped: true } })}
+                    data-tip="Leaves the project for later. Until it has one, the import can only be saved as a draft."
+                    className="text-sm text-gray-500 hover:underline"
+                  >
                     Skip for now
                   </button>
                 )}
@@ -367,7 +390,11 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
           hint="Link each row to an ingredient in your library. Rows that aren’t ingredients (a total, a note) can be left out."
         >
           {openWithSuggestion.length > 1 && (
-            <button onClick={acceptAllSuggestions} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+            <button
+              onClick={acceptAllSuggestions}
+              data-tip="Links every unconfirmed row to its closest library match in one go. Check the result."
+              className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
+            >
               <Check size={13} /> Use the first suggestion for all {openWithSuggestion.length} unconfirmed rows
             </button>
           )}
@@ -377,7 +404,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                 <tr>
                   <th className="font-medium px-3 py-2">In the file</th>
                   <th className="font-medium px-3 py-2 w-48">Amount</th>
-                  <th className="font-medium px-3 py-2">In your library</th>
+                  <th className="font-medium px-3 py-2">In your <Term t="ingredientLibrary">library</Term></th>
                   <th className="px-3 py-2 w-20" />
                 </tr>
               </thead>
@@ -403,6 +430,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                           />
                           <select
                             aria-label={`Unit for ${l.rawName}`} disabled={excluded} value={l.unit ?? ''}
+                            data-tip="The unit of the amount. % means a share of the batch size; mL, cups or pieces can’t be converted, so use grams."
                             onChange={e => changeLine(l.key, { unit: (e.target.value || null) as ImportUnit | null })}
                             className={`${input} ${!excluded && !l.unit ? 'border-red-300' : ''}`}
                           >
@@ -421,22 +449,35 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                           <div className="flex flex-wrap items-center gap-1.5">
                             <CheckCircle2 size={14} className="text-green-600 shrink-0" />
                             <span className="text-gray-900">{l.ingredientName}</span>
-                            <button className="text-xs text-blue-600 hover:underline" onClick={() => setLinking({ key: l.key, via: 'choose' })}>
+                            <button
+                              className="text-xs text-blue-600 hover:underline"
+                              data-tip="Link this row to a different ingredient."
+                              onClick={() => setLinking({ key: l.key, via: 'choose' })}
+                            >
                               Change
                             </button>
                           </div>
                         ) : l.status === 'skipped' ? (
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="text-amber-700">Skipped — add it later</span>
-                            <button className="text-blue-600 hover:underline" onClick={() => setLinking({ key: l.key, via: 'choose' })}>Link now</button>
+                            <button
+                              className="text-blue-600 hover:underline"
+                              data-tip="Link this row to an ingredient in your library, or add a new one."
+                              onClick={() => setLinking({ key: l.key, via: 'choose' })}
+                            >
+                              Link now
+                            </button>
                           </div>
                         ) : (
                           <div className="space-y-1.5">
                             {l.candidates.length > 0 ? (
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-xs text-gray-500">Did you mean</span>
+                                <span className="text-xs text-gray-500">
+                                  <Term tip="Close matches from your library. Click one to link it; other rows with the same name are linked too.">Did you mean</Term>
+                                </span>
                                 {l.candidates.slice(0, 3).map(c => (
                                   <button key={c.id} onClick={() => linkIngredient(l.key, c.id, c.name)}
+                                    data-tip="Links this row, and any unlinked row with the same name, to this library ingredient."
                                     className="px-2 py-0.5 text-xs rounded-full border border-blue-200 text-blue-700 hover:bg-blue-50">
                                     {c.name}
                                   </button>
@@ -446,24 +487,44 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                               <span className="text-xs text-amber-700">Not in your library</span>
                             )}
                             <div className="flex flex-wrap gap-1.5">
-                              <button className={btnSmall} onClick={() => setLinking({ key: l.key, via: 'library' })}>Pick from library</button>
+                              <button
+                                className={btnSmall}
+                                data-tip="Choose the ingredient yourself from your library. Rows with the same name are linked too."
+                                onClick={() => setLinking({ key: l.key, via: 'library' })}
+                              >
+                                Pick from library
+                              </button>
                               {canEditLibrary && (
-                                <button className={btnSmall} onClick={() => setLinking({ key: l.key, via: 'choose' })}>Add new ingredient</button>
+                                <button
+                                  className={btnSmall}
+                                  data-tip="Adds it to your library now, from USDA or by typing its details, and links this row. It stays in the library even if you don’t finish."
+                                  onClick={() => setLinking({ key: l.key, via: 'choose' })}
+                                >
+                                  Add new ingredient
+                                </button>
                               )}
-                              <button className={btnSmall} onClick={() => changeLine(l.key, { status: 'skipped' })}>Skip for now</button>
+                              <button
+                                className={btnSmall}
+                                data-tip="Leaves this row unlinked for now. The import can then only be saved as a draft."
+                                onClick={() => changeLine(l.key, { status: 'skipped' })}
+                              >
+                                Skip for now
+                              </button>
                             </div>
                           </div>
                         )}
                       </td>
                       <td className="px-3 py-2 align-top text-right">
                         {excluded ? (
-                          <button title="Include this row" aria-label={`Include ${l.rawName}`}
+                          <button data-tip="Brings this row back into the formulation." aria-label={`Include ${l.rawName}`}
                             onClick={() => changeLine(l.key, { status: l.ingredientId ? 'matched' : 'open' })}
                             className="p-1 text-gray-400 hover:text-gray-700 rounded">
                             <RotateCcw size={14} />
                           </button>
                         ) : (
-                          <button title="Leave this row out (not an ingredient)" aria-label={`Leave out ${l.rawName}`}
+                          <button
+                            data-tip="Leaves this row out, for rows that aren’t ingredients (a total, a note). It’s ignored on import."
+                            aria-label={`Leave out ${l.rawName}`}
                             onClick={() => changeLine(l.key, { status: 'excluded' })}
                             className="p-1 text-gray-400 hover:text-red-600 rounded">
                             <X size={14} />
@@ -493,7 +554,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
         </Section>
 
         {draft.steps.length > 0 && (
-          <Section title="Process steps" hint="Optional. Untick a step to leave it out; edit the wording if needed.">
+          <Section title={<Term t="processStep">Process steps</Term>} hint="Optional. Untick a step to leave it out; edit the wording if needed.">
             <ol className="space-y-2">
               {draft.steps.map((s, i) => (
                 <li key={s.key} className="flex items-start gap-2">
@@ -530,12 +591,15 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
             )}
           </div>
           <button onClick={() => saveDraft.mutate()} disabled={busy}
+            data-tip="Saves your progress as a draft, private to you. It isn’t a formulation until you click Create formulation."
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50">
             {saveDraft.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {importId && !dirty ? 'Draft saved' : 'Save as draft'}
           </button>
           <button onClick={() => commit.mutate()} disabled={!complete || busy}
-            title={complete ? undefined : 'Add the missing information first, or save a draft'}
+            data-tip={complete
+              ? 'Creates the formulation as version 1 in the chosen project and opens it.'
+              : 'Add the missing information first, or save a draft'}
             className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
             {commit.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
             Create formulation
@@ -556,6 +620,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
             </p>
             <div className="flex flex-col gap-3">
               <button onClick={() => setLinking({ key: linking.key, via: 'library' })}
+                data-tip="Choose an ingredient already in your library."
                 className="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 text-left">
                 <BookOpen size={18} className="text-emerald-600 shrink-0" />
                 <span><span className="block text-sm font-medium text-gray-900">An ingredient in my library</span></span>

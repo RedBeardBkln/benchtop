@@ -15,6 +15,7 @@ import { convertToUnit } from '@/lib/units'
 import { categoryPath } from '@/lib/ingredient-categories'
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
 import { MANUAL_NUTRIENTS, NewLibraryIngredientPanel } from '@/components/formulations/new-library-ingredient-panel'
+import { Term } from '@/components/term'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,12 @@ function LibraryHitLabel({ ing }: { ing: LibrarySearchHit }) {
         {ing.category && <span className="block text-xs text-gray-400 truncate">{categoryPath(ing)}</span>}
       </span>
       {ing.onHand && (
-        <span className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700">On hand</span>
+        <span
+          className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700"
+          data-tip="You have this ingredient in the lab."
+        >
+          On hand
+        </span>
       )}
     </span>
   )
@@ -132,6 +138,34 @@ const DATA_TYPE_BADGE: Record<string, { label: string; cls: string }> = {
   'SR Legacy':      { label: 'SR Legacy',  cls: 'bg-blue-100 text-blue-700'     },
   'Survey (FNDDS)': { label: 'Survey',     cls: 'bg-purple-100 text-purple-700' },
   'Branded':        { label: 'Branded',    cls: 'bg-gray-100 text-gray-600'     },
+}
+
+// What each USDA data type means, shown on its badge
+const DATA_TYPE_TIP: Record<string, string> = {
+  'Foundation':     'USDA Foundation Foods: analysed samples with detailed, well-documented values.',
+  'SR Legacy':      'USDA SR Legacy: the long-standing USDA reference data, no longer updated.',
+  'Survey (FNDDS)': 'USDA survey foods (FNDDS): typical foods as eaten, used in dietary surveys.',
+  'Branded':        'USDA Branded Foods: values from a manufacturer’s label, often less complete.',
+}
+
+// Hover help shared by the link step, the research step and the phone dialog
+const TIP = {
+  link: 'Linking ties a label ingredient to an ingredient with nutrition data, so the solver can use its numbers.',
+  library: 'Search your ingredient library and link one.',
+  usda: 'Search USDA FoodData Central. The food you pick is added to your library and linked.',
+  url: 'Find a web page with this ingredient’s nutrition facts and read the values from it with AI.',
+  addNew: 'In the lab but not in your library? Adds it to the library, with its nutrition, and links it.',
+  skip: 'Leaves this ingredient out: the solver won’t use it and it won’t be added to the formulation.',
+  unskip: 'Brings this ingredient back so you can link it.',
+  unlink: 'Removes the link so you can choose another source. The library ingredient isn’t deleted.',
+  bounds: 'The lowest and highest % of the batch the solver may give this ingredient. AI research can fill these in.',
+  blend: 'A compound ingredient: the label lists its own ingredients in parentheses. Its parts are listed under it.',
+  webSearch: 'Searches the web for pages with this ingredient’s nutrition facts.',
+  openPage: 'Opens the page in a new tab so you can check it first.',
+  fetch: 'Reads the nutrition values from this page with AI, per 100 g. Check them before saving.',
+  saveLink: 'Adds this ingredient to your library with these values and links it to the label ingredient.',
+  saveDraft: 'Saves your progress so you can resume later. Label photos aren’t kept, only what was read from them.',
+  close: 'Closes the wizard. If there’s unsaved progress, you’re offered a draft save first.',
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -372,12 +406,15 @@ function LibraryLinkSearch({
           placeholder="Search library…"
           className="flex-1 text-sm outline-none"
         />
-        <button onClick={onClose}><X size={12} className="text-gray-300 hover:text-gray-500" /></button>
+        <button onClick={onClose} aria-label="Close search" data-tip="Closes the library search.">
+          <X size={12} className="text-gray-300 hover:text-gray-500" />
+        </button>
       </div>
       {results.map(ing => (
         <button
           key={ing.id}
           onClick={() => pick(ing)}
+          data-tip="Links the label ingredient to this library ingredient and uses its nutrition data."
           className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 border-b border-gray-50"
         >
           <LibraryHitLabel ing={ing} />
@@ -417,12 +454,12 @@ function DeckLinkCard({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onAddNew}
-            title="In the lab but not in the library? Add it and link it"
+            data-tip={TIP.addNew}
             className="flex items-center gap-1 text-xs text-green-700 px-2 py-1 sm:py-0.5 rounded border border-green-200 hover:bg-green-50 transition-colors"
           >
             <PackagePlus size={11} /> Add new
           </button>
-          <button onClick={onSkip} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 sm:py-0.5 rounded hover:bg-gray-100 transition-colors">
+          <button onClick={onSkip} data-tip={TIP.skip} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 sm:py-0.5 rounded hover:bg-gray-100 transition-colors">
             Skip
           </button>
         </div>
@@ -433,6 +470,12 @@ function DeckLinkCard({
           <button
             key={tab}
             onClick={() => onUpdateLinkState({ activeTab: tab })}
+            data-tip={{
+              usda: 'USDA FoodData Central matches found for this ingredient. Pick one to import and link it.',
+              url: TIP.url,
+              manual: 'Type the nutrition values per 100 g yourself.',
+              doc: 'Read the nutrition values from a spec sheet or COA with AI.',
+            }[tab]}
             className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors ${
               ls.activeTab === tab
                 ? 'border-violet-500 text-violet-600 bg-white'
@@ -469,7 +512,12 @@ function DeckLinkCard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-sm text-gray-800 font-medium leading-tight">{cand.description}</span>
-                          <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+                          <span
+                            className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge.cls}`}
+                            data-tip={DATA_TYPE_TIP[cand.dataType]}
+                          >
+                            {badge.label}
+                          </span>
                         </div>
                         {cand.brandOwner && (
                           <p className="text-xs text-gray-400 mt-0.5 truncate">{cand.brandOwner}</p>
@@ -486,6 +534,7 @@ function DeckLinkCard({
                       </div>
                       <button
                         onClick={() => onImportCandidate(cand.fdcId)}
+                        data-tip="Imports this USDA food into your library and links it to the label ingredient."
                         disabled={ls.isLinking}
                         className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs border border-blue-200 rounded-md bg-white hover:bg-blue-50 text-blue-600 disabled:opacity-50 transition-colors"
                       >
@@ -522,6 +571,7 @@ function DeckLinkCard({
                 />
                 <button
                   onClick={() => onWebSearch(ls.webSearchQuery || item.rawName)}
+                  data-tip={TIP.webSearch}
                   disabled={ls.isWebSearching}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
@@ -549,6 +599,7 @@ function DeckLinkCard({
                       <div className="flex gap-1 shrink-0 items-start pt-0.5">
                         <a
                           href={r.url}
+                          data-tip={TIP.openPage}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 px-2 py-1 text-[10px] border border-gray-200 rounded hover:bg-gray-50 text-gray-500 transition-colors"
@@ -557,6 +608,7 @@ function DeckLinkCard({
                         </a>
                         <button
                           onClick={() => onFetchUrlFrom(r.url)}
+                          data-tip={TIP.fetch}
                           disabled={ls.isFetchingUrl}
                           className="flex items-center gap-1 px-2 py-1 text-[10px] border border-violet-200 rounded hover:bg-violet-50 text-violet-600 disabled:opacity-50 transition-colors"
                         >
@@ -583,6 +635,7 @@ function DeckLinkCard({
                 />
                 <button
                   onClick={onFetchUrl}
+                  data-tip={ls.customUrl ? TIP.fetch : 'Paste a URL first.'}
                   disabled={!ls.customUrl || ls.isFetchingUrl}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-violet-600 text-white rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
                 >
@@ -602,7 +655,7 @@ function DeckLinkCard({
               <div className="space-y-2">
                 <div className="border border-green-100 rounded-lg overflow-hidden">
                   <div className="bg-green-50 px-2.5 py-1.5 border-b border-green-100">
-                    <span className="text-xs font-medium text-green-700">Extracted · per 100 g</span>
+                    <span className="text-xs font-medium text-green-700">Extracted · <Term t="per100g">per 100 g</Term></span>
                   </div>
                   <table className="w-full text-xs">
                     <tbody className="divide-y divide-gray-50">
@@ -617,6 +670,7 @@ function DeckLinkCard({
                 </div>
                 <button
                   onClick={() => onSaveExternal('url')}
+                  data-tip={TIP.saveLink}
                   disabled={ls.isLinking}
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
@@ -648,6 +702,7 @@ function DeckLinkCard({
             </div>
             <button
               onClick={() => onSaveExternal('manual')}
+              data-tip={TIP.saveLink}
               disabled={ls.isLinking}
               className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
@@ -660,7 +715,9 @@ function DeckLinkCard({
         {ls.activeTab === 'doc' && (
           <div className="space-y-2.5">
             <p className="text-xs text-gray-400">Upload a COA or spec sheet — PDF, PNG, JPEG, or WEBP (max 20 MB)</p>
-            <label className={`flex items-center gap-2 px-3 py-2.5 text-sm border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+            <label
+              data-tip="Upload a spec sheet or COA. AI reads its nutrition values for you to check, then Save & Link."
+              className={`flex items-center gap-2 px-3 py-2.5 text-sm border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
               ls.isParsingDoc ? 'border-violet-200 bg-violet-50/30' : 'border-gray-200 hover:border-violet-300 hover:bg-violet-50/20'
             }`}>
               <Upload size={14} className="text-gray-400 shrink-0" />
@@ -686,7 +743,7 @@ function DeckLinkCard({
               <div className="space-y-2">
                 <div className="border border-green-100 rounded-lg overflow-hidden">
                   <div className="bg-green-50 px-2.5 py-1.5 border-b border-green-100">
-                    <span className="text-xs font-medium text-green-700">Extracted · per 100 g</span>
+                    <span className="text-xs font-medium text-green-700">Extracted · <Term t="per100g">per 100 g</Term></span>
                   </div>
                   <table className="w-full text-xs">
                     <tbody className="divide-y divide-gray-50">
@@ -701,6 +758,7 @@ function DeckLinkCard({
                 </div>
                 <button
                   onClick={() => onSaveExternal('doc')}
+                  data-tip={TIP.saveLink}
                   disabled={ls.isLinking}
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
@@ -1531,10 +1589,10 @@ export function ReverseWizard({
   ]
 
   function statusIcon(s: string) {
-    if (s === 'satisfied') return <CheckCircle2 size={13} className="text-green-500" />
-    if (s === 'violated')  return <XCircle      size={13} className="text-red-500" />
-    if (s === 'binding')   return <AlertCircle  size={13} className="text-yellow-500" />
-    return <span className="text-gray-300 text-xs">—</span>
+    if (s === 'satisfied') return <span data-tip="Within 1% of the label value."><CheckCircle2 size={13} className="text-green-500" /></span>
+    if (s === 'violated')  return <span data-tip="More than 5% off the label value."><XCircle size={13} className="text-red-500" /></span>
+    if (s === 'binding')   return <span data-tip="Within 1–5% of the label value."><AlertCircle size={13} className="text-yellow-500" /></span>
+    return <span className="text-gray-300 text-xs" data-tip="None of the linked ingredients has data for this nutrient.">—</span>
   }
 
   // ── Link-step pieces (desktop row and phone dialog share them) ─────────────────
@@ -1545,7 +1603,7 @@ export function ReverseWizard({
       <div className="mt-1 bg-white border border-gray-200 rounded-lg overflow-hidden z-30 relative">
         <div className="flex items-center justify-between px-2.5 py-1.5 bg-gray-50 border-b border-gray-100">
           <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5"><Globe size={11} /> Link via web URL</span>
-          <button onClick={() => setUrlPanelOpenId(null)} aria-label="Close" className="p-1 -m-1"><X size={12} className="text-gray-400 hover:text-gray-600" /></button>
+          <button onClick={() => setUrlPanelOpenId(null)} aria-label="Close" data-tip="Closes the web URL panel." className="p-1 -m-1"><X size={12} className="text-gray-400 hover:text-gray-600" /></button>
         </div>
         <div className="p-2.5 space-y-2.5">
           {/* Search row */}
@@ -1560,6 +1618,7 @@ export function ReverseWizard({
             />
             <button
               onClick={() => webSearchIngredient(d.id, ls.webSearchQuery || d.rawName)}
+              data-tip={TIP.webSearch}
               disabled={ls.isWebSearching}
               className="flex items-center gap-1 px-3 sm:px-2 py-2 sm:py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
@@ -1577,12 +1636,13 @@ export function ReverseWizard({
                     <p className="text-[10px] text-blue-500 truncate">{r.url}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <a href={r.url} target="_blank" rel="noopener noreferrer"
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" data-tip={TIP.openPage}
                       className="flex items-center gap-0.5 px-2 sm:px-1.5 py-1.5 sm:py-0.5 text-xs sm:text-[10px] border border-gray-200 rounded hover:bg-gray-50 text-gray-500">
                       <ExternalLink size={8} /> Open
                     </a>
                     <button
                       onClick={() => fetchUrlNutrition(d.id, r.url)}
+                      data-tip={TIP.fetch}
                       disabled={ls.isFetchingUrl}
                       className="flex items-center gap-0.5 px-2 sm:px-1.5 py-1.5 sm:py-0.5 text-xs sm:text-[10px] border border-violet-200 rounded hover:bg-violet-50 text-violet-600 disabled:opacity-50">
                       <Sparkles size={8} /> Fetch
@@ -1604,6 +1664,7 @@ export function ReverseWizard({
             />
             <button
               onClick={() => fetchUrlNutrition(d.id)}
+              data-tip={ls.customUrl ? TIP.fetch : 'Paste a URL first.'}
               disabled={!ls.customUrl || ls.isFetchingUrl}
               className="flex items-center gap-1 px-3 sm:px-2 py-2 sm:py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50 transition-colors">
               {ls.isFetchingUrl ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles size={10} />}
@@ -1614,7 +1675,7 @@ export function ReverseWizard({
           {ls.fetchedNutrients && ls.fetchedNutrients.length > 0 && (
             <div className="space-y-1.5">
               <div className="border border-green-100 rounded overflow-hidden">
-                <div className="bg-green-50 px-2 py-1 border-b border-green-100 text-xs font-medium text-green-700">Extracted · per 100 g</div>
+                <div className="bg-green-50 px-2 py-1 border-b border-green-100 text-xs font-medium text-green-700">Extracted · <Term t="per100g">per 100 g</Term></div>
                 <table className="w-full text-xs">
                   <tbody className="divide-y divide-gray-50">
                     {ls.fetchedNutrients.map((n, i) => (
@@ -1628,6 +1689,7 @@ export function ReverseWizard({
               </div>
               <button
                 onClick={() => saveExternalLink(d.id, 'url')}
+                data-tip={TIP.saveLink}
                 disabled={ls.isLinking}
                 className="flex items-center gap-1 px-3 py-2 sm:py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 transition-colors">
                 {ls.isLinking ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 size={11} />}
@@ -1674,15 +1736,22 @@ export function ReverseWizard({
     return (
       <>
         {d.subIngredients.length > 0 && (
-          <span className="text-[10px] text-violet-500 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full">blend</span>
+          <span className="text-[10px] text-violet-500 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full" data-tip={TIP.blend}>blend</span>
         )}
         {d.status === 'library' && (
-          <span className="text-xs text-green-600 flex items-center gap-0.5"><CheckCircle2 size={11} /> library</span>
+          <span className="text-xs text-green-600 flex items-center gap-0.5" data-tip="Linked to an ingredient in your library; its nutrition data is used.">
+            <CheckCircle2 size={11} /> library
+          </span>
         )}
         {d.status === 'usda' && (
-          <span className="text-xs text-blue-600 flex items-center gap-0.5"><Database size={11} /> USDA</span>
+          <span
+            className="text-xs text-blue-600 flex items-center gap-0.5"
+            data-tip="Linked to a new library ingredient made from USDA, a web page, a document or typed-in values."
+          >
+            <Database size={11} /> USDA
+          </span>
         )}
-        {d.status === 'skipped' && <span className="text-xs text-gray-400">skipped</span>}
+        {d.status === 'skipped' && <span className="text-xs text-gray-400" data-tip={TIP.skip}>skipped</span>}
       </>
     )
   }
@@ -1707,7 +1776,7 @@ export function ReverseWizard({
         )}
         {linked && (
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-1">Usage bounds for the solver (%)</p>
+            <p className="text-xs font-medium text-gray-500 mb-1"><Term tip={TIP.bounds}>Usage bounds</Term> for the solver (%)</p>
             <div className="flex items-center gap-2">
               <input
                 type="number" inputMode="decimal" min="0" max="100" step="any" aria-label="Minimum %"
@@ -1726,24 +1795,27 @@ export function ReverseWizard({
         )}
         {d.status === 'unlinked' ? (
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => togglePanel(d.id, 'library')} className={`${big} border-gray-200 text-gray-700 ${linkSearchOpenId === d.id ? 'bg-gray-100' : ''}`}>
+            <button onClick={() => togglePanel(d.id, 'library')} data-tip={TIP.library} className={`${big} border-gray-200 text-gray-700 ${linkSearchOpenId === d.id ? 'bg-gray-100' : ''}`}>
               <Link2 size={15} /> Library
             </button>
-            <button onClick={() => openUsdaFor(d)} className={`${big} border-blue-200 text-blue-600`}>
+            <button onClick={() => openUsdaFor(d)} data-tip={TIP.usda} className={`${big} border-blue-200 text-blue-600`}>
               <Database size={15} /> USDA
             </button>
-            <button onClick={() => togglePanel(d.id, 'url')} className={`${big} border-violet-200 text-violet-600 ${urlPanelOpenId === d.id ? 'bg-violet-50' : ''}`}>
+            <button onClick={() => togglePanel(d.id, 'url')} data-tip={TIP.url} className={`${big} border-violet-200 text-violet-600 ${urlPanelOpenId === d.id ? 'bg-violet-50' : ''}`}>
               <Globe size={15} /> Web URL
             </button>
-            <button onClick={() => togglePanel(d.id, 'new')} className={`${big} border-green-200 text-green-700 ${newPanelOpenId === d.id ? 'bg-green-50' : ''}`}>
+            <button onClick={() => togglePanel(d.id, 'new')} data-tip={TIP.addNew} className={`${big} border-green-200 text-green-700 ${newPanelOpenId === d.id ? 'bg-green-50' : ''}`}>
               <PackagePlus size={15} /> Add new
             </button>
-            <button onClick={() => skipDeckItem(d.id)} className={`${big} col-span-2 border-gray-100 text-gray-400`}>
+            <button onClick={() => skipDeckItem(d.id)} data-tip={TIP.skip} className={`${big} col-span-2 border-gray-100 text-gray-400`}>
               Skip this ingredient
             </button>
           </div>
         ) : (
-          <button onClick={() => unlinkDeckItem(d.id)} className={`${big} w-full border-gray-200 text-gray-500`}>
+          <button
+            onClick={() => unlinkDeckItem(d.id)}
+            data-tip={d.status === 'skipped' ? TIP.unskip : TIP.unlink}
+            className={`${big} w-full border-gray-200 text-gray-500`}>
             <Unlink size={15} /> {d.status === 'skipped' ? 'Undo skip' : 'Unlink'}
           </button>
         )}
@@ -1797,11 +1869,12 @@ export function ReverseWizard({
             <button
               onClick={saveDraft}
               disabled={step === 'entry' || isSavingDraft}
+              data-tip={step === 'entry' ? 'Choose how to start first; there’s nothing to save yet.' : TIP.saveDraft}
               className="flex items-center gap-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-md text-gray-600 disabled:opacity-40"
             >
               <Save size={13} /> {isSavingDraft ? 'Saving…' : 'Save draft'}
             </button>
-            <button onClick={requestClose} aria-label="Close wizard" className="p-2 text-gray-400"><X size={18} /></button>
+            <button onClick={requestClose} aria-label="Close wizard" data-tip={TIP.close} className="p-2 text-gray-400"><X size={18} /></button>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -1815,12 +1888,12 @@ export function ReverseWizard({
             <button
               onClick={saveDraft}
               disabled={step === 'entry' || isSavingDraft}
-              title="Save your progress and finish later"
+              data-tip={step === 'entry' ? 'Choose how to start first; there’s nothing to save yet.' : TIP.saveDraft}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 disabled:opacity-40 whitespace-nowrap"
             >
               <Save size={12} /> {isSavingDraft ? 'Saving…' : 'Save as draft'}
             </button>
-            <button onClick={requestClose} aria-label="Close wizard" className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+            <button onClick={requestClose} aria-label="Close wizard" data-tip={TIP.close} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
           </div>
         </div>
       </div>
@@ -1845,6 +1918,9 @@ export function ReverseWizard({
                 <div className="flex gap-2">
                   <button
                     onClick={() => (confirmDiscard ? discardDraft() : setConfirmDiscard(true))}
+                    data-tip={confirmDiscard
+                      ? 'Click again to permanently delete the saved draft.'
+                      : 'Deletes the saved draft so you can start over. You’re asked to confirm.'}
                     className={`flex-1 sm:flex-none px-4 py-2 text-sm border rounded-md ${
                       confirmDiscard ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                     }`}
@@ -1853,6 +1929,7 @@ export function ReverseWizard({
                   </button>
                   <button
                     onClick={() => restoreDraft(resumableDraft, savedDraft?.savedAt ?? null)}
+                    data-tip="Reopens the wizard at the step you saved, with everything you entered and found."
                     className="flex-1 sm:flex-none px-4 py-2 text-sm bg-violet-600 text-white rounded-md hover:bg-violet-700"
                   >
                     Resume
@@ -1927,6 +2004,8 @@ export function ReverseWizard({
                         <img src={src} alt={`Label photo ${i + 1}`} className="w-full h-full object-cover rounded-lg border border-gray-200" />
                         <button
                           onClick={() => removeImage(i)}
+                          aria-label="Remove photo"
+                          data-tip="Removes this photo. Values already read from it stay."
                           className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 shadow-sm"
                         >
                           <X size={11} />
@@ -1959,6 +2038,7 @@ export function ReverseWizard({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={parseLabel}
+                      data-tip="AI reads the photos for the product name, serving size, nutrition panel, ingredients and claims. Replaces those fields below."
                       disabled={isParsing}
                       className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-sm
                                  rounded-md hover:bg-violet-700 disabled:opacity-50 transition-colors"
@@ -1991,7 +2071,7 @@ export function ReverseWizard({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Serving size (g)</label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block"><Term t="servingSize">Serving size</Term> (g)</label>
                   <input
                     type="number" min="0" step="any"
                     value={labelServingG}
@@ -2001,7 +2081,9 @@ export function ReverseWizard({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Batch to produce (g)</label>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">
+                    <Term tip="The batch weight the result is scaled to when it’s applied to the formulation. It doesn’t change the percentages.">Batch to produce</Term> (g)
+                  </label>
                   <input
                     type="number" min="1" step="any"
                     value={batchSizeG}
@@ -2015,7 +2097,9 @@ export function ReverseWizard({
             {/* ── Nutrient targets ── */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-gray-500">Nutritional panel (per serving)</label>
+                <label className="text-xs font-medium text-gray-500">
+                  <Term tip="The label’s nutrition values per serving. The solver looks for the percentages that come closest to them.">Nutritional panel</Term> (per serving)
+                </label>
                 <button
                   onClick={() => setTargets(prev => [...prev, { id: `t${Date.now()}`, nutrientName: '', value: '', unit: 'g' }])}
                   className="text-xs text-violet-600 hover:text-violet-700 flex items-center gap-1"
@@ -2043,6 +2127,7 @@ export function ReverseWizard({
                     />
                     <span className="text-xs text-gray-400 w-10">{t.unit}</span>
                     <button onClick={() => setTargets(prev => prev.filter(x => x.id !== t.id))}
+                      aria-label="Remove nutrient" data-tip="Removes this nutrient from the targets."
                       className="text-gray-200 hover:text-red-400"><Trash2 size={12} /></button>
                   </div>
                 ))}
@@ -2052,7 +2137,8 @@ export function ReverseWizard({
             {/* ── Ingredient deck ── */}
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">
-                Ingredient deck {mode === 'manual' ? '(comma or line separated)' : ''}
+                <Term tip="The product’s ingredient list as printed on the label, heaviest first. Blends list their own ingredients in parentheses.">Ingredient deck</Term>{' '}
+                {mode === 'manual' ? '(comma or line separated)' : ''}
               </label>
               {mode === 'image' && deckIngredients.length > 0 ? (
                 <div className="space-y-1 max-h-36 overflow-y-auto text-sm text-gray-700 p-3 bg-gray-50 rounded-lg border border-gray-100">
@@ -2072,7 +2158,7 @@ export function ReverseWizard({
                           <span className="text-gray-400 w-4 shrink-0">{i + 1}.</span>
                           <span>{d.rawName}</span>
                           {d.subIngredients.length > 0 && (
-                            <span className="text-violet-500 bg-violet-50 border border-violet-100 px-1 rounded text-[10px]">blend</span>
+                            <span className="text-violet-500 bg-violet-50 border border-violet-100 px-1 rounded text-[10px]" data-tip={TIP.blend}>blend</span>
                           )}
                         </div>
                       </div>
@@ -2090,6 +2176,7 @@ export function ReverseWizard({
                   />
                   <button
                     onClick={applyManualDeck}
+                    data-tip="Splits the text at commas and new lines into separate ingredients. Text in parentheses becomes a blend’s ingredients."
                     disabled={!manualDeckText.trim()}
                     className="text-xs text-violet-600 hover:text-violet-700 disabled:opacity-40"
                   >
@@ -2101,14 +2188,21 @@ export function ReverseWizard({
 
             {/* ── Claims ── */}
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Label claims</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">
+                <Term tip="Claims printed on the label (vegan, gluten free…). AI research uses them as hints about which ingredients fit.">Label claims</Term>
+              </label>
               {claims.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {claims.map((c, i) => (
                     <span key={i} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded-full">{c}</span>
                   ))}
                   {impliedConstraints.length > 0 && (
-                    <span className="ml-1 text-xs text-gray-400">{impliedConstraints.length} constraint(s) identified</span>
+                    <span
+                      className="ml-1 text-xs text-gray-400"
+                      data-tip="Rules the AI inferred from the claims (e.g. no dairy for “vegan”). They’re passed on to AI research."
+                    >
+                      {impliedConstraints.length} constraint(s) identified
+                    </span>
                   )}
                 </div>
               ) : (
@@ -2132,6 +2226,7 @@ export function ReverseWizard({
                   setStep('link')
                 }}
                 disabled={activeTargets.length === 0}
+                data-tip={activeTargets.length === 0 ? 'Enter at least one nutrient value first.' : undefined}
                 className="flex items-center gap-1 px-5 py-2 bg-violet-600 text-white text-sm rounded-md hover:bg-violet-700 disabled:opacity-40"
               >
                 Next: link ingredients <ChevronRight size={14} />
@@ -2145,7 +2240,7 @@ export function ReverseWizard({
           <div className="space-y-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Link ingredients to your library</h3>
+                <h3 className="text-base font-semibold text-gray-900"><Term tip={TIP.link}>Link</Term> ingredients to your library</h3>
                 <p className="text-sm text-gray-500">
                   Connect each label ingredient to a library or USDA record so the solver has nutrient data.
                   If the lab has it but the library doesn't, add it with “New”.
@@ -2174,7 +2269,7 @@ export function ReverseWizard({
                     showBlendHeader && (
                       <div key={`hdr-${d.id}`} className="flex items-center gap-2 pt-1 pb-0.5">
                         <span className="text-xs font-semibold text-violet-700">{d.parentBlendName}</span>
-                        <span className="text-[10px] text-violet-500 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full">blend</span>
+                        <span className="text-[10px] text-violet-500 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full" data-tip={TIP.blend}>blend</span>
                         <div className="flex-1 h-px bg-violet-100" />
                       </div>
                     ),
@@ -2200,12 +2295,13 @@ export function ReverseWizard({
                         {/* Bounds (shown when linked) */}
                         {(d.status === 'library' || d.status === 'usda') && (
                           <div className="flex items-center gap-3 mt-1.5">
-                            <label className="text-xs text-gray-400">Bounds:</label>
+                            <span className="text-xs text-gray-400"><Term tip={TIP.bounds}>Bounds</Term>:</span>
                             <input
                               type="number" min="0" max="100" step="any"
                               value={d.minPct}
                               onChange={e => updateBound(d.id, 'minPct', e.target.value)}
                               placeholder="min %"
+                              aria-label="Minimum %"
                               className="w-16 px-1.5 py-0.5 text-xs border border-gray-200 rounded tabular-nums"
                             />
                             <span className="text-xs text-gray-300">–</span>
@@ -2214,6 +2310,7 @@ export function ReverseWizard({
                               value={d.maxPct}
                               onChange={e => updateBound(d.id, 'maxPct', e.target.value)}
                               placeholder="max %"
+                              aria-label="Maximum %"
                               className="w-16 px-1.5 py-0.5 text-xs border border-gray-200 rounded tabular-nums"
                             />
                             <span className="text-xs text-gray-400">%</span>
@@ -2229,35 +2326,35 @@ export function ReverseWizard({
                           <>
                             <button
                               onClick={() => togglePanel(d.id, 'library')}
-                              title="Link to library ingredient"
+                              data-tip={TIP.library}
                               className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 text-gray-600"
                             >
                               <Link2 size={11} /> Library
                             </button>
                             <button
                               onClick={() => openUsdaFor(d)}
-                              title="Search USDA FoodData Central"
+                              data-tip={TIP.usda}
                               className="flex items-center gap-1 px-2 py-1 text-xs border border-blue-200 rounded hover:bg-blue-50 text-blue-600"
                             >
                               <Database size={11} /> USDA
                             </button>
                             <button
                               onClick={() => togglePanel(d.id, 'url')}
-                              title="Link from a web URL"
+                              data-tip={TIP.url}
                               className="flex items-center gap-1 px-2 py-1 text-xs border border-violet-200 rounded hover:bg-violet-50 text-violet-600"
                             >
                               <Globe size={11} /> URL
                             </button>
                             <button
                               onClick={() => togglePanel(d.id, 'new')}
-                              title="In the lab but not in the library? Add it and link it"
+                              data-tip={TIP.addNew}
                               className="flex items-center gap-1 px-2 py-1 text-xs border border-green-200 rounded hover:bg-green-50 text-green-700"
                             >
                               <PackagePlus size={11} /> New
                             </button>
                             <button
                               onClick={() => skipDeckItem(d.id)}
-                              title="Skip this ingredient"
+                              data-tip={TIP.skip}
                               className="px-2 py-1 text-xs border border-gray-100 rounded hover:bg-gray-50 text-gray-400"
                             >
                               Skip
@@ -2266,7 +2363,8 @@ export function ReverseWizard({
                         ) : (
                           <button
                             onClick={() => unlinkDeckItem(d.id)}
-                            title="Unlink"
+                            aria-label={d.status === 'skipped' ? 'Undo skip' : 'Unlink'}
+                            data-tip={d.status === 'skipped' ? TIP.unskip : TIP.unlink}
                             className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 text-gray-400"
                           >
                             <Unlink size={11} />
@@ -2282,7 +2380,9 @@ export function ReverseWizard({
 
             {/* Extra candidates */}
             <div className="pt-2 border-t border-gray-100">
-              <p className="text-xs font-medium text-gray-500 mb-2">Add extra candidates (beyond the declared deck)</p>
+              <p className="text-xs font-medium text-gray-500 mb-2">
+                Add <Term tip="Library ingredients the label doesn’t list that the solver may also use. They’re only added if it gives them a share.">extra candidates</Term> (beyond the declared deck)
+              </p>
               <div className="relative">
                 <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg">
                   <Search size={13} className="text-gray-400 shrink-0" />
@@ -2300,6 +2400,7 @@ export function ReverseWizard({
                         key={ing.id}
                         onMouseDown={e => e.preventDefault()}
                         onClick={() => addExtraCandidate(ing)}
+                        data-tip="Adds this ingredient as an extra candidate for the solver."
                         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-50"
                       >
                         <LibraryHitLabel ing={ing} />
@@ -2313,7 +2414,11 @@ export function ReverseWizard({
                   {extraCandidates.map(c => (
                     <span key={c.ingredientId} className="flex items-center gap-1 px-2 py-0.5 bg-violet-50 text-violet-700 text-xs rounded-full">
                       {c.name}
-                      <button onClick={() => setExtraCandidates(prev => prev.filter(x => x.ingredientId !== c.ingredientId))}>
+                      <button
+                        onClick={() => setExtraCandidates(prev => prev.filter(x => x.ingredientId !== c.ingredientId))}
+                        aria-label={`Remove ${c.name}`}
+                        data-tip="Removes this extra candidate."
+                      >
                         <X size={10} />
                       </button>
                     </span>
@@ -2330,6 +2435,9 @@ export function ReverseWizard({
               <button
                 onClick={() => setStep('research')}
                 disabled={allCandidatesForSolve.length === 0}
+                data-tip={allCandidatesForSolve.length === 0
+                  ? 'Link at least one ingredient, or add an extra candidate, first.'
+                  : 'AI suggests the product category, likely % ranges and sources for unlinked ingredients. Check its results.'}
                 className="flex items-center gap-1 px-5 py-2 bg-violet-600 text-white text-sm rounded-md hover:bg-violet-700 disabled:opacity-40"
               >
                 <Sparkles size={13} /> Run AI research <ChevronRight size={14} />
@@ -2345,7 +2453,7 @@ export function ReverseWizard({
               <div>
                 <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                   <Sparkles size={16} className="text-violet-500" />
-                  AI research synthesis
+                  <Term tip="benchtop’s AI estimates the product category, on-hand matches, likely % ranges and data sources. It can be wrong; always check.">AI research</Term> synthesis
                 </h3>
                 <p className="text-sm text-gray-500">
                   Claude analyzes the product profile and suggests identification, percentages, and formulation notes.
@@ -2354,6 +2462,7 @@ export function ReverseWizard({
               {!isResearching && (
                 <button
                   onClick={runResearch}
+                  data-tip="Runs the AI research again with the current label data and links. Replaces the results and the suggested bounds."
                   className="flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 text-violet-600 text-sm rounded-md hover:bg-violet-50"
                 >
                   <RotateCcw size={12} /> Re-run
@@ -2393,7 +2502,7 @@ export function ReverseWizard({
                 {(researchResult.onHandMatches?.length ?? 0) > 0 && (
                   <div>
                     <h4 className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">
-                      Already on hand in your lab
+                      Already <Term t="onHand">on hand</Term> in your lab
                     </h4>
                     <div className="space-y-2">
                       {researchResult.onHandMatches!.map((m, i) => {
@@ -2413,6 +2522,9 @@ export function ReverseWizard({
                               ) : (
                                 <button
                                   onClick={() => linkLibraryIngredient(deckItem.id, m.ingredientId, name => `Linked to on-hand "${name}"`)}
+                                  data-tip={deckItem.status === 'unlinked'
+                                    ? 'Links the label ingredient to this on-hand library ingredient.'
+                                    : 'Replaces the current link with this on-hand library ingredient.'}
                                   className="px-2 py-1 text-xs border border-emerald-300 rounded text-emerald-700 hover:bg-emerald-100 whitespace-nowrap"
                                 >
                                   {deckItem.status === 'unlinked' ? 'Use this' : 'Use instead'}
@@ -2454,6 +2566,7 @@ export function ReverseWizard({
                                     setUsdaOpen(true)
                                   }
                                 }}
+                                data-tip="Opens a USDA search for this suggestion. The food you pick is added to your library and linked."
                                 className="flex items-center gap-1 px-2 py-1 text-xs border border-blue-200 rounded hover:bg-blue-50 text-blue-600 whitespace-nowrap"
                               >
                                 <Database size={10} /> Search USDA
@@ -2470,7 +2583,7 @@ export function ReverseWizard({
                 {researchResult.approximatePercentages.length > 0 && (
                   <div>
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                      Estimated % ranges (applied to solver bounds)
+                      Estimated % ranges (applied to <Term tip={TIP.bounds}>solver bounds</Term>)
                     </h4>
                     <div className="overflow-x-auto">
                     <table className="w-full text-sm border border-gray-100 rounded-lg overflow-hidden">
@@ -2500,7 +2613,9 @@ export function ReverseWizard({
                 {/* Constraints */}
                 {researchResult.constraints.length > 0 && (
                   <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1.5">Formulation constraints</p>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1.5">
+                      <Term tip="Rules the AI thinks the product must follow, from its label and claims. Use them to check the result.">Formulation constraints</Term>
+                    </p>
                     <ul className="space-y-1">
                       {researchResult.constraints.map((c, i) => (
                         <li key={i} className="text-sm text-amber-800 flex gap-2"><span>•</span>{c}</li>
@@ -2567,6 +2682,11 @@ export function ReverseWizard({
               <button
                 onClick={() => setStep('solve')}
                 disabled={isResearching || allCandidatesForSolve.length === 0}
+                data-tip={isResearching
+                  ? 'Wait for the research to finish.'
+                  : allCandidatesForSolve.length === 0
+                    ? 'Link at least one ingredient first.'
+                    : 'Goes to the solver. Ingredients that are still unlinked are left out.'}
                 className="flex items-center gap-1 px-5 py-2 bg-violet-600 text-white text-sm rounded-md hover:bg-violet-700 disabled:opacity-40"
               >
                 Proceed to solve <ChevronRight size={14} />
@@ -2580,7 +2700,8 @@ export function ReverseWizard({
           <div className="space-y-5">
             <div>
               <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                <Zap size={16} className="text-violet-500" /> LP Solver
+                <Zap size={16} className="text-violet-500" />{' '}
+                <Term tip="A linear-programming solver: it finds the percentages, within each ingredient’s bounds, whose nutrition comes closest to the label.">LP Solver</Term>
               </h3>
               <p className="text-sm text-gray-500">
                 {allCandidatesForSolve.length} ingredient{allCandidatesForSolve.length !== 1 ? 's' : ''} available
@@ -2605,6 +2726,7 @@ export function ReverseWizard({
               <button
                 onClick={runSolve}
                 disabled={isSolving || allCandidatesForSolve.length === 0}
+                data-tip="Finds the percentages within each ingredient’s bounds whose nutrition comes closest to the label."
                 className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 text-white text-sm rounded-md hover:bg-violet-700 disabled:opacity-50"
               >
                 {isSolving
@@ -2618,7 +2740,13 @@ export function ReverseWizard({
               <>
                 {/* Status */}
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-xs rounded font-medium ${
+                  <span
+                    data-tip={solverResult.status === 'optimal'
+                      ? 'A best-fit mix was found within the bounds.'
+                      : solverResult.status === 'infeasible'
+                        ? 'No mix fits the bounds. Widen the bounds or link more ingredients.'
+                        : 'The solver failed. Try again.'}
+                    className={`px-2 py-0.5 text-xs rounded font-medium ${
                     solverResult.status === 'optimal'    ? 'bg-green-100 text-green-700' :
                     solverResult.status === 'infeasible' ? 'bg-red-100 text-red-700' :
                                                            'bg-gray-100 text-gray-600'
@@ -2628,6 +2756,7 @@ export function ReverseWizard({
                   )}
                   <button
                     onClick={() => { setSolverResult(null); runSolve() }}
+                    data-tip="Runs the solver again, e.g. after changing bounds or links on earlier steps."
                     className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-violet-600"
                   >
                     <RotateCcw size={11} /> Re-solve
@@ -2656,7 +2785,7 @@ export function ReverseWizard({
                         <thead className="bg-gray-50 text-xs text-gray-500">
                           <tr>
                             <th className="px-3 py-2 text-left font-medium">Ingredient</th>
-                            <th className="px-3 py-2 text-right font-medium">%</th>
+                            <th className="px-3 py-2 text-right font-medium"><Term t="usagePct">%</Term></th>
                             <th className="px-3 py-2 text-right font-medium">Weight (g)</th>
                           </tr>
                         </thead>
@@ -2696,9 +2825,15 @@ export function ReverseWizard({
                               <thead className="border-b border-gray-100">
                                 <tr className="text-xs text-gray-500">
                                   <th className="px-3 py-2 text-left font-medium">Nutrient</th>
-                                  <th className="px-3 py-2 text-right font-medium">Label target</th>
-                                  <th className="px-3 py-2 text-right font-medium">Formulated</th>
-                                  <th className="px-3 py-2 text-right font-medium w-16">Δ</th>
+                                  <th className="px-3 py-2 text-right font-medium">
+                                    <Term tip="The value from the label’s nutrition panel.">Label target</Term>
+                                  </th>
+                                  <th className="px-3 py-2 text-right font-medium">
+                                    <Term tip="What the solved recipe gives, per serving (or per 100 g if there’s no serving size).">Formulated</Term>
+                                  </th>
+                                  <th className="px-3 py-2 text-right font-medium w-16">
+                                    <Term tip="Formulated minus label target. Green within 5%, yellow 5–20%, red over 20%.">Δ</Term>
+                                  </th>
                                   <th className="px-3 py-2 text-center font-medium w-10"></th>
                                 </tr>
                               </thead>
@@ -2764,6 +2899,7 @@ export function ReverseWizard({
                         </p>
                         <button
                           onClick={applyResult}
+                          data-tip="Replaces all the formulation’s ingredients with this result, scaled to the batch. Not saved until you click Save."
                           className="flex items-center gap-1.5 px-5 py-2 bg-violet-600 text-white text-sm rounded-md hover:bg-violet-700"
                         >
                           Apply to formulation
@@ -2838,6 +2974,7 @@ export function ReverseWizard({
               </button>
               <button
                 onClick={() => { setClosePromptOpen(false); onClose() }}
+                data-tip="Closes the wizard. Anything since your last draft save is lost."
                 className="w-full py-2.5 text-sm border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50"
               >
                 Close without saving

@@ -24,9 +24,11 @@ type Normalized = { value: string | null } | { error: string }
 
 /** A single-value measurement: edits locally, validates and saves on blur. */
 function MeasureField({
-  label, saved, disabled, onCommit, normalize, className, type = 'text', ...rest
+  label, saved, disabled, onCommit, normalize, className, type = 'text', tip, ...rest
 }: {
   label: string
+  /** Hover / focus hint on the box */
+  tip?: string
   saved: string
   disabled: boolean
   onCommit: (next: string | null) => void
@@ -67,6 +69,8 @@ function MeasureField({
         disabled={disabled}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
+        aria-label={label}
+        data-tip={disabled ? undefined : tip}
         className={INPUT}
       />
     </Field>
@@ -110,10 +114,12 @@ function TempFields({ savedC, disabled, onCommit }: {
   return (
     <>
       <Field label="Temp (°C)" className="w-20">
-        <input type="number" step="any" value={c} disabled={disabled} onChange={(e) => changeC(e.target.value)} onBlur={commit} className={INPUT} />
+        <input type="number" step="any" value={c} disabled={disabled} onChange={(e) => changeC(e.target.value)} onBlur={commit}
+          aria-label="Temperature (°C)" data-tip={disabled ? undefined : 'Type °C or °F and the other fills in. Saved in °C.'} className={INPUT} />
       </Field>
       <Field label="Temp (°F)" className="w-20">
-        <input type="number" step="any" value={f} disabled={disabled} onChange={(e) => changeF(e.target.value)} onBlur={commit} className={INPUT} />
+        <input type="number" step="any" value={f} disabled={disabled} onChange={(e) => changeF(e.target.value)} onBlur={commit}
+          aria-label="Temperature (°F)" data-tip={disabled ? undefined : 'Type °F or °C and the other fills in. Saved in °C.'} className={INPUT} />
       </Field>
     </>
   )
@@ -169,6 +175,7 @@ function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelec
             className={INPUT}
           />
           <button type="button" onClick={submit} disabled={busy || !name.trim()}
+            data-tip="Adds this to your account’s equipment list and picks it for this step"
             className="px-2 py-1 text-xs bg-gray-900 text-white rounded hover:bg-gray-800 disabled:opacity-40">
             Add
           </button>
@@ -193,6 +200,8 @@ function EquipmentField({ equipmentId, equipmentName, options, disabled, onSelec
         value={equipmentId ?? ''}
         disabled={disabled}
         onFocus={onRefresh}
+        aria-label="Equipment"
+        data-tip={disabled ? undefined : 'The equipment used in this step. The list is shared by everyone on your account.'}
         onChange={(e) => {
           if (e.target.value === NEW_EQUIPMENT) setAdding(true)
           else if (e.target.value === MANAGE_EQUIPMENT) onManage?.()
@@ -244,15 +253,16 @@ export function StepMeasurements({
 
   return (
     <>
-      <MeasureField label="Start" type="time" className="w-28" saved={p.start_time ?? ''} disabled={disabled} onCommit={one('start_time')} />
-      <MeasureField label="End" type="time" className="w-28" saved={p.end_time ?? ''} disabled={disabled} onCommit={one('end_time')} />
-      <MeasureField label="pH" type="number" step="0.01" min="0" max="14" className="w-16" saved={p.ph ?? ''} disabled={disabled} normalize={phNormalize} onCommit={one('ph')} />
+      <MeasureField label="Start" type="time" className="w-28" saved={p.start_time ?? ''} disabled={disabled} onCommit={one('start_time')} tip="Time of day this step started. Saves when you click away." />
+      <MeasureField label="End" type="time" className="w-28" saved={p.end_time ?? ''} disabled={disabled} onCommit={one('end_time')} tip="Time of day this step finished. Saves when you click away." />
+      <MeasureField label="pH" type="number" step="0.01" min="0" max="14" className="w-16" saved={p.ph ?? ''} disabled={disabled} normalize={phNormalize} onCommit={one('ph')} tip="pH measured at this step, 0 to 14" />
       <TempFields savedC={p.temp_c ?? ''} disabled={disabled} onCommit={one('temp_c')} />
       <MeasureField
         label="Time (hh:mm:ss)" placeholder="00:00:00" className="w-28" saved={stepTime(p) ?? ''} disabled={disabled}
         normalize={timeNormalize} onCommit={(v) => onPatch({ time: v, time_min: null })}
+        tip="How long this step takes, as hours:minutes:seconds, e.g. 00:30:00"
       />
-      <MeasureField label="Speed" type="number" step="0.01" min="0" placeholder="0.00" className="w-20" saved={p.speed ?? ''} disabled={disabled} normalize={speedNormalize} onCommit={one('speed')} />
+      <MeasureField label="Speed" type="number" step="0.01" min="0" placeholder="0.00" className="w-20" saved={p.speed ?? ''} disabled={disabled} normalize={speedNormalize} onCommit={one('speed')} tip="Mixer or equipment speed setting, a number (saved to 2 decimals)" />
       <EquipmentField
         equipmentId={step.equipmentId} equipmentName={step.equipmentName} options={equipment} disabled={disabled}
         onSelect={onSelectEquipment} onCreate={onCreateEquipment} onRefresh={onRefreshEquipment}

@@ -136,6 +136,15 @@ export const gettingStarted: HelpSection = {
           type: 'p',
           text: 'Small pop-up messages (for example “Profile saved” or an error) appear for a few seconds in the **top-right corner** of the screen.',
         },
+        { type: 'h', text: 'Quick explanations as you go' },
+        {
+          type: 'list',
+          items: [
+            '**Hover over a button** (or move to it with the Tab key) to see what it does.',
+            'Words with a **dotted underline**, such as Yield or On hand, are benchtop terms. Hover over one, or **tap it** on a phone or tablet, to see what it means.',
+            'Press **Esc**, or tap anywhere else, to close an explanation.',
+          ],
+        },
       ],
     },
     {
@@ -210,6 +219,10 @@ export const gettingStarted: HelpSection = {
     },
   ],
   faqs: [
+    {
+      q: 'What do the words with a dotted underline mean?',
+      a: 'They’re benchtop terms. Hover over one with the mouse, or tap it on a phone or tablet, and a short explanation pops up. Hovering over a button explains what it does.',
+    },
     {
       q: 'How do I sign up for benchtop?',
       a: 'You can’t sign up on your own; benchtop is invitation only. To join your company’s existing account, ask its owner or an admin for an invitation link. To start a new company account, contact the benchtop team.',

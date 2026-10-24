@@ -17,6 +17,8 @@ import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 import { IngredientCostPanel } from './ingredient-cost-panel'
 import { EditIngredientDialog, toEditable, type EditableIngredient } from './edit-ingredient-dialog'
 import { categoryPath } from '@/lib/ingredient-categories'
+import { GLOSSARY } from '@/lib/glossary'
+import { Term } from '@/components/term'
 
 // fetch(...).then(okOrThrow('…')) — a refused change (e.g. view-only access) shows its error
 // instead of looking like it worked
@@ -504,19 +506,21 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
         <div className="flex flex-wrap items-center gap-3 mb-5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
           <AlertTriangle size={16} className="text-amber-600 shrink-0" />
           <p className="flex-1 min-w-[16rem] text-sm text-amber-900">
-            <span className="font-medium">Duplicate ingredient.</span>{' '}
+            <span className="font-medium"><Term t="duplicate">Duplicate</Term> ingredient.</span>{' '}
             {data.duplicates!.length === 1 ? 'Another entry has' : `${data.duplicates!.length} other entries have`} the same
             name, brand, supplier and item code. Rename this one, or merge them.
           </p>
           {canEdit && <div className="flex gap-2">
             <button
               onClick={() => { setResolveMode('rename'); setResolveOpen(true) }}
+              data-tip="Change this entry’s name, brand, supplier or item code so it’s no longer a duplicate."
               className="px-3 py-1.5 text-xs font-medium border border-amber-300 rounded-md bg-white text-amber-800 hover:bg-amber-100"
             >
               Rename
             </button>
             <button
               onClick={() => { setResolveMode('merge'); setResolveOpen(true) }}
+              data-tip="Combine the duplicates into one entry. Formulations that used the others switch to the kept one."
               className="px-3 py-1.5 text-xs font-medium border border-amber-300 rounded-md bg-white text-amber-800 hover:bg-amber-100"
             >
               Merge…
@@ -557,6 +561,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                 className="text-2xl font-semibold text-gray-900 border-b-2 border-blue-500 outline-none bg-transparent w-full"
               />
               <button type="submit" disabled={!nameEdit.trim() || patchIngredientMutation.isPending}
+                data-tip={!nameEdit.trim() ? 'The name can’t be empty.' : 'Renames the ingredient everywhere it’s used. Words are capitalized automatically.'}
                 className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 shrink-0">
                 <Save size={12} /> Save
               </button>
@@ -571,7 +576,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               {canEdit && <button
                 onClick={() => { setNameEdit(data.name); setEditingName(true) }}
                 className="[@media(hover:hover)]:opacity-0 group-hover/name:opacity-100 focus:opacity-100 transition-opacity p-1 text-gray-400 hover:text-gray-700 rounded"
-                title="Edit name"
+                aria-label="Edit name"
+                data-tip="Rename this ingredient. The new name shows everywhere it’s used."
               >
                 <Edit2 size={14} />
               </button>}
@@ -595,6 +601,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                 value={labelNameEdit}
                 onChange={e => setLabelNameEdit(e.target.value)}
                 placeholder="Label statement (e.g. Rolled Oats)"
+                aria-label="Label name"
+                data-tip="How the ingredient is written in the ingredient statement. Leave blank to use its name."
                 className="text-sm text-gray-600 border-b border-blue-400 outline-none bg-transparent w-full"
               />
               <button type="submit" disabled={patchIngredientMutation.isPending}
@@ -610,16 +618,17 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
             <div className="flex items-center gap-1.5 group/label mb-2">
               {data.labelName ? (
                 <span className="text-sm text-gray-500">
-                  <span className="text-xs text-gray-400 mr-1">Label:</span>
+                  <span className="text-xs text-gray-400 mr-1"><Term t="labelName">Label</Term>:</span>
                   {data.labelName}
                 </span>
               ) : (
-                <span className="text-xs text-gray-300 italic">No label name set</span>
+                <span className="text-xs text-gray-300 italic">No <Term t="labelName">label name</Term> set</span>
               )}
               {canEdit && <button
                 onClick={() => { setLabelNameEdit(data.labelName ?? ''); setEditingLabelName(true) }}
                 className="[@media(hover:hover)]:opacity-0 group-hover/label:opacity-100 focus:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
-                title="Edit label name"
+                aria-label="Edit label name"
+                data-tip="Set how this ingredient reads in a formulation’s ingredient statement."
               >
                 <Edit2 size={11} />
               </button>}
@@ -652,6 +661,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   value={sourceEdit[key]}
                   onChange={e => setSourceEdit(s => ({ ...s, [key]: e.target.value }))}
                   placeholder={placeholder}
+                  aria-label={placeholder}
+                  data-tip="Name, brand, supplier and item code together must not match another ingredient."
                   className="text-sm text-gray-600 border-b border-blue-400 outline-none bg-transparent w-32"
                 />
               ))}
@@ -691,7 +702,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   setEditingSource(true)
                 }}
                 className="[@media(hover:hover)]:opacity-0 group-hover/source:opacity-100 focus:opacity-100 transition-opacity p-0.5 text-gray-400 hover:text-gray-700 rounded"
-                title="Edit brand, supplier, item code"
+                aria-label="Edit brand, supplier, item code"
+                data-tip="Edit brand, supplier and item code. With the name, they tell this entry apart from similar ones."
               >
                 <Edit2 size={11} />
               </button>}
@@ -699,34 +711,35 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           )}
 
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
+            <span data-tip={data.verification === 'verified' ? GLOSSARY.verified : GLOSSARY.unverified} className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
               data.verification === 'verified'
                 ? 'bg-green-100 text-green-700'
                 : 'bg-yellow-100 text-yellow-700'
             }`}>
               {data.verification === 'verified' ? '✓ Verified' : '⚠ Unverified'}
             </span>
-            <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 uppercase">
+            <span data-tip={GLOSSARY.source} className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 uppercase">
               {data.sourceType}
             </span>
             {data.onHand && (
-              <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">On hand</span>
+              <span data-tip={GLOSSARY.onHand} className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">On hand</span>
             )}
-            <span className="text-xs text-gray-500">{categoryPath(data) || 'Uncategorized'}</span>
+            <span className="text-xs text-gray-500" data-tip={GLOSSARY.category}>{categoryPath(data) || 'Uncategorized'}</span>
             {data.moisturePct != null && (
-              <span className="text-xs text-gray-500">Moisture {parseFloat(data.moisturePct)}%</span>
+              <span className="text-xs text-gray-500"><Term t="moisturePct">Moisture</Term> {parseFloat(data.moisturePct)}%</span>
             )}
-            {data.naturallyDerived && <span className="text-xs text-gray-500">Naturally derived</span>}
+            {data.naturallyDerived && <span className="text-xs text-gray-500"><Term t="naturallyDerived">Naturally derived</Term></span>}
             {data.sourceFormulationId && (
               <Link
                 href={`/formulations/${data.sourceFormulationId}`}
+                data-tip="Opens the formulation this ingredient was saved from."
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700 hover:underline"
               >
                 View source formulation <ExternalLink size={10} />
               </Link>
             )}
             {data.stockG != null && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">
+              <span data-tip={GLOSSARY.stock} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-50 text-teal-700">
                 <Package size={10} />
                 {parseFloat(data.stockG).toFixed(0)} g on hand
               </span>
@@ -737,6 +750,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
+                data-tip="Opens this food’s USDA FoodData Central page in a new tab."
               >
                 FDC {data.fdcId} <ExternalLink size={10} />
               </a>
@@ -749,13 +763,16 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
         <button
           onClick={() => setEditingDetails(toEditable(data))}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-          title="Category, on hand, stock, moisture, naturally derived and notes"
+          data-tip="Edit category, on hand, stock, moisture, naturally derived and notes."
         >
           <Edit2 size={12} /> Edit details
         </button>
         <button
           onClick={() => verifyMutation.mutate()}
           disabled={verifyMutation.isPending}
+          data-tip={data.verification === 'verified'
+            ? 'Marks the data as not yet checked, so it shows ⚠ in formulations.'
+            : 'Confirms you’ve checked this ingredient’s nutrition, allergens and details against a reliable source, such as its spec sheet.'}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border transition-colors ${
             data.verification === 'verified'
               ? 'border-green-200 text-green-700 hover:bg-green-50'
@@ -806,6 +823,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               {canEdit && <div className="flex justify-end">
                 <button
                   onClick={() => setEditingNutrients(true)}
+                  data-tip="Type values in per 100 g, or read them from an uploaded spec sheet. Changes apply wherever this ingredient is used."
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   <Edit2 size={12} /> Edit nutrients
@@ -831,9 +849,9 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                           <thead className="bg-gray-50 text-xs text-gray-500">
                             <tr>
                               <th className="px-4 py-2 text-left font-medium">Nutrient</th>
-                              <th className="px-4 py-2 text-right font-medium">Per 100 g</th>
+                              <th className="px-4 py-2 text-right font-medium"><Term t="per100g">Per 100 g</Term></th>
                               <th className="px-4 py-2 text-right font-medium">Unit</th>
-                              <th className="px-4 py-2 text-left font-medium text-gray-400">Source</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-400"><Term t="sourceRef">Source</Term></th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">
@@ -849,6 +867,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                                 <td className="px-4 py-2 text-xs text-gray-400">
                                   {n.sourceUrl ? (
                                     <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer"
+                                      data-tip="Opens the page this value came from in a new tab."
                                       className="hover:underline text-blue-400">
                                       {n.sourceRef}
                                     </a>
@@ -871,7 +890,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               <div className="flex items-end gap-4 pb-4 border-b border-gray-100">
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Source reference
+                    <Term t="sourceRef">Source reference</Term>
                     <span className="font-normal text-gray-400 ml-1">
                       — applied to new or modified values
                     </span>
@@ -880,6 +899,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                     value={globalSource}
                     onChange={e => setGlobalSource(e.target.value)}
                     placeholder="e.g. Supplier COA Q2-2024, USDA FDC 12345, Manual entry"
+                    data-tip="Where the numbers came from. Saved with every value you add or change; untouched values keep their own source."
                     className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md
                                focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -894,6 +914,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   <button
                     onClick={handleSaveNutrients}
                     disabled={saveNutrientsMutation.isPending}
+                    data-tip="Saves all values. Every formulation that uses this ingredient picks up the change."
                     className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-blue-600 text-white
                                rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                   >
@@ -911,6 +932,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   <select
                     value={parseDocId}
                     onChange={e => setParseDocId(e.target.value)}
+                    aria-label="Document to parse"
+                    data-tip="Choose an uploaded spec sheet or COA. Only PDFs and images can be read."
                     className="text-sm border border-gray-200 rounded-md px-2 py-1
                                focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -922,6 +945,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   <button
                     onClick={handleParseFromDoc}
                     disabled={!parseDocId || isParsing}
+                    data-tip={!parseDocId ? 'Choose a document first.' : 'Reads nutrition values from this document into the editor for you to check. Nothing is saved until you click Save nutrients.'}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white
                                rounded-md hover:bg-emerald-700 disabled:opacity-40 transition-colors"
                   >
@@ -952,8 +976,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                             <tr>
                               <th className="px-3 py-2 text-left font-medium">Nutrient</th>
                               <th className="px-3 py-2 text-left font-medium w-14">Unit</th>
-                              <th className="px-3 py-2 text-left font-medium w-36">Per 100 g</th>
-                              <th className="px-3 py-2 text-left font-medium text-gray-400">Source</th>
+                              <th className="px-3 py-2 text-left font-medium w-36"><Term t="per100g">Per 100 g</Term></th>
+                              <th className="px-3 py-2 text-left font-medium text-gray-400"><Term t="sourceRef">Source</Term></th>
                               <th className="px-3 py-2 w-6" />
                             </tr>
                           </thead>
@@ -988,6 +1012,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                                         }))
                                       }
                                       placeholder="—"
+                                      aria-label={`${n.name} per 100 g (${n.unit})`}
                                       className="w-32 px-2 py-0.5 text-sm border border-gray-200 rounded
                                                  focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
                                     />
@@ -1009,7 +1034,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                                           }))
                                         }
                                         className="text-gray-300 hover:text-red-400 transition-colors"
-                                        title="Clear value"
+                                        aria-label={`Clear ${n.name}`}
+                                        data-tip="Clears this value. It’s removed from the ingredient when you save."
                                       >
                                         <X size={13} />
                                       </button>
@@ -1034,7 +1060,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
       {/* ── ALLERGENS ── */}
       {activeTab === 'allergens' && (
         <div className="space-y-4">
-          <p className="text-xs text-gray-400">Click to declare or remove. Declared allergens are highlighted.</p>
+          <p className="text-xs text-gray-400">Click to declare or remove. Declared <Term t="allergen">allergens</Term> are highlighted.</p>
 
           <div className="flex flex-wrap gap-2">
             {STANDARD_ALLERGENS.map(allergen => {
@@ -1044,6 +1070,11 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   key={allergen}
                   onClick={() => toggleAllergen(allergen)}
                   disabled={!canEdit || addAllergenMutation.isPending || removeAllergenMutation.isPending}
+                  data-tip={!canEdit
+                    ? 'You have view-only access to the ingredient library.'
+                    : active
+                      ? `Removes ${allergen}. It drops out of the allergen statement of formulations using this ingredient.`
+                      : `Declares ${allergen}. It’s added to the allergen statement of every formulation using this ingredient.`}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     active
                       ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600'
@@ -1064,7 +1095,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   <span key={a.id}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-orange-500 text-white">
                     {a.allergen}
-                    {canEdit && <button onClick={() => removeAllergenMutation.mutate(a.id)} className="hover:opacity-70">
+                    {canEdit && <button onClick={() => removeAllergenMutation.mutate(a.id)} aria-label={`Remove ${a.allergen}`} data-tip={`Removes ${a.allergen} from this ingredient’s allergens.`} className="hover:opacity-70">
                       <X size={12} />
                     </button>}
                   </span>
@@ -1081,11 +1112,14 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               value={allergenInput}
               onChange={e => setAllergenInput(e.target.value)}
               placeholder="Add custom allergen…"
+              aria-label="Custom allergen"
+              data-tip="For an allergen not in the list above, e.g. one required in another market."
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
             />
             <button
               type="submit"
               disabled={!allergenInput.trim() || addAllergenMutation.isPending}
+              data-tip={!allergenInput.trim() ? 'Type an allergen first.' : 'Declares this allergen on the ingredient.'}
               className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-40 transition-colors"
             >
               <Plus size={14} /> Add
@@ -1097,7 +1131,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
       {/* ── CERTIFICATIONS ── */}
       {activeTab === 'certs' && (
         <div className="space-y-4">
-          <p className="text-xs text-gray-400">{canEdit ? 'Click to add or remove certifications.' : 'Certifications recorded for this ingredient are highlighted.'}</p>
+          <p className="text-xs text-gray-400">{canEdit ? <>Click to add or remove <Term t="certification">certifications</Term>.</> : <><Term t="certification">Certifications</Term> recorded for this ingredient are highlighted.</>}</p>
 
           <div className="flex flex-wrap gap-2">
             {STANDARD_CERTS.map(cert => {
@@ -1107,6 +1141,9 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   key={cert}
                   onClick={() => toggleCert(cert)}
                   disabled={!canEdit || addCertMutation.isPending || removeCertMutation.isPending}
+                  data-tip={!canEdit
+                    ? 'You have view-only access to the ingredient library.'
+                    : active ? `Removes the ${cert} certification.` : `Records that this ingredient is certified ${cert}.`}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     active
                       ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
@@ -1127,7 +1164,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   <span key={c.id}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white">
                     {c.cert}
-                    {canEdit && <button onClick={() => removeCertMutation.mutate(c.id)} className="hover:opacity-70">
+                    {canEdit && <button onClick={() => removeCertMutation.mutate(c.id)} aria-label={`Remove ${c.cert}`} data-tip={`Removes the ${c.cert} certification.`} className="hover:opacity-70">
                       <X size={12} />
                     </button>}
                   </span>
@@ -1144,11 +1181,14 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               value={certInput}
               onChange={e => setCertInput(e.target.value)}
               placeholder="Add custom certification…"
+              aria-label="Custom certification"
+              data-tip="For a certification not in the list above."
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
             />
             <button
               type="submit"
               disabled={!certInput.trim() || addCertMutation.isPending}
+              data-tip={!certInput.trim() ? 'Type a certification first.' : 'Records this certification on the ingredient.'}
               className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-40 transition-colors"
             >
               <Plus size={14} /> Add
@@ -1163,9 +1203,10 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           {!editingSubs ? (
             <>
               <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-400">Declared sub-ingredient list (e.g. from label statement).</p>
+                <p className="text-xs text-gray-400">Declared <Term t="subIngredients">sub-ingredient</Term> list (e.g. from label statement).</p>
                 {canEdit && <button
                   onClick={() => { setSubsText((data.subIngredients ?? []).map(s => s.name).join('\n')); setEditingSubs(true) }}
+                  data-tip="Type the components of this ingredient, one per line, in label order."
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   <Edit2 size={12} /> Edit list
@@ -1197,6 +1238,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                 <button
                   onClick={() => updateSubsMutation.mutate(subsText.split('\n').map(s => s.trim()).filter(Boolean))}
                   disabled={updateSubsMutation.isPending}
+                  data-tip="Saves the list. It appears in parentheses after this ingredient in formulation ingredient statements."
                   className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                   <Save size={13} />
@@ -1239,6 +1281,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => openDoc(doc.id)}
+                      data-tip="Opens the document in a new tab. The link works for a few minutes."
                       className="flex items-center gap-1 px-2.5 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                     >
                       <Eye size={12} /> View
@@ -1246,6 +1289,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                     {canEdit && <button
                       onClick={() => { if (confirm(`Delete "${doc.label}"?`)) deleteDocMutation.mutate(doc.id) }}
                       disabled={deleteDocMutation.isPending}
+                      data-tip="Permanently deletes this document. Nutrient values already read from it stay."
                       className="flex items-center gap-1 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-40"
                     >
                       <Trash2 size={12} /> Delete
@@ -1263,6 +1307,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                aria-label="Document file"
+                data-tip="PDF, Word, Excel, CSV, PNG, JPG or WebP, up to 20 MB. PDFs and images can be read by AI for nutrition."
                 onChange={e => setDocFile(e.target.files?.[0] ?? null)}
                 className="text-sm text-gray-600 file:mr-3 file:px-3 file:py-1.5 file:rounded-md
                            file:border-0 file:text-xs file:bg-gray-100 file:text-gray-700
@@ -1272,6 +1318,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                 value={docLabel}
                 onChange={e => setDocLabel(e.target.value)}
                 placeholder="Label (e.g. Spec Sheet, COA 2024-Q2)"
+                aria-label="Document label"
+                data-tip="A name for the document, shown in the list. Required."
                 className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md
                            focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -1279,6 +1327,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
             <button
               onClick={() => { if (docFile && docLabel.trim()) uploadDocMutation.mutate({ file: docFile, label: docLabel.trim() }) }}
               disabled={!docFile || !docLabel.trim() || uploadDocMutation.isPending}
+              data-tip={!docFile ? 'Choose a file first.' : !docLabel.trim() ? 'Type a label for the document first.' : 'Uploads the file and stores it with this ingredient.'}
               className="flex items-center gap-2 px-4 py-1.5 text-sm bg-blue-600 text-white
                          rounded-md hover:bg-blue-700 disabled:opacity-40 transition-colors"
             >
@@ -1303,6 +1352,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               <p className="text-sm text-gray-400 mb-2">No suppliers linked yet.</p>
               {canEdit && <button
                 onClick={() => setShowAddSupplier(true)}
+                data-tip="Record who sells this ingredient, the pack size and the price."
                 className="text-sm text-blue-600 hover:underline"
               >
                 Link a supplier →
@@ -1317,10 +1367,11 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                     <div className="px-4 py-4 space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Pack size</label>
+                          <label className="block text-xs text-gray-500 mb-1"><Term t="packSize">Pack size</Term></label>
                           <input
                             type="number" min="0" step="any"
                             value={linkForm.packSize}
+                            data-tip="How much one pack, bag or drum holds, in the unit chosen. Leave blank if unknown."
                             onChange={e => setLinkForm(f => ({ ...f, packSize: e.target.value }))}
                             placeholder="e.g. 25"
                             className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1330,6 +1381,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                           <label className="block text-xs text-gray-500 mb-1">Unit</label>
                           <select
                             value={linkForm.packUnit}
+                            aria-label="Unit"
+                            data-tip="The unit for the pack size and the price. Only per kg, g, lb, oz or mt prices can be used as the ingredient’s cost."
                             onChange={e => setLinkForm(f => ({ ...f, packUnit: e.target.value }))}
                             className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                           >
@@ -1337,7 +1390,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Cost / unit ($)</label>
+                          <label className="block text-xs text-gray-500 mb-1"><Term tip="The price for one unit (e.g. $ per kg or per bag), not for the whole pack. Leave blank if unknown.">Cost / unit</Term> ($)</label>
                           <input
                             type="number" min="0" step="any"
                             value={linkForm.costPerUnit}
@@ -1347,7 +1400,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                           />
                         </div>
                       </div>
-                      <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                      <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer" data-tip={GLOSSARY.preferredSupplier}>
                         <input
                           type="checkbox"
                           checked={linkForm.isPreferred}
@@ -1360,6 +1413,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                         <button
                           onClick={() => updateSupplierLinkMutation.mutate({ linkId: link.id, form: linkForm })}
                           disabled={updateSupplierLinkMutation.isPending}
+                          data-tip="Saves the pack size, price and preferred setting for this supplier link."
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                         >
                           <Save size={12} /> Save
@@ -1381,17 +1435,17 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-800">{link.supplierName}</span>
                             {link.isPreferred && (
-                              <span title="Preferred">
+                              <span data-tip={GLOSSARY.preferredSupplier} aria-label="Preferred supplier">
                                 <Star size={11} className="text-yellow-400 fill-yellow-400" />
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                             {link.packSize && link.packUnit && (
-                              <span>{parseFloat(link.packSize)} {link.packUnit}</span>
+                              <span data-tip={GLOSSARY.packSize}>{parseFloat(link.packSize)} {link.packUnit}</span>
                             )}
                             {link.costPerUnit && (
-                              <span className="text-green-700 font-medium">
+                              <span className="text-green-700 font-medium" data-tip="Price per unit. Choose it as the ingredient’s cost on the Cost tab.">
                                 ${parseFloat(link.costPerUnit).toFixed(2)} / {link.packUnit || 'unit'}
                               </span>
                             )}
@@ -1401,6 +1455,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-0.5 text-blue-500 hover:underline"
+                                data-tip="Opens the supplier’s website in a new tab."
                               >
                                 <ExternalLink size={10} />
                                 {new URL(link.supplierWebsiteUrl).hostname.replace(/^www\./, '')}
@@ -1423,7 +1478,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                             })
                           }}
                           className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                          title="Edit"
+                          aria-label="Edit supplier link"
+                          data-tip="Edit the pack size, price and preferred setting for this supplier."
                         >
                           <Edit2 size={13} />
                         </button>
@@ -1434,7 +1490,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                           }}
                           disabled={removeSupplierLinkMutation.isPending}
                           className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
-                          title="Remove"
+                          aria-label="Remove supplier link"
+                          data-tip="Unlinks this supplier and its price from the ingredient. The supplier record itself is kept."
                         >
                           <Trash2 size={13} />
                         </button>
@@ -1451,9 +1508,11 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
             <div className="border border-dashed border-blue-200 rounded-lg px-4 py-4 space-y-3 bg-blue-50/30">
               <p className="text-xs font-medium text-gray-600">Link supplier</p>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Supplier</label>
+                <label className="block text-xs text-gray-500 mb-1"><Term t="supplier">Supplier</Term></label>
                 <select
                   value={linkForm.supplierId}
+                  aria-label="Supplier"
+                  data-tip="Pick one of your suppliers, or “+ New supplier…” to create one here."
                   onChange={e => setLinkForm(f => ({ ...f, supplierId: e.target.value }))}
                   className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                 >
@@ -1473,6 +1532,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                       value={linkForm.newName}
                       onChange={e => setLinkForm(f => ({ ...f, newName: e.target.value }))}
                       placeholder="e.g. Cargill"
+                      data-tip="If a supplier with this name already exists, the ingredient is linked to it instead of creating a second one."
                       className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
@@ -1492,10 +1552,11 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Pack size</label>
+                      <label className="block text-xs text-gray-500 mb-1"><Term t="packSize">Pack size</Term></label>
                       <input
                         type="number" min="0" step="any"
                         value={linkForm.packSize}
+                        data-tip="How much one pack, bag or drum holds, in the unit chosen. Leave blank if unknown."
                         onChange={e => setLinkForm(f => ({ ...f, packSize: e.target.value }))}
                         placeholder="e.g. 25"
                         className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1505,6 +1566,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                       <label className="block text-xs text-gray-500 mb-1">Unit</label>
                       <select
                         value={linkForm.packUnit}
+                        aria-label="Unit"
+                        data-tip="The unit for the pack size and the price. Only per kg, g, lb, oz or mt prices can be used as the ingredient’s cost."
                         onChange={e => setLinkForm(f => ({ ...f, packUnit: e.target.value }))}
                         className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
@@ -1512,7 +1575,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Cost / unit ($)</label>
+                      <label className="block text-xs text-gray-500 mb-1"><Term tip="The price for one unit (e.g. $ per kg or per bag), not for the whole pack. Leave blank if unknown.">Cost / unit</Term> ($)</label>
                       <input
                         type="number" min="0" step="any"
                         value={linkForm.costPerUnit}
@@ -1522,7 +1585,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                       />
                     </div>
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer" data-tip={`${GLOSSARY.preferredSupplier} Shown with a star.`}>
                     <input
                       type="checkbox"
                       checked={linkForm.isPreferred}
@@ -1544,6 +1607,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                     addSupplierLinkMutation.mutate(linkForm)
                   }}
                   disabled={!linkForm.supplierId || addSupplierLinkMutation.isPending}
+                  data-tip={!linkForm.supplierId ? 'Choose a supplier first.' : 'Links this supplier to the ingredient with the pack size and price entered.'}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
                   <Plus size={12} />
@@ -1560,6 +1624,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           ) : canEdit && (data.suppliers?.length ?? 0) > 0 && (
             <button
               onClick={() => setShowAddSupplier(true)}
+              data-tip="Add another supplier, or the same one again for a different pack size."
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
             >
               <Plus size={12} /> Link another supplier
@@ -1586,7 +1651,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           {/* Stock level card */}
           <div className="border border-gray-100 rounded-lg px-4 py-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700">Current stock</span>
+              <span className="text-sm font-medium text-gray-700">Current <Term t="stock">stock</Term></span>
               {!editingStock && canEdit && (
                 <button
                   onClick={() => {
@@ -1594,6 +1659,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                     setEditingStock(true)
                   }}
                   className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+                  data-tip="Set how many grams you have now, e.g. after a stock count."
                 >
                   <Edit2 size={11} /> Edit
                 </button>
@@ -1621,6 +1687,8 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   value={stockEdit}
                   onChange={e => setStockEdit(e.target.value)}
                   placeholder="Leave blank to disable tracking"
+                  aria-label="Stock in grams"
+                  data-tip="Grams you have now. Completing a batch subtracts what it used. Leave blank to stop tracking."
                   className="w-44 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 tabular-nums"
                 />
                 <span className="text-xs text-gray-400">g</span>
@@ -1649,7 +1717,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           {/* Depletion history */}
           <div>
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              Depletion history
+              <Term tip="Batches completed with this ingredient and how many grams each one took from stock.">Depletion history</Term>
             </h3>
             {!inventoryData ? (
               <p className="text-sm text-gray-400">Loading…</p>
@@ -1662,7 +1730,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                     <div>
                       <div className="font-medium text-gray-800">{d.formulationName}</div>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        {new Date(d.runAt).toLocaleDateString()} · ×{d.batchMultiplier}
+                        {new Date(d.runAt).toLocaleDateString()} · <span data-tip={GLOSSARY.batchMultiplier}>×{d.batchMultiplier}</span>
                         {d.notes && <span className="ml-2 text-gray-300">— {d.notes}</span>}
                       </div>
                     </div>
@@ -1707,6 +1775,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                   </div>
                   <a
                     href={`/projects/${f.projectId}/formulations/${f.formulationId}`}
+                    data-tip="Opens this formulation."
                     className="flex items-center gap-1 px-2.5 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                   >
                     <ExternalLink size={12} /> View

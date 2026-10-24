@@ -8,21 +8,22 @@ import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
 import { UnreadFeedbackBanner, useUnreadFeedback } from '@/components/admin/unread-feedback'
 
+// `tip` is the short description shown when you hover or focus the link
 const NAV = [
-  { href: '/projects', label: 'Projects', icon: FolderOpen },
-  { href: '/ingredients', label: 'Ingredients', icon: FlaskConical },
-  { href: '/suppliers', label: 'Suppliers', icon: Truck },
-  { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/help', label: 'Help', icon: HelpCircle },
+  { href: '/projects', label: 'Projects', icon: FolderOpen, tip: 'Your product ideas, each with its formulations and nutrition targets' },
+  { href: '/ingredients', label: 'Ingredients', icon: FlaskConical, tip: 'Your ingredient library: nutrition, allergens, suppliers, costs and stock' },
+  { href: '/suppliers', label: 'Suppliers', icon: Truck, tip: 'The companies you buy ingredients from, with contacts and terms' },
+  { href: '/settings', label: 'Settings', icon: Settings, tip: 'Your profile, password, preferences, team and billing' },
+  { href: '/help', label: 'Help', icon: HelpCircle, tip: 'Step-by-step guides and answers for every part of benchtop' },
 ]
 
 // Only shown to account owners and admins (client records hold accounting and shipping details)
-const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2 }
+const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2, tip: 'The customers you formulate for: contacts, billing, shipping and their projects' }
 
 // Only shown to platform admins
 const ADMIN_NAV = [
-  { href: '/admin/invitations', label: 'Invitations & accounts', icon: MailPlus },
-  { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare },
+  { href: '/admin/invitations', label: 'Invitations & accounts', icon: MailPlus, tip: 'Platform admin: invite new customers and manage every account’s plan' },
+  { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare, tip: 'Platform admin: bug reports and feature requests from users' },
 ]
 
 export function AppShell({
@@ -59,12 +60,13 @@ export function AppShell({
         </div>
 
         <nav className="flex-1 px-3 pb-4 space-y-1">
-          {nav.map(({ href, label, icon: Icon }) => {
+          {nav.map(({ href, label, icon: Icon, tip }) => {
             const active = pathname === href || pathname.startsWith(href + '/')
             return (
               <Link
                 key={href}
                 href={href}
+                data-tip={tip}
                 className={`flex items-center gap-3 h-10 px-3 rounded-lg text-[15px] font-medium transition-colors ${
                   active
                     ? 'bg-lcd-300 text-ink-900'
@@ -106,12 +108,13 @@ export function AppShell({
 
       {/* Bottom nav — mobile only */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-ink-900 border-t border-ink-700 flex pb-[env(safe-area-inset-bottom)] print:hidden">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon, tip }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
+              data-tip={tip}
               className={`flex-1 flex flex-col items-center gap-0.5 py-3 text-xs transition-colors ${
                 active ? 'text-lcd-300' : 'text-ink-400'
               }`}

@@ -10,12 +10,20 @@ import type { IngredientCostInfo } from '@/lib/costing-server'
 import { COGS_FIGURES, type CogsFigure, type CostUnit } from '@/lib/preferences'
 import { usePreferences } from '@/lib/use-preferences'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 const FIGURE_LABELS: Record<CogsFigure, (u: CostUnit) => string> = {
   batch: () => 'Per batch',
   perMass: u => `Per ${u} finished`,
   serving: () => 'Per serving',
   unit: () => 'Per unit',
+}
+
+const FIGURE_TIPS: Record<CogsFigure, (u: CostUnit) => string> = {
+  batch: () => 'The total ingredient cost of the batch.',
+  perMass: u => `Batch cost ÷ the finished weight after process losses, per ${u}.`,
+  serving: () => 'The ingredient cost of one serving of finished product. Needs a serving size.',
+  unit: () => 'The ingredient cost of one sellable package, from the unit / package size.',
 }
 
 // The formulation's COGS tab: raw material cost from each ingredient's cost (Cost tab on the
@@ -127,6 +135,7 @@ export function CogsPanel({
                 type="button"
                 aria-pressed={on}
                 onClick={() => toggleFigure(f)}
+                data-tip={`${on ? 'Hides' : 'Shows'} this figure. ${FIGURE_TIPS[f](mass)} Remembered for you.`}
                 className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                   on ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
                 }`}
@@ -143,6 +152,7 @@ export function CogsPanel({
               type="button"
               aria-pressed={mass === u}
               onClick={() => setPrefs({ cogsMassUnit: u })}
+              data-tip={u === 'kg' ? 'Show quantities and costs per kilogram' : 'Show quantities and costs per pound'}
               className={`px-2 py-1 rounded-md border ${mass === u ? 'bg-gray-900 border-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
             >
               {u}
@@ -158,7 +168,7 @@ export function CogsPanel({
             const { value, hint, empty } = figureValue[f]
             return (
               <div key={f} className="rounded-lg border border-gray-200 bg-white px-4 py-3">
-                <div className="text-xs text-gray-500">{FIGURE_LABELS[f](mass)}</div>
+                <div className="text-xs text-gray-500"><Term tip={FIGURE_TIPS[f](mass)}>{FIGURE_LABELS[f](mass)}</Term></div>
                 <div className="text-xl font-semibold text-gray-900 tabular-nums">
                   {value != null ? formatMoney(value) : <span className="text-gray-300">—</span>}
                 </div>
@@ -182,6 +192,7 @@ export function CogsPanel({
             onBlur={commitUnit}
             onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
             disabled={!canEdit}
+            data-tip={canEdit ? 'Finished weight of one package, used for the cost per unit. Saves when you click away.' : undefined}
             placeholder="e.g. 500"
             className="w-24 px-2 py-0.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 tabular-nums"
           />
@@ -218,11 +229,13 @@ export function CogsPanel({
             <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Ingredient</th>
-                <th className="px-3 py-2 text-right font-medium">% of formula</th>
+                <th className="px-3 py-2 text-right font-medium"><Term t="usagePct">% of formula</Term></th>
                 <th className="px-3 py-2 text-right font-medium">Qty ({mass})</th>
-                <th className="px-3 py-2 text-right font-medium">Cost / {mass}</th>
+                <th className="px-3 py-2 text-right font-medium">
+                  <Term tip="The ingredient’s cost: its chosen supplier price, or the manual cost on its Cost tab.">Cost / {mass}</Term>
+                </th>
                 <th className="px-3 py-2 text-right font-medium">Batch cost</th>
-                <th className="px-3 py-2 text-left font-medium w-40">Share of cost</th>
+                <th className="px-3 py-2 text-left font-medium w-40"><Term tip="This ingredient’s part of the total batch cost.">Share of cost</Term></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -260,7 +273,9 @@ export function CogsPanel({
             </tbody>
             <tfoot className="border-t border-gray-200 bg-gray-50 font-medium">
               <tr>
-                <td className="px-3 py-2">Total{missing.length > 0 && <span className="font-normal text-xs text-amber-700"> (partial)</span>}</td>
+                <td className="px-3 py-2">Total{missing.length > 0 && (
+                  <span className="font-normal text-xs text-amber-700" data-tip="Leaves out ingredients with no cost, so the real cost is higher"> (partial)</span>
+                )}</td>
                 <td className="px-3 py-2 text-right tabular-nums">100.00%</td>
                 <td className="px-3 py-2 text-right tabular-nums">{fmtQty(cogs.totalWeightG)}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-600">

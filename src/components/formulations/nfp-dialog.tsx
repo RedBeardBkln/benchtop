@@ -18,6 +18,7 @@ import {
   type LabelInfo, type StatementItem, type StatementLine,
 } from '@/lib/label-statements'
 import { IngredientStatementEditor } from './ingredient-statement-editor'
+import { Term } from '@/components/term'
 
 type Format = 'png' | 'jpg' | 'pdf'
 
@@ -335,13 +336,15 @@ export function NfpDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 print:hidden">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Nutrition Facts Panel</h2>
+            <h2 className="text-base font-semibold text-gray-900"><Term t="nfp">Nutrition Facts Panel</Term></h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              FDA 2020 {NFP_LAYOUT_INFO[(viewing?.model.layout ?? layout)].label.toLowerCase()} format · rounded per 21 CFR 101.9
+              FDA 2020 {NFP_LAYOUT_INFO[(viewing?.model.layout ?? layout)].label.toLowerCase()} format · <Term tip="Every amount and %DV is rounded to the FDA’s declared increments (21 CFR 101.9), e.g. calories to the nearest 5 or 10.">rounded per 21 CFR 101.9</Term>
             </p>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
+            data-tip="Closes the panel builder. Saved panels stay saved; unsaved settings are lost."
             className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
           >
             <X size={18} />
@@ -355,10 +358,11 @@ export function NfpDialog({
             {/* FDA layout */}
             <div>
               <label htmlFor="nfp-layout" className="block text-xs font-medium text-gray-600 mb-2">
-                Layout
+                <Term tip="The FDA panel format: standard (vertical), tabular (side-by-side columns) or linear (one paragraph, for small packages).">Layout</Term>
               </label>
               <select
                 id="nfp-layout"
+                data-tip="Changes the panel’s FDA format. The values stay the same; only the arrangement changes."
                 value={layout}
                 onChange={e => setLayout(e.target.value as NfpLayout)}
                 className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -382,6 +386,9 @@ export function NfpDialog({
                   <button
                     key={f}
                     onClick={() => setFormat(f)}
+                    data-tip={f === 'pdf'
+                      ? 'Download as a PDF page sized to the panel.'
+                      : `Download as a ${f.toUpperCase()} image.`}
                     className={`px-4 py-1.5 text-xs rounded-md border font-semibold uppercase tracking-wide transition-colors ${
                       format === f
                         ? 'bg-blue-600 text-white border-blue-600'
@@ -395,7 +402,10 @@ export function NfpDialog({
             </div>
 
             {/* Hide zero-value nutrients */}
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label
+              className="flex items-center gap-2 cursor-pointer"
+              data-tip="Leaves off nutrient lines whose FDA-rounded amount is 0."
+            >
               <input
                 type="checkbox"
                 checked={hideZeros}
@@ -409,7 +419,10 @@ export function NfpDialog({
 
             {/* Additional micro / phyto nutrients */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label
+                className="flex items-center gap-2 cursor-pointer"
+                data-tip="Adds the vitamins, minerals and other nutrients you pick below to the panel. Unticking clears your picks."
+              >
                 <input
                   type="checkbox"
                   checked={showExtras}
@@ -435,6 +448,7 @@ export function NfpDialog({
                   {/* Collapsible header */}
                   <button
                     onClick={() => setExtrasOpen(v => !v)}
+                    data-tip="Shows or hides the extra nutrients this formulation has data for."
                     className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
                   >
                     <span>
@@ -460,6 +474,7 @@ export function NfpDialog({
                               </span>
                               <button
                                 onClick={() => toggleAllInCategory(cat, !allChecked)}
+                                data-tip={allChecked ? 'Removes every nutrient in this group from the panel.' : 'Adds every nutrient in this group to the panel.'}
                                 className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
                               >
                                 {allChecked ? 'Deselect all' : someChecked ? 'Select all' : 'Select all'}
@@ -499,7 +514,10 @@ export function NfpDialog({
 
             {/* Allergen statement */}
             <div>
-              <label className="flex items-center gap-2 cursor-pointer mb-2">
+              <label
+                className="flex items-center gap-2 cursor-pointer mb-2"
+                data-tip="Prints a “Contains:” line with the panel, built from each ingredient’s allergens. You can edit the text."
+              >
                 <input
                   type="checkbox"
                   checked={includeAllergen}
@@ -527,7 +545,10 @@ export function NfpDialog({
 
             {/* Ingredient statement */}
             <div>
-              <label className="flex items-center gap-2 cursor-pointer mb-2">
+              <label
+                className="flex items-center gap-2 cursor-pointer mb-2"
+                data-tip="Prints the “INGREDIENTS:” line with the panel, heaviest first. You can rearrange or retype it."
+              >
                 <input
                   type="checkbox"
                   checked={includeIngredients}
@@ -550,6 +571,7 @@ export function NfpDialog({
                   <button
                     type="button"
                     onClick={() => setCustomIngredientText(null)}
+                    data-tip="Goes back to the list built from the formulation. Your typed edits are thrown away."
                     className="mt-1 text-xs text-blue-600 hover:underline"
                   >
                     Back to the arranged list (discards typed changes)
@@ -568,6 +590,7 @@ export function NfpDialog({
                   <button
                     type="button"
                     onClick={() => setCustomIngredientText(ingredientText)}
+                    data-tip="Switches to a free-text box so you can type the statement exactly as you want it."
                     className="mt-1 text-xs text-blue-600 hover:underline"
                   >
                     Edit as text
@@ -592,6 +615,7 @@ export function NfpDialog({
               <button
                 onClick={handleDownload}
                 disabled={downloading}
+                data-tip={`Saves the panel shown in the preview as a ${format.toUpperCase()} file.`}
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 <Download size={14} />
@@ -605,6 +629,7 @@ export function NfpDialog({
                   window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
                   window.print()
                 }}
+                data-tip="Opens your browser’s print dialog with just the panel. Choose “Save as PDF” there for a PDF."
                 className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
               >
                 <Printer size={14} />
@@ -615,7 +640,7 @@ export function NfpDialog({
             {/* Save to this iteration */}
             <div className="border-t border-gray-100 pt-4 space-y-3 print:hidden">
               <div>
-                <h3 className="text-sm font-semibold text-gray-800">Saved to v{version}</h3>
+                <h3 className="text-sm font-semibold text-gray-800">Saved to <Term t="version">v{version}</Term></h3>
                 <p className="text-xs text-gray-400 mt-0.5">
                   Panels saved here belong to this iteration only and are kept exactly as shown, even if
                   ingredient data changes later.
@@ -630,11 +655,16 @@ export function NfpDialog({
                       Viewing a saved panel (FDA rules {viewing.rulesVersion}). Download and Print use this version.
                     </p>
                     <div className="flex gap-3 mt-1">
-                      <button onClick={() => setViewing(null)} className="text-xs font-medium text-blue-700 hover:underline">
+                      <button
+                        onClick={() => setViewing(null)}
+                        data-tip="Returns to the panel built from the formulation’s current data and your settings."
+                        className="text-xs font-medium text-blue-700 hover:underline"
+                      >
                         Back to live panel
                       </button>
                       <button
                         onClick={() => { restoreOptions(viewing.options); setViewing(null) }}
+                        data-tip="Copies this saved panel’s settings (layout, extras, statements) onto the live panel, with current data."
                         className="text-xs font-medium text-blue-700 hover:underline"
                       >
                         Reuse these settings
@@ -648,12 +678,15 @@ export function NfpDialog({
                     value={saveName}
                     onChange={e => setSaveName(e.target.value)}
                     maxLength={120}
+                    aria-label="Saved panel name"
+                    data-tip="A name for the saved panel. Leave blank to name it after the formulation, version and time."
                     placeholder={`Name (optional) — e.g. Retail label ${formatDate(new Date(), 'MMM yyyy')}`}
                     className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
                     onClick={() => saveMutation.mutate()}
                     disabled={saveMutation.isPending}
+                    data-tip={`Saves this panel to v${version} exactly as shown, so it reopens unchanged even if data changes later.`}
                     className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors shrink-0"
                   >
                     <Save size={14} />
@@ -682,7 +715,8 @@ export function NfpDialog({
                       </div>
                       <button
                         onClick={() => setViewing(p)}
-                        title="View this saved panel"
+                        aria-label="View this saved panel"
+                        data-tip="Shows this saved panel in the preview. Download and Print then use it."
                         className="p-1.5 text-gray-400 hover:text-blue-600 rounded transition-colors"
                       >
                         <Eye size={15} />
@@ -692,7 +726,8 @@ export function NfpDialog({
                           if (window.confirm(`Delete saved panel "${p.name}"?`)) deleteMutation.mutate(p.id)
                         }}
                         disabled={deleteMutation.isPending}
-                        title="Delete this saved panel"
+                        aria-label="Delete this saved panel"
+                        data-tip="Permanently deletes this saved panel. The formulation isn’t affected."
                         className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors disabled:opacity-50"
                       >
                         <Trash2 size={15} />
@@ -707,6 +742,7 @@ export function NfpDialog({
             <div className="border border-gray-200 rounded-lg overflow-hidden print:hidden">
               <button
                 onClick={() => setRulesOpen(v => !v)}
+                data-tip="Shows the FDA rounding rules used for each line of the panel, with their citations."
                 className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
               >
                 <span className="flex items-center gap-2"><Scale size={13} /> FDA rounding rules applied to this panel</span>

@@ -10,6 +10,8 @@ import {
 import type { IngredientDetail, Nutrient } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
 import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
+import { GLOSSARY } from '@/lib/glossary'
+import { Term } from '@/components/term'
 
 const CATEGORY_ORDER = ['macros', 'vitamins', 'minerals', 'other'] as const
 
@@ -246,12 +248,12 @@ export function IngredientSidePanel({
                 <h2 className="text-base font-semibold text-gray-900 leading-tight truncate">{data?.name}</h2>
                 {data?.labelName && (
                   <p className="text-xs text-gray-400 mt-0.5 truncate">
-                    <span className="text-gray-300">Label: </span>{data.labelName}
+                    <span className="text-gray-300"><Term t="labelName">Label</Term>: </span>{data.labelName}
                   </p>
                 )}
                 <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                   {data && (
-                    <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${
+                    <span data-tip={data.verification === 'verified' ? GLOSSARY.verified : GLOSSARY.unverified} className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${
                       data.verification === 'verified'
                         ? 'bg-green-100 text-green-700'
                         : 'bg-yellow-100 text-yellow-700'
@@ -260,7 +262,7 @@ export function IngredientSidePanel({
                     </span>
                   )}
                   {data?.sourceType && (
-                    <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 uppercase">
+                    <span data-tip={GLOSSARY.source} className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 uppercase">
                       {data.sourceType}
                     </span>
                   )}
@@ -270,6 +272,7 @@ export function IngredientSidePanel({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-0.5 text-xs text-blue-500 hover:underline"
+                      data-tip="Opens this food’s USDA FoodData Central page in a new tab."
                     >
                       FDC {data.fdcId} <ExternalLink size={9} />
                     </a>
@@ -284,7 +287,8 @@ export function IngredientSidePanel({
                 href={`/ingredients/${ingredientId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Open full ingredient page"
+                aria-label="Open full ingredient page"
+                data-tip="Opens this ingredient’s full page in a new tab, with documents, suppliers, cost and stock."
                 className="p-1.5 text-gray-400 hover:text-blue-500 rounded hover:bg-gray-100 transition-colors"
               >
                 <ExternalLink size={15} />
@@ -292,6 +296,7 @@ export function IngredientSidePanel({
             )}
             <button
               onClick={onClose}
+              aria-label="Close"
               className="p-1.5 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors"
             >
               <X size={15} />
@@ -376,12 +381,13 @@ export function IngredientSidePanel({
                     <div className="p-4 space-y-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Default source reference <span className="text-gray-400">(applies to all)</span>
+                          Default <Term t="sourceRef">source reference</Term> <span className="text-gray-400">(applies to all)</span>
                         </label>
                         <input
                           value={globalSource}
                           onChange={e => setGlobalSource(e.target.value)}
                           placeholder="e.g. USDA FDC 123456 / COA 2024-01"
+                          data-tip="Saved with every value you add or change. Values you don’t touch keep the source they already had."
                           className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
@@ -408,6 +414,8 @@ export function IngredientSidePanel({
                                           [n.id]: { ...prev[n.id] ?? {}, amount: e.target.value },
                                         }))}
                                         placeholder="—"
+                                        aria-label={`${n.name} per 100 g (${n.unit})`}
+                                        data-tip={`Amount per 100 g of the ingredient, in ${n.unit}. Clear it to remove the value.`}
                                         className="w-20 px-2 py-0.5 text-xs text-right border border-gray-200 rounded tabular-nums focus:outline-none focus:ring-1 focus:ring-blue-500"
                                       />
                                       <span className="text-xs text-gray-400 w-8 shrink-0">{n.unit}</span>
@@ -430,7 +438,7 @@ export function IngredientSidePanel({
               {tab === 'allergens' && (
                 <div className="p-5 space-y-6">
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Allergens</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3"><Term t="allergen">Allergens</Term></h3>
                     <div className="flex flex-wrap gap-2">
                       {STANDARD_ALLERGENS.map(a => {
                         const active = activeAllergenNames.has(a)
@@ -439,6 +447,9 @@ export function IngredientSidePanel({
                             key={a}
                             onClick={() => toggleAllergen(a)}
                             disabled={!canEditLibrary}
+                            data-tip={!canEditLibrary
+                              ? 'You have view-only access to the ingredient library.'
+                              : active ? `Removes ${a} from this ingredient’s allergens.` : `Marks this ingredient as containing ${a}. It feeds the allergen statement.`}
                             className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                               active
                                 ? 'bg-red-100 border-red-200 text-red-700'
@@ -455,7 +466,7 @@ export function IngredientSidePanel({
                         {data.allergens.filter(a => !STANDARD_ALLERGENS.includes(a.allergen)).map(a => (
                           <span key={a.id} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 border border-red-200 text-red-700">
                             {a.allergen}
-                            {canEditLibrary && <button onClick={() => removeAllergenMutation.mutate(a.id)} className="ml-0.5 hover:text-red-900">×</button>}
+                            {canEditLibrary && <button onClick={() => removeAllergenMutation.mutate(a.id)} aria-label={`Remove ${a.allergen}`} data-tip={`Removes ${a.allergen} from this ingredient’s allergens.`} className="ml-0.5 hover:text-red-900">×</button>}
                           </span>
                         ))}
                       </div>
@@ -463,7 +474,7 @@ export function IngredientSidePanel({
                   </div>
 
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Certifications</h3>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3"><Term t="certification">Certifications</Term></h3>
                     <div className="flex flex-wrap gap-2">
                       {STANDARD_CERTS.map(c => {
                         const active = activeCertNames.has(c)
@@ -472,6 +483,9 @@ export function IngredientSidePanel({
                             key={c}
                             onClick={() => toggleCert(c)}
                             disabled={!canEditLibrary}
+                            data-tip={!canEditLibrary
+                              ? 'You have view-only access to the ingredient library.'
+                              : active ? `Removes the ${c} certification.` : `Records that this ingredient is ${c}.`}
                             className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                               active
                                 ? 'bg-green-100 border-green-200 text-green-700'
@@ -493,27 +507,27 @@ export function IngredientSidePanel({
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                     {data.labelName && (
                       <div className="col-span-2">
-                        <div className="text-xs text-gray-400 mb-0.5">Label statement</div>
+                        <div className="text-xs text-gray-400 mb-0.5"><Term t="labelName">Label statement</Term></div>
                         <div className="text-xs font-medium text-gray-800">{data.labelName}</div>
                       </div>
                     )}
                     <div>
-                      <div className="text-xs text-gray-400 mb-0.5">Source type</div>
+                      <div className="text-xs text-gray-400 mb-0.5"><Term t="source">Source type</Term></div>
                       <div className="font-medium text-gray-800 uppercase text-xs">{data.sourceType}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-400 mb-0.5">Verification</div>
+                      <div className="text-xs text-gray-400 mb-0.5"><Term tip="Whether someone has checked this ingredient’s data against a reliable source.">Verification</Term></div>
                       <div className={`text-xs font-medium ${data.verification === 'verified' ? 'text-green-600' : 'text-yellow-600'}`}>
                         {data.verification === 'verified' ? '✓ Verified' : '⚠ Unverified'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-400 mb-0.5">Naturally derived</div>
+                      <div className="text-xs text-gray-400 mb-0.5"><Term t="naturallyDerived">Naturally derived</Term></div>
                       <div className="text-xs font-medium text-gray-700">{data.naturallyDerived ? 'Yes' : 'No'}</div>
                     </div>
                     {data.fdcId && (
                       <div>
-                        <div className="text-xs text-gray-400 mb-0.5">USDA FDC ID</div>
+                        <div className="text-xs text-gray-400 mb-0.5"><Term t="fdcId">USDA FDC ID</Term></div>
                         <a
                           href={`https://fdc.nal.usda.gov/food-details/${data.fdcId}/nutrients`}
                           target="_blank"
@@ -526,13 +540,13 @@ export function IngredientSidePanel({
                     )}
                     {data.defaultCostPerKg && (
                       <div>
-                        <div className="text-xs text-gray-400 mb-0.5">Cost / kg</div>
+                        <div className="text-xs text-gray-400 mb-0.5"><Term tip="The manually entered price per kg. A supplier price chosen on the Cost tab overrides it.">Cost / kg</Term></div>
                         <div className="text-xs font-medium text-gray-700">${parseFloat(data.defaultCostPerKg).toFixed(2)}</div>
                       </div>
                     )}
                     {data.moisturePct && (
                       <div>
-                        <div className="text-xs text-gray-400 mb-0.5">Moisture %</div>
+                        <div className="text-xs text-gray-400 mb-0.5"><Term t="moisturePct">Moisture %</Term></div>
                         <div className="text-xs font-medium text-gray-700">{parseFloat(data.moisturePct).toFixed(2)}%</div>
                       </div>
                     )}
@@ -545,7 +559,7 @@ export function IngredientSidePanel({
                   )}
                   {(data.subIngredients?.length ?? 0) > 0 && (
                     <div>
-                      <div className="text-xs text-gray-400 mb-1">Sub-ingredients</div>
+                      <div className="text-xs text-gray-400 mb-1"><Term t="subIngredients">Sub-ingredients</Term></div>
                       <p className="text-sm text-gray-700">{data.subIngredients!.map(s => s.name).join(', ')}</p>
                     </div>
                   )}
@@ -571,7 +585,7 @@ export function IngredientSidePanel({
                             <ChevronRight size={10} className="text-gray-300 mt-0.5 shrink-0" />
                             <div>
                               <span className="font-medium">{s.supplierName}</span>
-                              {s.isPreferred && <span className="ml-1 text-yellow-500">★</span>}
+                              {s.isPreferred && <span className="ml-1 text-yellow-500" data-tip={GLOSSARY.preferredSupplier} aria-label="Preferred supplier">★</span>}
                               {(s.packSize || s.costPerUnit) && (
                                 <div className="text-gray-400 mt-0.5">
                                   {s.packSize && s.packUnit && `${parseFloat(s.packSize)} ${s.packUnit}`}
@@ -606,6 +620,7 @@ export function IngredientSidePanel({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-blue-500 hover:underline"
+                        data-tip="Opens the ingredient’s full page in a new tab, where you can link suppliers and prices."
                       >
                         Add on the ingredient page →
                       </a>
@@ -616,7 +631,7 @@ export function IngredientSidePanel({
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="text-sm font-medium text-gray-800">{s.supplierName}</span>
                           {s.isPreferred && (
-                            <span className="text-yellow-400 text-xs">★</span>
+                            <span className="text-yellow-400 text-xs" data-tip={GLOSSARY.preferredSupplier} aria-label="Preferred supplier">★</span>
                           )}
                           {s.supplierWebsiteUrl && (
                             <a
@@ -633,13 +648,13 @@ export function IngredientSidePanel({
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500 mt-1.5">
                           {s.packSize && s.packUnit && (
                             <div>
-                              <span className="text-gray-400">Pack size</span>
+                              <span className="text-gray-400"><Term t="packSize">Pack size</Term></span>
                               <div className="font-medium text-gray-700">{parseFloat(s.packSize)} {s.packUnit}</div>
                             </div>
                           )}
                           {s.costPerUnit && (
                             <div>
-                              <span className="text-gray-400">Cost / unit</span>
+                              <span className="text-gray-400"><Term tip="The price for one unit (such as per kg or per bag), not for the whole pack.">Cost / unit</Term></span>
                               <div className="font-medium text-green-700">${parseFloat(s.costPerUnit).toFixed(2)}</div>
                             </div>
                           )}
@@ -666,6 +681,7 @@ export function IngredientSidePanel({
           {tab === 'nutrients' && !editingNutrients && !formulationLocked && canEditLibrary && (
             <button
               onClick={() => setEditingNutrients(true)}
+              data-tip="Edit this ingredient’s nutrition per 100 g. Changes update the library ingredient everywhere it’s used."
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md text-gray-600 hover:bg-white hover:border-blue-200 hover:text-blue-600 transition-colors"
             >
               <Sparkles size={11} /> Edit nutrients
@@ -676,6 +692,7 @@ export function IngredientSidePanel({
               <button
                 onClick={handleSaveNutrients}
                 disabled={saveNutrientsMutation.isPending}
+                data-tip="Saves the values to the library ingredient. Every formulation that uses it picks up the change."
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {saveNutrientsMutation.isPending ? 'Saving…' : 'Save nutrients'}
@@ -692,6 +709,9 @@ export function IngredientSidePanel({
             <button
               onClick={() => verifyMutation.mutate()}
               disabled={verifyMutation.isPending}
+              data-tip={data.verification === 'verified'
+                ? 'Marks the data as not yet checked, so it shows ⚠ in formulations.'
+                : 'Confirms you’ve checked this ingredient’s data against a reliable source, such as its spec sheet.'}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border transition-colors ${
                 data.verification === 'verified'
                   ? 'border-green-200 text-green-700 hover:bg-green-50'
@@ -706,6 +726,7 @@ export function IngredientSidePanel({
           {!formulationLocked && data && (
             <button
               onClick={() => onSwap(lineKey, data.name)}
+              data-tip="Replaces this ingredient in the formulation with a different one."
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               <ArrowLeftRight size={11} /> Swap ingredient

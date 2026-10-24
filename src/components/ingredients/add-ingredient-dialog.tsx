@@ -8,6 +8,7 @@ import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Link, Loader2, X } from 'lucide-react'
 import { readErrorMessage } from '@/lib/utils'
+import { Term } from '@/components/term'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
@@ -150,7 +151,7 @@ export function AddIngredientDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
           <h2 className="text-base font-semibold text-gray-900">Add ingredient</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
             <X size={18} />
           </button>
         </div>
@@ -159,6 +160,7 @@ export function AddIngredientDialog({
         <div className="flex border-b border-gray-200 shrink-0">
           <button
             onClick={() => setMode('manual')}
+            data-tip="Type the ingredient’s details in yourself. You add its nutrition afterwards on its page."
             className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
               mode === 'manual'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -169,6 +171,7 @@ export function AddIngredientDialog({
           </button>
           <button
             onClick={() => setMode('url')}
+            data-tip="Reads the main label nutrients from a supplier’s product web page."
             className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
               mode === 'url'
                 ? 'text-blue-600 border-b-2 border-blue-600'
@@ -204,7 +207,7 @@ export function AddIngredientDialog({
             {/* Deck name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preferred name on ingredient deck
+                Preferred name on <Term t="labelName">ingredient deck</Term>
               </label>
               <input
                 {...register('labelName')}
@@ -224,6 +227,7 @@ export function AddIngredientDialog({
                 <input
                   {...register('brandName')}
                   placeholder="e.g. Supro"
+                  data-tip="Part of what makes this entry unique: name, brand, supplier and item code together can’t match another ingredient."
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
                              focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -233,6 +237,7 @@ export function AddIngredientDialog({
                 <input
                   {...register('supplierName')}
                   placeholder="e.g. Univar"
+                  data-tip="Plain text that helps tell this entry apart from others. To record a supplier’s price and pack size, link one on the ingredient’s Suppliers tab."
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
                              focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -250,7 +255,7 @@ export function AddIngredientDialog({
 
             {/* Source type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Source type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1"><Term t="source">Source type</Term></label>
               <select
                 {...register('sourceType')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md
@@ -263,7 +268,7 @@ export function AddIngredientDialog({
 
             {/* Flags */}
             <div className="space-y-2.5">
-              <label className="flex items-center gap-2.5 cursor-pointer">
+              <label className="flex items-center gap-2.5 cursor-pointer" data-tip="Comes from a natural source. Formulations containing anything not naturally derived get flagged as synthetic.">
                 <input type="checkbox" {...register('naturallyDerived')} className="rounded" />
                 <span className="text-sm text-gray-700">Naturally derived</span>
               </label>
@@ -273,7 +278,7 @@ export function AddIngredientDialog({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cost / kg ($)
+                  <Term t="costPerKg">Cost / kg</Term> ($)
                 </label>
                 <input
                   {...register('defaultCostPerKg')}
@@ -286,7 +291,7 @@ export function AddIngredientDialog({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Moisture %</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1"><Term t="moisturePct">Moisture %</Term></label>
                 <input
                   {...register('moisturePct')}
                   type="number"
@@ -323,6 +328,7 @@ export function AddIngredientDialog({
               <button
                 type="submit"
                 disabled={mutation.isPending}
+                data-tip="Adds it to your ingredient library as Unverified. Add its nutrition afterwards on its Nutrients tab."
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md
                            hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
@@ -356,6 +362,7 @@ export function AddIngredientDialog({
                   value={urlInput}
                   onChange={e => { setUrlInput(e.target.value); setParsedNutrients(null) }}
                   placeholder="https://supplier.com/product/pea-protein"
+                  aria-label="Supplier product URL"
                   className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md
                              focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -363,6 +370,7 @@ export function AddIngredientDialog({
                   type="button"
                   onClick={handleFetch}
                   disabled={!urlInput.trim() || fetching}
+                  data-tip={!urlInput.trim() ? 'Paste a product page URL first.' : 'Reads the nutrition from that page for you to check. Some sites block this.'}
                   className="px-3 py-2 text-sm bg-gray-800 text-white rounded-md
                              hover:bg-gray-700 disabled:opacity-50 transition-colors shrink-0 flex items-center gap-1.5"
                 >
@@ -382,7 +390,7 @@ export function AddIngredientDialog({
                   <span className="text-xs font-semibold text-gray-600">
                     {parsedNutrients.length} nutrients found
                   </span>
-                  <span className="text-xs text-gray-400">per 100 g</span>
+                  <span className="text-xs text-gray-400"><Term t="per100g">per 100 g</Term></span>
                 </div>
                 {parsedNutrients.length > 0 ? (
                   <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
@@ -415,6 +423,7 @@ export function AddIngredientDialog({
                 type="button"
                 onClick={() => urlMutation.mutate()}
                 disabled={!urlName.trim() || !parsedNutrients || parsedNutrients.length === 0 || urlMutation.isPending}
+                data-tip={!urlName.trim() ? 'Enter an ingredient name first.' : !parsedNutrients || parsedNutrients.length === 0 ? 'Fetch nutrition from a URL first.' : 'Adds it to your library with these nutrients, citing the page as their source.'}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md
                            hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Term } from '@/components/term'
 
 export type SolverBounds = { minPct: number | null; maxPct: number | null }
 
@@ -54,7 +55,7 @@ export function SolverBoundsDialog({ rows, readOnly, onClose, onApply }: {
         }}
       >
         <div>
-          <h3 className="text-base font-semibold text-gray-900">Solver limits</h3>
+          <h3 className="text-base font-semibold text-gray-900"><Term t="solverLimits">Solver limits</Term></h3>
           <p className="text-sm text-gray-500 mt-1">
             Keep each ingredient between a minimum and maximum usage % when you click Solve. Leave a box
             blank for no limit. Locked ingredients keep their amount, so limits don’t apply to them.
@@ -65,8 +66,8 @@ export function SolverBoundsDialog({ rows, readOnly, onClose, onApply }: {
             <thead>
               <tr className="text-xs text-gray-500 text-left">
                 <th className="font-medium py-1.5">Ingredient</th>
-                <th className="font-medium py-1.5 w-24">Min %</th>
-                <th className="font-medium py-1.5 w-24">Max %</th>
+                <th className="font-medium py-1.5 w-24"><Term tip="Solve won’t give this ingredient less than this share of the batch. Blank = no minimum.">Min %</Term></th>
+                <th className="font-medium py-1.5 w-24"><Term tip="Solve won’t give this ingredient more than this share of the batch. Blank = no maximum.">Max %</Term></th>
               </tr>
             </thead>
             <tbody>
@@ -78,7 +79,11 @@ export function SolverBoundsDialog({ rows, readOnly, onClose, onApply }: {
                   <tr key={p.key} className="border-t border-gray-100">
                     <td className="py-1.5 pr-2 text-gray-800">
                       {p.name}
-                      {p.locked && <span className="block text-xs text-gray-400">Locked</span>}
+                      {p.locked && (
+                        <span className="block text-xs text-gray-400" data-tip="Weight- or %-locked in the grid, so Solve keeps its amount and limits don’t apply">
+                          Locked
+                        </span>
+                      )}
                       {bad && <span className="block text-xs text-red-500">{rowError(p)}</span>}
                     </td>
                     <td className="py-1.5">
@@ -107,6 +112,7 @@ export function SolverBoundsDialog({ rows, readOnly, onClose, onApply }: {
             <button
               type="button"
               onClick={() => setDraft(Object.fromEntries(rows.map(r => [r.key, { min: '', max: '' }])))}
+              data-tip="Empties every box, so no ingredient has a limit. Click Apply to keep it."
               className="text-sm text-gray-500 hover:text-gray-700"
             >
               Clear all
@@ -119,6 +125,7 @@ export function SolverBoundsDialog({ rows, readOnly, onClose, onApply }: {
             </button>
             {!readOnly && (
               <button type="submit" disabled={!!error}
+                data-tip={error ?? 'Sets these limits on the formula. Click Save, then Solve, to use them.'}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                 Apply
               </button>

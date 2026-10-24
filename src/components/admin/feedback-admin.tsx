@@ -8,6 +8,7 @@ import { FEEDBACK_KIND_LABELS, type FeedbackKind } from '@/lib/feedback'
 import { readErrorMessage } from '@/lib/utils'
 import { btnSecondary, Card, Notice } from '@/components/settings/ui'
 import { UNREAD_FEEDBACK_KEY } from '@/components/admin/unread-feedback'
+import { Term } from '@/components/term'
 
 type FeedbackRow = {
   id: string
@@ -26,9 +27,9 @@ type FeedbackRow = {
 }
 
 const FILTERS = [
-  { key: 'open', label: 'Open' },
-  { key: 'resolved', label: 'Resolved' },
-  { key: 'all', label: 'All' },
+  { key: 'open', label: 'Open', tip: 'Show feedback not yet marked resolved' },
+  { key: 'resolved', label: 'Resolved', tip: 'Show feedback marked resolved' },
+  { key: 'all', label: 'All', tip: 'Show all feedback' },
 ] as const
 type Filter = (typeof FILTERS)[number]['key']
 
@@ -85,6 +86,7 @@ export function FeedbackAdmin() {
             key={f.key}
             type="button"
             onClick={() => setFilter(f.key)}
+            data-tip={f.tip}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               filter === f.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -111,13 +113,16 @@ export function FeedbackAdmin() {
                 <span className="text-gray-400">·</span>
                 <span className="text-gray-500">{formatWhen(f.createdAt)}</span>
                 {newIds?.has(f.id) && (
-                  <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[11px] font-semibold">New</span>
+                  <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[11px] font-semibold">
+                    <Term tip="Unread when you opened this page. It’s now marked read; the tag goes when you leave.">New</Term>
+                  </span>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => setResolved.mutate({ id: f.id, resolved: !f.resolvedAt })}
                 disabled={setResolved.isPending}
+                data-tip={f.resolvedAt ? 'Moves this back to Open' : 'Marks this dealt with and moves it to Resolved'}
                 className={`${btnSecondary} !py-1 !px-3 !text-xs`}
               >
                 {f.resolvedAt ? 'Reopen' : 'Mark resolved'}
@@ -129,7 +134,7 @@ export function FeedbackAdmin() {
             <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
               <span className="text-gray-700 font-medium">{f.contactName}</span>
               <span>{f.accountName}</span>
-              <a href={`mailto:${f.contactEmail}`} className="inline-flex items-center gap-1 text-blue-600 hover:underline">
+              <a href={`mailto:${f.contactEmail}`} data-tip="Start an email to this person" className="inline-flex items-center gap-1 text-blue-600 hover:underline">
                 <Mail size={12} /> {f.contactEmail}
               </a>
               {f.contactPhone && (

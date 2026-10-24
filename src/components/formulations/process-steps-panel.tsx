@@ -9,6 +9,7 @@ import type { LossType, LossUnit } from '@/lib/process-loss'
 import type { StepParams } from '@/lib/step-measurements'
 import { StepMeasurements } from '@/components/formulations/step-measurements'
 import { EquipmentManagerDialog } from '@/components/formulations/equipment-manager-dialog'
+import { Term } from '@/components/term'
 
 type LossDraft = { type: LossType | ''; amount: string; unit: LossUnit }
 
@@ -70,6 +71,7 @@ function LossFields({
             update(type ? { ...draft, type } : NO_LOSS, true)
           }}
           aria-label="Loss type"
+          data-tip="Production loss: product left on equipment, per-100 g nutrition unchanged. Moisture loss: water driven off, nutrition concentrates."
           className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
         >
@@ -89,6 +91,7 @@ function LossFields({
               onChange={(e) => onChange({ ...draft, amount: e.target.value })}
               onBlur={() => update(draft, true)}
               aria-label="Loss amount"
+              data-tip={draft.unit === 'pct' ? 'Loss as a % of the weight going into this step, after earlier losses' : 'Grams lost in this step. Saves when you click away.'}
               placeholder="Amount"
               className="w-20 px-1.5 py-1 text-xs border border-gray-200 rounded tabular-nums
                          focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
@@ -98,6 +101,7 @@ function LossFields({
               disabled={disabled}
               onChange={(e) => update({ ...draft, unit: e.target.value as LossUnit }, true)}
               aria-label="Loss unit"
+              data-tip="Grams, or a % of the weight going into this step (after any earlier losses)"
               className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
@@ -309,6 +313,7 @@ export function ProcessStepsPanel({
         type="button"
         onClick={toggleCollapsed}
         aria-expanded={!collapsed}
+        data-tip={collapsed ? 'Shows the method steps, with their losses and measurements' : 'Hides the process steps (remembered in this browser)'}
         className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors"
       >
         {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
@@ -350,12 +355,16 @@ export function ProcessStepsPanel({
                       setDragKey(step.id)
                     }}
                     className={`pt-1 ${!isLocked ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    data-tip={!isLocked ? 'Drag to reorder this step' : undefined}
                   >
                     {!isLocked && <GripVertical size={14} className="text-gray-300 hover:text-gray-500 transition-colors" />}
                   </div>
 
                   <button
                     onClick={() => toggleExpanded(step.id)}
+                    aria-expanded={isExpanded}
+                    aria-label={isExpanded ? 'Hide more measurements' : 'Show more measurements'}
+                    data-tip={isExpanded ? 'Hides solids, shear and pressure' : 'Shows more measurements: solids (%), shear and pressure'}
                     className="pt-1 text-gray-400 hover:text-gray-600"
                   >
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -369,6 +378,8 @@ export function ProcessStepsPanel({
                     <input
                       defaultValue={step.instruction}
                       disabled={isLocked}
+                      aria-label="Step instruction"
+                      data-tip={isLocked ? undefined : 'Click to edit the instruction. Saves when you click away.'}
                       onBlur={(e) => {
                         const value = e.target.value.trim()
                         if (value && value !== step.instruction) {
@@ -384,7 +395,9 @@ export function ProcessStepsPanel({
 
                     <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
                       <div className="space-y-0.5">
-                        <span className="block text-[10px] text-gray-400">Loss</span>
+                        <span className="block text-[10px] text-gray-400">
+                          <Term tip="Weight lost in this step. It lowers the yield; a moisture loss also concentrates the nutrition per 100 g.">Loss</Term>
+                        </span>
                         <StepLoss
                           step={step}
                           disabled={isLocked}
@@ -415,6 +428,8 @@ export function ProcessStepsPanel({
                             <input
                               defaultValue={p[key] ?? ''}
                               disabled={isLocked}
+                              aria-label={label}
+                              data-tip={isLocked ? undefined : 'Free text, e.g. a value with its unit. Saves when you click away.'}
                               onBlur={(e) => {
                                 const next = e.target.value.trim()
                                 if (next !== (p[key] ?? '')) patchParams(step.id, { [key]: next || null })
@@ -431,6 +446,8 @@ export function ProcessStepsPanel({
                   {!isLocked && (
                     <button
                       onClick={() => deleteMutation.mutate(step.id)}
+                      aria-label="Delete step"
+                      data-tip="Deletes this step straight away (no confirmation)"
                       className="pt-1 text-gray-300 hover:text-red-500 transition-colors"
                     >
                       <X size={14} />
@@ -457,6 +474,7 @@ export function ProcessStepsPanel({
             <button
               onClick={handleAdd}
               disabled={addMutation.isPending || !newInstruction.trim()}
+              data-tip={newInstruction.trim() ? 'Adds this step to the end of the method. Steps save by themselves.' : 'Type an instruction first'}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white
                          rounded-md hover:bg-gray-800 disabled:opacity-40 transition-colors"
             >

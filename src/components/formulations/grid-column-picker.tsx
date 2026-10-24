@@ -45,7 +45,8 @@ export function GridColumnPicker({
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        title="Choose which nutrients show as columns"
+        aria-expanded={open}
+        data-tip="Choose which nutrients show as columns in the grid. Saved for this version."
         className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
       >
         <Columns3 size={11} /> Nutrient columns ({selectedIds.length})
@@ -69,6 +70,7 @@ export function GridColumnPicker({
                   type="button"
                   onClick={onReset}
                   disabled={isDefault}
+                  data-tip={isDefault ? 'Already showing the default columns' : 'Back to Energy, Protein, Total Fat, Carbs and Dietary Fiber'}
                   className="text-blue-600 hover:underline disabled:text-gray-300 disabled:no-underline"
                 >
                   Reset to default
@@ -88,7 +90,7 @@ export function GridColumnPicker({
                         <label
                           key={n.id}
                           className="flex items-center gap-2 px-3 py-1 text-sm cursor-pointer hover:bg-gray-50"
-                          title={present ? undefined : 'No ingredient in this formulation has a value for this nutrient'}
+                          data-tip={present ? undefined : 'No ingredient in this formulation has a value for this nutrient'}
                         >
                           <input
                             type="checkbox"

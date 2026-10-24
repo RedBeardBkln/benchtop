@@ -10,7 +10,8 @@ export function PreferencesPanel() {
       title="Raw material costing (COGS)"
       description="Adds a COGS tab to formulations showing raw material cost per batch, per kg or lb, per serving and per unit, with each ingredient's share. You can record ingredient costs either way; this only controls whether formulations show them."
     >
-      <label className="flex items-center gap-3 text-sm text-gray-800 cursor-pointer w-fit">
+      <label className="flex items-center gap-3 text-sm text-gray-800 cursor-pointer w-fit"
+        data-tip="Turns the COGS tab on formulations on or off, just for you. Ingredient costs are kept either way.">
         <input
           type="checkbox"
           role="switch"

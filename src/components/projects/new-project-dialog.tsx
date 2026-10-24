@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { X } from 'lucide-react'
 import { ClientSelect, useClientOptions } from '@/components/clients/client-select'
+import { Term } from '@/components/term'
 
 export function NewProjectDialog({
   open,
@@ -57,7 +58,7 @@ export function NewProjectDialog({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-base font-semibold text-gray-900">New project</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleClose} aria-label="Close" data-tip="Close without creating a project" className="text-gray-400 hover:text-gray-600">
             <X size={18} />
           </button>
         </div>
@@ -92,7 +93,7 @@ export function NewProjectDialog({
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Objective
+              <Term tip="The goal for this product, such as its protein, claims or allergen needs. Shown under the project name and editable later.">Objective</Term>
               <span className="font-normal text-gray-400 ml-1">(optional)</span>
             </label>
             <textarea
@@ -116,6 +117,11 @@ export function NewProjectDialog({
             <button
               type="submit"
               disabled={!name.trim() || needsClient || mutation.isPending}
+              data-tip={!name.trim()
+                ? 'Type a project name first.'
+                : needsClient
+                  ? 'Choose a client first. Your access covers only certain clients.'
+                  : 'Creates the project and opens it.'}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md
                          hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
