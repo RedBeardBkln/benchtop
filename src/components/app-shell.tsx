@@ -18,8 +18,9 @@ const NAV = [
   { href: '/help', label: 'Help', icon: HelpCircle, tip: 'Step-by-step guides and answers for every part of benchtop' },
 ]
 
-// Shown in the phone's bottom bar; the rest of the menu sits under More
-const MOBILE_PRIMARY = ['/projects', '/ingredients', '/suppliers', '/settings']
+// The phone's bottom bar shows the first four of these the user has; the rest of the menu sits under More.
+// Settings only makes the bar for people who can't see Clients.
+const MOBILE_PRIMARY = ['/projects', '/clients', '/ingredients', '/suppliers', '/settings']
 
 // Only shown to account owners and admins (client records hold accounting and shipping details)
 const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2, tip: 'The customers you formulate for: contacts, billing, shipping and their projects' }
@@ -50,8 +51,8 @@ export function AppShell({
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   // Phones get the main sections in the bottom bar; everything else goes under More
-  const primary = nav.filter(n => MOBILE_PRIMARY.includes(n.href))
-  const more = nav.filter(n => !MOBILE_PRIMARY.includes(n.href))
+  const primary = nav.filter(n => MOBILE_PRIMARY.includes(n.href)).slice(0, 4)
+  const more = nav.filter(n => !primary.includes(n))
   const moreActive = more.some(n => isActive(n.href))
   const moreBadge = more.reduce((sum, n) => sum + badge(n.href), 0)
   // The page More was opened on; it counts as open only while we're still on that page

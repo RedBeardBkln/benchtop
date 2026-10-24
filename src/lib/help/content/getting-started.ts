@@ -115,7 +115,7 @@ export const gettingStarted: HelpSection = {
       blocks: [
         {
           type: 'p',
-          text: '**On a computer** (or any wide screen) the menu is the dark bar down the left side. **On a phone** the menu is a bar along the bottom of the screen with Projects, Ingredients, Suppliers and Settings. Tap **More** for the rest (Clients, Help, Sign out) and to see which email you’re signed in with.',
+          text: '**On a computer** (or any wide screen) the menu is the dark bar down the left side. **On a phone** the menu is a bar along the bottom of the screen with Projects, Clients, Ingredients and Suppliers (if you can’t see Clients, Settings takes its place). Tap **More** for the rest (Settings, Help, Sign out) and to see which email you’re signed in with.',
         },
         {
           type: 'terms',
@@ -241,7 +241,7 @@ export const gettingStarted: HelpSection = {
     },
     {
       q: 'Where is the menu on my phone?',
-      a: 'On a phone the menu is the dark bar along the bottom of the screen: Projects, Ingredients, Suppliers and Settings. Tap **More** for Clients (owners and admins only), Help and Sign out.',
+      a: 'On a phone the menu is the dark bar along the bottom of the screen: Projects, Clients, Ingredients and Suppliers. Tap **More** for Settings, Help and Sign out. Members don’t see Clients, so Settings is on their bar instead.',
     },
     {
       q: 'What does “No account found” mean?',
