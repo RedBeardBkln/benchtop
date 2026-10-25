@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { formatIngredientName } from '@/lib/ingredient-name'
-import { and, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         category: ingredients.category, subcategory: ingredients.subcategory, microCategory: ingredients.microCategory,
       })
       .from(ingredients)
-      .where(eq(ingredients.accountId, accountId)),
+      .where(and(eq(ingredients.accountId, accountId), isNull(ingredients.archivedAt))),
     db
       .selectDistinct({ category: intakeItems.category, subcategory: intakeItems.subcategory, microCategory: intakeItems.microCategory })
       .from(intakeItems)

@@ -413,6 +413,11 @@ export const ingredients: HelpSection = {
           type: 'note',
           text: 'An ingredient that’s used in a formulation (archived ones count too) can’t be deleted; benchtop tells you how many formulations use it. Check its **Formulations** tab, remove it from those recipes (or swap it out), then try again. If it’s a duplicate, merge it instead.',
         },
+        { type: 'h', text: 'Archived ingredients' },
+        {
+          type: 'p',
+          text: 'When you archive a client you can archive the ingredients only that client uses (see [Archiving a client](/help/clients#archive-client)). Archived ingredients are hidden from the library and every picker, but formulations that use them keep working. To bring one back, click **Archived ingredients** under the library list and click `Restore` next to it, or open the ingredient and click `Restore` on the banner at the top.',
+        },
       ],
     },
     {

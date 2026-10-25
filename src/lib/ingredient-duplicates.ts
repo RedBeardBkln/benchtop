@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { and, eq, ne } from 'drizzle-orm'
+import { and, eq, isNull, ne } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { ingredients } from '@/lib/db/schema'
 import {
@@ -31,7 +31,7 @@ export async function findDuplicate(
   const candidates = await db
     .select(identityColumns)
     .from(ingredients)
-    .where(and(eq(ingredients.accountId, accountId), excludeId ? ne(ingredients.id, excludeId) : undefined))
+    .where(and(eq(ingredients.accountId, accountId), isNull(ingredients.archivedAt), excludeId ? ne(ingredients.id, excludeId) : undefined))
   const wantedName = normalizePart(fields.name)
   return candidates.find(c => normalizePart(c.name) === wantedName && identityKey(c) === key) ?? null
 }
@@ -50,7 +50,7 @@ export class DuplicateIngredientError extends Error {
   }
 }
 
-/** All identity rows for an account (used to flag pre-existing duplicates). */
+/** All active identity rows for an account (used to flag pre-existing duplicates). Archived entries don't count. */
 export async function loadIdentityRows(accountId: string) {
-  return db.select(identityColumns).from(ingredients).where(eq(ingredients.accountId, accountId))
+  return db.select(identityColumns).from(ingredients).where(and(eq(ingredients.accountId, accountId), isNull(ingredients.archivedAt)))
 }

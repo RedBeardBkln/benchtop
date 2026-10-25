@@ -8,7 +8,7 @@ import {
   ingredientCerts,
   formulationLines,
 } from '@/lib/db/schema'
-import { and, desc, ilike, sql, eq } from 'drizzle-orm'
+import { and, desc, ilike, isNotNull, isNull, sql, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
 import { duplicateCounts } from '@/lib/ingredient-identity'
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
   const { ctx } = auth
 
   const q = request.nextUrl.searchParams.get('q')?.trim()
+  // ?archived=1 lists only archived ingredients; otherwise they're left out (library list and pickers)
+  const archived = request.nextUrl.searchParams.get('archived') === '1'
   // Searches (the pickers) ask for a handful; the library list gets everything
   const requested = parseInt(request.nextUrl.searchParams.get('limit') ?? '', 10)
   const limit = q
@@ -56,6 +58,7 @@ export async function GET(request: NextRequest) {
         subcategory: ingredients.subcategory,
         microCategory: ingredients.microCategory,
         onHand: ingredients.onHand,
+        archivedAt: ingredients.archivedAt,
         createdAt: ingredients.createdAt,
         updatedAt: ingredients.updatedAt,
         formulationCount: sql<number>`coalesce(${formulationCountSq.cnt}, 0)`,
@@ -65,6 +68,7 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           eq(ingredients.accountId, ctx.account.id),
+          archived ? isNotNull(ingredients.archivedAt) : isNull(ingredients.archivedAt),
           q ? ilike(ingredients.name, `%${q}%`) : undefined,
         ),
       )

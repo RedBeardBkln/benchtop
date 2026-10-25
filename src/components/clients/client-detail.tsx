@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ArrowLeft, Copy, Plus, Trash2, X } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeft, Copy, Plus, Trash2, X } from 'lucide-react'
 import { EMPTY_ADDRESS, type CarrierAccount, type ClientAddress } from '@/lib/client-schemas'
 import { readErrorMessage } from '@/lib/utils'
 import { AddressFields, Contacts, Field, Section, inputCls, type Contact } from '@/components/records/record-fields'
 import { Term } from '@/components/term'
+import { ArchiveClientDialog, UnarchiveClientDialog } from './client-archive-dialogs'
 
 type ClientDetailData = {
   id: string
@@ -31,6 +32,7 @@ type ClientDetailData = {
   otherCarrierAccounts: CarrierAccount[]
   preferredCarrier: string | null
   shippingNotes: string | null
+  archivedAt: string | null
   contacts: Contact[]
   projects: Array<{ id: string; name: string; status: string }>
 }
@@ -91,6 +93,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
   const initial = toForm(client)
   const [form, setForm] = useState<Form>(initial)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
   const dirty = JSON.stringify(form) !== JSON.stringify(initial)
 
   const text = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -139,8 +142,15 @@ function ClientForm({ client }: { client: ClientDetailData }) {
     <div className="space-y-5 pb-20">
       <Section title="Details">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Client name *" htmlFor="client-name" hint="Shown on projects. Renaming updates every linked project and team access grant.">
+          <Field label="Client name (DBA) *" htmlFor="client-name"
+            tip="The name the client does business as (DBA): their trading or brand name. Shown on projects and in the client dropdown."
+            hint="Renaming updates every linked project and team access grant.">
             <input id="client-name" value={form.name} onChange={text('name')} className={inputCls} />
+          </Field>
+          <Field label="Legal company name" htmlFor="client-legal"
+            tip="The client’s registered company name (e.g. Acme Foods, LLC), for invoices, contracts and billing records."
+            hint="For billing. Leave blank if it’s the same as the client name.">
+            <input id="client-legal" value={form.legalName} onChange={text('legalName')} placeholder="e.g. Acme Foods, LLC" className={inputCls} />
           </Field>
           <Field label="Website" htmlFor="client-website">
             <input id="client-website" value={form.website} onChange={text('website')} placeholder="https://" className={inputCls} />
@@ -165,9 +175,6 @@ function ClientForm({ client }: { client: ClientDetailData }) {
 
       <Section title="Accounting" description="How this client is billed.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Legal / billing name" htmlFor="client-legal">
-            <input id="client-legal" value={form.legalName} onChange={text('legalName')} placeholder="If different from the client name" className={inputCls} />
-          </Field>
           <Field label="Tax ID / EIN" htmlFor="client-tax" tip="The client’s tax number (in the US, their Employer Identification Number), for invoices and records.">
             <input id="client-tax" value={form.taxId} onChange={text('taxId')} className={inputCls} autoComplete="off" />
           </Field>
@@ -327,6 +334,38 @@ function ClientForm({ client }: { client: ClientDetailData }) {
         )}
       </Section>
 
+      <Section title={client.archivedAt ? 'Unarchive client' : 'Archive client'}>
+        {client.archivedAt ? (
+          <>
+            <p className="text-sm text-gray-500 mb-3">
+              Brings this client back, and lets you choose which of its archived projects, formulations,
+              ingredients and suppliers come back with it.
+            </p>
+            <button type="button" onClick={() => setArchiveOpen(true)}
+              data-tip="Opens a list of what was archived with this client so you can pick what to restore"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-blue-200 text-blue-700 rounded-md hover:bg-blue-50">
+              <ArchiveRestore size={14} /> Unarchive client
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500 mb-3">
+              Hides this client along with its projects and formulations. You can also archive ingredients
+              and suppliers that only this client uses. Nothing is deleted, and you can unarchive later.
+            </p>
+            <button type="button" onClick={() => setArchiveOpen(true)}
+              data-tip="Shows what will be archived and lets you choose ingredients and suppliers to archive too. Nothing happens until you confirm."
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-amber-200 text-amber-700 rounded-md hover:bg-amber-50">
+              <Archive size={14} /> Archive client
+            </button>
+          </>
+        )}
+      </Section>
+
+      {archiveOpen && (client.archivedAt
+        ? <UnarchiveClientDialog client={client} onClose={() => setArchiveOpen(false)} />
+        : <ArchiveClientDialog client={client} onClose={() => setArchiveOpen(false)} />)}
+
       {/* Save bar */}
       {dirty && (
         <div className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-lg bg-ink-900 text-white px-4 py-2.5 shadow-lg">
@@ -378,7 +417,15 @@ export function ClientDetail({ id }: { id: string }) {
         <p className="text-sm text-red-500">Client not found.</p>
       ) : (
         <>
-          <h1 className="text-2xl font-semibold text-gray-900 mb-6">{data.name}</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-1">{data.name}</h1>
+          {data.legalName && data.legalName !== data.name && <p className="text-sm text-gray-500">{data.legalName}</p>}
+          <div className="mb-6" />
+          {data.archivedAt && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Archived on {new Date(data.archivedAt).toLocaleDateString()}. It’s hidden from your client list and the
+              project dropdown. Use <b>Unarchive client</b> at the bottom of the page to bring it back.
+            </div>
+          )}
           {/* Keyed on the saved record, so the form resets after a save that changes it */}
           <ClientForm key={JSON.stringify(toForm(data))} client={data} />
         </>

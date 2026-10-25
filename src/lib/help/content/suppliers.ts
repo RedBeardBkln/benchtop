@@ -123,6 +123,15 @@ export const suppliers: HelpSection = {
           type: 'note',
           text: 'Ingredients that only mention the supplier in their **Supplier** text don’t stop you deleting it, and their text isn’t changed.',
         },
+        { type: 'h', text: 'Archived suppliers' },
+        {
+          type: 'p',
+          text: 'When you archive a client you can archive suppliers whose ingredients are all being archived with it (see [Archiving a client](/help/clients#archive-client)). Archived suppliers are hidden from the supplier list and pickers; their links and prices stay. To bring one back, click **Archived suppliers** under the list and click `Restore`, or open the supplier and click `Restore` on the banner.',
+        },
+        {
+          type: 'note',
+          text: 'You can’t add a new supplier with the same name as an archived one. Restore the archived supplier instead.',
+        },
       ],
     },
   ],

@@ -25,6 +25,7 @@ import { categoryOptions, categoryPath } from '@/lib/ingredient-categories'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 import { GLOSSARY } from '@/lib/glossary'
 import { Term } from '@/components/term'
+import { ArchivedRecords } from '@/components/archived-records'
 
 const SOURCE_LABELS: Record<string, { label: string; className: string; tip: string }> = {
   usda:         { label: 'USDA', className: 'bg-blue-100 text-blue-700', tip: 'Imported from the USDA FoodData Central database.' },
@@ -398,6 +399,8 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
         {table.getFilteredRowModel().rows.length} of {ingredients.length} ingredient
         {ingredients.length !== 1 ? 's' : ''}
       </div>
+
+      <ArchivedRecords kind="ingredients" canEdit={canEdit} />
 
       <UsdaSearchDialog
         open={usdaOpen}

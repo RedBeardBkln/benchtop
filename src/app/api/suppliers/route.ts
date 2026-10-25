@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { supplierContacts, suppliers } from '@/lib/db/schema'
-import { asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import { normalizeSupplierFields, supplierCreateSchema } from '@/lib/supplier-schemas'
 import { duplicateSupplierResponse, findSupplierByName, getSupplierIngredientCounts } from '@/lib/suppliers-server'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
+  // ?archived=1 lists only archived suppliers; otherwise they're left out (supplier list and pickers)
+  const archived = req.nextUrl.searchParams.get('archived') === '1'
 
   const [rows, counts, contacts] = await Promise.all([
     db
       .select()
       .from(suppliers)
-      .where(eq(suppliers.accountId, ctx.account.id))
+      .where(and(eq(suppliers.accountId, ctx.account.id), archived ? isNotNull(suppliers.archivedAt) : isNull(suppliers.archivedAt)))
       .orderBy(asc(sql`lower(${suppliers.name})`)),
     getSupplierIngredientCounts(ctx.account.id),
     db

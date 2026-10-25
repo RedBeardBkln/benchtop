@@ -1,4 +1,5 @@
-import { and, eq, isNotNull } from 'drizzle-orm'
+import { NextResponse } from 'next/server'
+import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { accountMembers, clients, invitations, projects } from '@/lib/db/schema'
 import { isUuid } from '@/lib/tenancy'
@@ -20,6 +21,21 @@ export async function getOwnedClient(accountId: string, id: string) {
 export function isDuplicateNameError(err: unknown): boolean {
   const e = err as { code?: string; cause?: { code?: string } }
   return e?.code === '23505' || e?.cause?.code === '23505'
+}
+
+/** 409 for a client name that's taken, pointing at the archived client when that's the one holding it. */
+export async function clientNameTakenResponse(accountId: string, name: string | undefined) {
+  const [row] = name
+    ? await db
+      .select({ archivedAt: clients.archivedAt })
+      .from(clients)
+      .where(and(eq(clients.accountId, accountId), sql`lower(${clients.name}) = lower(${name})`))
+      .limit(1)
+    : []
+  const error = row?.archivedAt
+    ? `An archived client is called "${name}". Unarchive it from Clients → Show archived instead.`
+    : `A client named "${name}" already exists`
+  return NextResponse.json({ error }, { status: 409 })
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]

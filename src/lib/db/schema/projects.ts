@@ -25,6 +25,8 @@ export const projects = pgTable('projects', {
   requiredCerts: text('required_certs').array().notNull().default([]),
   excludedAllergens: text('excluded_allergens').array().notNull().default([]),
   status: projectStatusEnum('status').notNull().default('active'),
+  // Set when the project was archived along with its client, so unarchiving the client can offer it back
+  archivedWithClientId: uuid('archived_with_client_id').references(() => clients.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

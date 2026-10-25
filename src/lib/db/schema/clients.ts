@@ -28,6 +28,8 @@ export const clients = pgTable('clients', {
   otherCarrierAccounts: jsonb('other_carrier_accounts').$type<CarrierAccount[]>().notNull().default([]),
   preferredCarrier: text('preferred_carrier'),
   shippingNotes: text('shipping_notes'),
+  // Archived clients drop out of lists and pickers; archiving one archives its projects too (see lib/client-archive.ts)
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

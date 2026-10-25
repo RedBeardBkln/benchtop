@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, isNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { clients, ingredients, projects } from '@/lib/db/schema'
 import { claudeJson } from '@/lib/ai-json'
@@ -113,9 +113,9 @@ export async function buildDrafts(ctx: AuthContext, fileName: string, found: Ext
     db.select({
       id: ingredients.id, name: ingredients.name, labelName: ingredients.labelName,
       itemCode: ingredients.itemCode, supplierName: ingredients.supplierName,
-    }).from(ingredients).where(eq(ingredients.accountId, accountId)),
+    }).from(ingredients).where(and(eq(ingredients.accountId, accountId), isNull(ingredients.archivedAt))),
     db.select({ id: clients.id, name: clients.name }).from(clients)
-      .where(eq(clients.accountId, accountId)).orderBy(asc(sql`lower(${clients.name})`)),
+      .where(and(eq(clients.accountId, accountId), isNull(clients.archivedAt))).orderBy(asc(sql`lower(${clients.name})`)),
     db.select({ id: projects.id, name: projects.name, client: projects.client }).from(projects)
       .where(eq(projects.accountId, accountId)),
   ])

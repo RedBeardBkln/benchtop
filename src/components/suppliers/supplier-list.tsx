@@ -13,6 +13,7 @@ import { readErrorMessage } from '@/lib/utils'
 import { AddressFields, Field, emptyContact, inputCls } from '@/components/records/record-fields'
 import { PAYMENT_TERMS } from './supplier-detail'
 import { Term } from '@/components/term'
+import { ArchivedRecords } from '@/components/archived-records'
 
 type SupplierRow = Supplier & {
   ingredientCount: number
@@ -265,6 +266,8 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
           </div>
         </>
       )}
+
+      <ArchivedRecords kind="suppliers" canEdit={canEdit} />
 
       {dialogOpen && <NewSupplierDialog onClose={() => setDialogOpen(false)} />}
     </div>

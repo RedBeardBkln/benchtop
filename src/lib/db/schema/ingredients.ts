@@ -6,6 +6,7 @@ import { sourceTypeEnum, verificationEnum } from './enums'
 import { nutrients } from './nutrients'
 import { accounts } from './accounts'
 import { formulations } from './formulations'
+import { clients } from './clients'
 
 export const ingredients = pgTable('ingredients', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -39,6 +40,10 @@ export const ingredients = pgTable('ingredients', {
   onHand: boolean('on_hand').notNull().default(false),
   // Set when this ingredient was saved from a finalized formulation (nutrients etc. are a snapshot of it)
   sourceFormulationId: uuid('source_formulation_id').references(() => formulations.id, { onDelete: 'set null' }),
+  // Archived ingredients drop out of the library list and pickers but stay in the formulations that use them
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
+  // Set when archived along with a client
+  archivedWithClientId: uuid('archived_with_client_id').references(() => clients.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

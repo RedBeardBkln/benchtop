@@ -3,7 +3,7 @@ import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { ingredients } from '@/lib/db/schema'
 import { categoryPath } from '@/lib/ingredient-categories'
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       category: ingredients.category, subcategory: ingredients.subcategory, microCategory: ingredients.microCategory,
     })
     .from(ingredients)
-    .where(and(eq(ingredients.accountId, ctx.account.id), eq(ingredients.onHand, true)))
+    .where(and(eq(ingredients.accountId, ctx.account.id), eq(ingredients.onHand, true), isNull(ingredients.archivedAt)))
   ).map(i => ({ id: i.id, name: i.name, path: categoryPath(i) }))
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })

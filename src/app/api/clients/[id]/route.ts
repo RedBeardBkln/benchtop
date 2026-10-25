@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { clientContacts, clients, projects } from '@/lib/db/schema'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import { clientPatchSchema, normalizeClientFields } from '@/lib/client-schemas'
-import { getOwnedClient, isDuplicateNameError, propagateClientRename } from '@/lib/clients-server'
+import { clientNameTakenResponse, getOwnedClient, isDuplicateNameError, propagateClientRename } from '@/lib/clients-server'
 import { notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     return NextResponse.json(row)
   } catch (err) {
     if (isDuplicateNameError(err)) {
-      return NextResponse.json({ error: `A client named "${updates.name}" already exists` }, { status: 409 })
+      return clientNameTakenResponse(ctx.account.id, updates.name)
     }
     throw err
   }

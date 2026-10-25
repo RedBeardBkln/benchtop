@@ -157,6 +157,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
   if (d.archived !== undefined) {
     updates.archivedAt = d.archived ? new Date() : null
+    // Archiving or restoring by hand ends any link to a client archive
+    updates.archivedWithClientId = null
   }
 
   const [row] = await db
@@ -170,7 +172,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   // Name and archived state belong to the formulation as a whole, so keep every iteration in sync
   const familyUpdates: Record<string, unknown> = {}
   if (d.name !== undefined) familyUpdates.name = d.name
-  if (d.archived !== undefined) familyUpdates.archivedAt = updates.archivedAt
+  if (d.archived !== undefined) {
+    familyUpdates.archivedAt = updates.archivedAt
+    familyUpdates.archivedWithClientId = null
+  }
   if (Object.keys(familyUpdates).length > 0) {
     await db
       .update(formulations)

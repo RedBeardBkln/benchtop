@@ -9,6 +9,7 @@ import {
   ArrowLeft, ExternalLink, Check, AlertTriangle,
   Plus, X, Edit2, Save, Upload, FileText, Trash2, Eye, Sparkles, Truck, Star, Package,
 } from 'lucide-react'
+import { ArchivedBanner } from '@/components/archived-records'
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
 import { uploadStaged } from '@/lib/upload-file'
@@ -336,9 +337,9 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: form.newName.trim(), websiteUrl: form.newWebsite.trim() || null }),
         })
-        // A supplier with that name already exists: link to it rather than making a twin
+        // A supplier with that name already exists: link to it rather than making a twin (unless it's archived)
         const body = await r.json().catch(() => null)
-        if (r.status === 409 && body?.existing?.id) supplierId = body.existing.id
+        if (r.status === 409 && body?.existing?.id && !body.existing.archived) supplierId = body.existing.id
         else if (!r.ok) throw new Error(body?.error ?? 'Failed to create supplier')
         else supplierId = body.id
       }
@@ -537,6 +538,9 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           onRemoved={() => router.push('/ingredients')}
         />
       )}
+
+      <ArchivedBanner kind="ingredients" canEdit={canEdit}
+        record={{ id: data.id, name: data.name, archivedAt: data.archivedAt ? String(data.archivedAt) : null }} />
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">

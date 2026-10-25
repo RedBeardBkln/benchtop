@@ -88,7 +88,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     updates.clientId = d.clientId ?? null
   }
   if (d.objectiveText !== undefined) updates.objectiveText = d.objectiveText
-  if (d.status !== undefined) updates.status = d.status
+  if (d.status !== undefined) {
+    updates.status = d.status
+    // Archiving or restoring by hand ends any link to a client archive
+    updates.archivedWithClientId = null
+  }
   if (d.targets !== undefined) updates.targets = d.targets
 
   const [row] = await db

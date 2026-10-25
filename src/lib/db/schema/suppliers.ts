@@ -5,6 +5,7 @@ import {
 import { sql } from 'drizzle-orm'
 import { ingredients } from './ingredients'
 import { accounts } from './accounts'
+import { clients } from './clients'
 import type { ClientAddress } from '../../client-schemas'
 
 export const suppliers = pgTable('suppliers', {
@@ -20,6 +21,10 @@ export const suppliers = pgTable('suppliers', {
   accountNumber: text('account_number'),
   paymentTerms: text('payment_terms'),
   notes: text('notes'),
+  // Archived suppliers drop out of the supplier list and pickers; their sourcing links stay
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
+  // Set when archived along with a client
+  archivedWithClientId: uuid('archived_with_client_id').references(() => clients.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

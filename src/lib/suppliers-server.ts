@@ -115,7 +115,7 @@ export async function getSupplierIngredientCounts(accountId: string): Promise<Ma
 /** Another supplier in the account with this name (ignoring case and surrounding spaces), if any */
 export async function findSupplierByName(accountId: string, name: string, excludeId?: string) {
   const [row] = await db
-    .select({ id: suppliers.id, name: suppliers.name })
+    .select({ id: suppliers.id, name: suppliers.name, archivedAt: suppliers.archivedAt })
     .from(suppliers)
     .where(and(
       eq(suppliers.accountId, accountId),
@@ -126,9 +126,12 @@ export async function findSupplierByName(accountId: string, name: string, exclud
   return row ?? null
 }
 
-export function duplicateSupplierResponse(existing: { id: string; name: string }) {
+export function duplicateSupplierResponse(existing: { id: string; name: string; archivedAt?: Date | null }) {
+  const error = existing.archivedAt
+    ? `An archived supplier is called "${existing.name}". Restore it from Suppliers → Archived suppliers instead.`
+    : `A supplier called "${existing.name}" already exists`
   return NextResponse.json(
-    { error: `A supplier called "${existing.name}" already exists`, code: 'duplicate_supplier', existing },
+    { error, code: 'duplicate_supplier', existing: { id: existing.id, name: existing.name, archived: !!existing.archivedAt } },
     { status: 409 },
   )
 }

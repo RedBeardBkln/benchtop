@@ -11,10 +11,12 @@ import type { SupplierIngredient } from '@/lib/suppliers-server'
 import { readErrorMessage } from '@/lib/utils'
 import { AddressFields, Contacts, Field, Section, inputCls, type Contact } from '@/components/records/record-fields'
 import { Term } from '@/components/term'
+import { ArchivedBanner } from '@/components/archived-records'
 
 type SupplierDetailData = {
   id: string
   name: string
+  archivedAt: string | null
   websiteUrl: string | null
   email: string | null
   phone: string | null
@@ -299,6 +301,7 @@ export function SupplierDetail({ id, canEdit }: { id: string; canEdit: boolean }
       ) : (
         <>
           <h1 className="text-2xl font-semibold text-gray-900 mb-6">{data.name}</h1>
+          <ArchivedBanner kind="suppliers" record={data} canEdit={canEdit} />
           {/* Keyed on the saved record, so the form resets after a save that changes it */}
           <SupplierForm key={JSON.stringify(toForm(data))} supplier={data} canEdit={canEdit} />
         </>

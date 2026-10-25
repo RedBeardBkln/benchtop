@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { clientContacts, clients, projects } from '@/lib/db/schema'
 import { asc, eq, sql } from 'drizzle-orm'
 import { clientFieldsSchema, normalizeClientFields } from '@/lib/client-schemas'
-import { isDuplicateNameError } from '@/lib/clients-server'
+import { clientNameTakenResponse, isDuplicateNameError } from '@/lib/clients-server'
 
 // Client records hold accounting and shipping details, so only owners and admins manage them.
 // Everyone else picks from /api/clients/options.
@@ -41,6 +41,7 @@ export async function GET() {
       id: r.id,
       name: r.name,
       website: r.website,
+      archivedAt: r.archivedAt,
       projectCount: countBy.get(r.id) ?? 0,
       primaryContact: contactBy.get(r.id) ?? null,
     })),
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(row, { status: 201 })
   } catch (err) {
     if (isDuplicateNameError(err)) {
-      return NextResponse.json({ error: `A client named "${parsed.data.name}" already exists` }, { status: 409 })
+      return clientNameTakenResponse(ctx.account.id, parsed.data.name)
     }
     throw err
   }

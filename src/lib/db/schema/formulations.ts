@@ -8,6 +8,7 @@ import { ingredients } from './ingredients'
 import { nutrients } from './nutrients'
 import { equipment } from './equipment'
 import { accounts } from './accounts'
+import { clients } from './clients'
 
 export const formulations = pgTable('formulations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -39,6 +40,8 @@ export const formulations = pgTable('formulations', {
   gridNutrientIds: jsonb('grid_nutrient_ids').$type<string[]>(),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
+  // Set when archived along with its project's client (see lib/client-archive.ts)
+  archivedWithClientId: uuid('archived_with_client_id').references(() => clients.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

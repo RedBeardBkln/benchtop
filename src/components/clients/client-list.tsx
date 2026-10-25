@@ -13,6 +13,7 @@ type ClientRow = {
   id: string
   name: string
   website: string | null
+  archivedAt: string | null
   projectCount: number
   primaryContact: { name: string; email: string | null } | null
 }
@@ -54,7 +55,7 @@ function NewClientDialog({ onClose }: { onClose: () => void }) {
         >
           <div>
             <label htmlFor="new-client-name" className="block text-xs font-medium text-gray-600 mb-1">
-              Client name <span className="text-red-400">*</span>
+              Client name (DBA) <span className="text-red-400">*</span>
             </label>
             <input
               id="new-client-name"
@@ -88,6 +89,7 @@ function NewClientDialog({ onClose }: { onClose: () => void }) {
 export function ClientList() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
 
   const { data, isLoading, isError } = useQuery<{ clients: ClientRow[] }>({
     queryKey: ['clients'],
@@ -99,8 +101,10 @@ export function ClientList() {
   })
 
   const q = query.trim().toLowerCase()
+  const archivedCount = (data?.clients ?? []).filter(c => c.archivedAt).length
   const rows = (data?.clients ?? []).filter(c =>
-    !q || c.name.toLowerCase().includes(q) || c.primaryContact?.name.toLowerCase().includes(q),
+    (showArchived || !c.archivedAt) &&
+    (!q || c.name.toLowerCase().includes(q) || c.primaryContact?.name.toLowerCase().includes(q)),
   )
 
   return (
@@ -163,9 +167,15 @@ export function ClientList() {
               {rows.map(c => (
                 <tr key={c.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <Link href={`/clients/${c.id}`} className="font-medium text-gray-900 hover:text-blue-700 hover:underline">
+                    <Link href={`/clients/${c.id}`} className={`font-medium hover:text-blue-700 hover:underline ${c.archivedAt ? 'text-gray-400' : 'text-gray-900'}`}>
                       {c.name}
                     </Link>
+                    {c.archivedAt && (
+                      <span data-tip="Archived: hidden from lists and the project client dropdown. Open it to unarchive."
+                        className="ml-2 inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                        Archived
+                      </span>
+                    )}
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-gray-500">
                     {c.primaryContact ? (
@@ -179,11 +189,21 @@ export function ClientList() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-400">No clients match “{query}”.</td></tr>
+                <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-400">
+                  {q ? <>No clients match “{query}”.</> : 'Every client is archived.'}
+                </td></tr>
               )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {archivedCount > 0 && (
+        <label className="mt-3 inline-flex items-center gap-2 text-sm text-gray-600"
+          data-tip="Lists archived clients too, so you can open one and unarchive it">
+          <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="rounded border-gray-300" />
+          Show archived ({archivedCount})
+        </label>
       )}
 
       {dialogOpen && <NewClientDialog onClose={() => setDialogOpen(false)} />}

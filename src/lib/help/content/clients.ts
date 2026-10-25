@@ -20,7 +20,7 @@ export const clients: HelpSection = {
           type: 'steps',
           items: [
             'On [Clients](/clients), click `New client`.',
-            'Type the **Client name**, for example “Acme Foods”.',
+            'Type the **Client name (DBA)**: the name they do business as, for example “Acme Foods”.',
             'Click `Add client`. The client’s record opens so you can fill in the rest.',
           ],
         },
@@ -46,9 +46,9 @@ export const clients: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: 'Details', text: '**Client name**, **Website** and **Notes**.' },
+            { term: 'Details', text: '**Client name (DBA)**: the name they trade under, shown on projects. **Legal company name**: their registered name for billing, such as “Acme Foods, LLC” (leave it blank if it’s the same). Also **Website** and **Notes**.' },
             { term: 'Contacts', text: 'The people you work with there. See below. Contacts save immediately.' },
-            { term: 'Accounting', text: '**Legal / billing name**, **Tax ID / EIN**, **Payment terms** (such as Net 30), **Currency**, **Invoices go to** (an email), **Purchase order required on invoices**, the **Billing address**, and **Accounting notes**.' },
+            { term: 'Accounting', text: '**Tax ID / EIN**, **Payment terms** (such as Net 30), **Currency**, **Invoices go to** (an email), **Purchase order required on invoices**, the **Billing address**, and **Accounting notes**.' },
             { term: 'Shipping', text: '**Ship-to address**, **Preferred carrier**, the client’s **UPS / FedEx / DHL account #**, any **Other carrier accounts**, and **Shipping notes** (dock hours, cold-chain needs and so on).' },
             { term: 'Projects', text: 'Every project linked to this client. Click one to open it.' },
           ],
@@ -129,6 +129,49 @@ export const clients: HelpSection = {
             'Click `Delete` to confirm. The client and all its contacts are permanently removed.',
           ],
         },
+        {
+          type: 'tip',
+          text: 'Finished working with a client but want to keep their history? **Archive** them instead. See below.',
+        },
+      ],
+    },
+    {
+      slug: 'archive-client',
+      title: 'Archiving and unarchiving a client',
+      summary: 'Put a client away with its projects and formulations, and bring back exactly what you need later.',
+      blocks: [
+        {
+          type: 'p',
+          text: 'Archiving hides a client from your client list and the project Client dropdown. Its projects and formulations are archived too. Nothing is deleted.',
+        },
+        {
+          type: 'steps',
+          items: [
+            'On the client record, scroll to the bottom and click `Archive client`.',
+            'The dialog shows how many projects and formulations will be archived with it.',
+            'Optionally tick **ingredients** to archive too. Only ingredients this client’s formulations use are listed. Ones also used by other clients’ or projects’ formulations are greyed out with the reason.',
+            'Optionally tick **suppliers** to archive too. A supplier can only be archived when every ingredient it supplies is being archived as well.',
+            'Click `Archive client`.',
+          ],
+        },
+        {
+          type: 'p',
+          text: 'Archived ingredients and suppliers drop out of the library, the supplier list and every picker, but formulations that use them keep working.',
+        },
+        { type: 'h', text: 'Unarchiving' },
+        {
+          type: 'steps',
+          items: [
+            'On [Clients](/clients), tick **Show archived** below the list and open the client.',
+            'Scroll to the bottom and click `Unarchive client`.',
+            'Everything archived along with the client is listed: projects, formulations, ingredients and suppliers, all ticked. Untick anything you want to leave archived.',
+            'Click `Unarchive client`.',
+          ],
+        },
+        {
+          type: 'note',
+          text: 'Projects you’d archived yourself before archiving the client are listed too but start unticked. Anything left archived can be restored on its own later: a project or formulation from its own page, and an ingredient or supplier from **Archived ingredients** or **Archived suppliers** under those lists.',
+        },
       ],
     },
   ],
@@ -143,7 +186,15 @@ export const clients: HelpSection = {
     },
     {
       q: 'I can’t add a client because the name already exists.',
-      a: 'Client names must be different, ignoring capital letters. Open the existing client from [Clients](/clients) instead.',
+      a: 'Client names must be different, ignoring capital letters. Open the existing client from [Clients](/clients) instead. If it’s archived, tick **Show archived** to find it, then unarchive it.',
+    },
+    {
+      q: 'What’s the difference between the client name and the legal company name?',
+      a: 'The **Client name (DBA)** is the name they do business as, which shows on projects. The **Legal company name** is their registered name for invoices and billing, such as “Acme Foods, LLC”. Leave it blank if they’re the same.',
+    },
+    {
+      q: 'Does archiving a client delete anything?',
+      a: 'No. The client, its projects and formulations, and any ingredients or suppliers you chose are hidden, not deleted. Unarchive the client to choose what comes back.',
     },
     {
       q: 'I made changes to a client but they disappeared.',
