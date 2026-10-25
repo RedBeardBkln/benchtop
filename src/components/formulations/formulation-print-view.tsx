@@ -13,6 +13,7 @@ import { PCT_DECIMALS_MIN, readPctDecimals } from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
 import { formulationFileName } from '@/lib/download-name'
+import { Logo } from '@/components/logo'
 
 // Literal class names so Tailwind includes them
 const COL_SPAN: Record<number, string> = {
@@ -367,8 +368,9 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
         )}
 
         {/* Footer */}
-        <div className="mt-8 pt-3 border-t border-gray-200 text-xs text-gray-400">
-          Printed {new Date().toLocaleString()} · Formulation ID: {data.id}
+        <div className="mt-8 pt-3 border-t border-gray-200 text-xs text-gray-400 flex items-center justify-between gap-4">
+          <span>Printed {new Date().toLocaleString()} · Formulation ID: {data.id}</span>
+          <Logo variant="wordmark" height={9} className="shrink-0" />
         </div>
       </div>
     </div>

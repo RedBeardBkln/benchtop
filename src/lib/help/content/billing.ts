@@ -30,7 +30,7 @@ export const billing: HelpSection = {
         },
         {
           type: 'p',
-          text: 'Go to [Settings → Billing](/settings/billing) to see which one you have and when any free period ends. To change your account type, contact the benchtop team.',
+          text: 'Go to [Settings → Billing](/settings/billing) to see which one you have and when any free period ends. To change your account type, contact the Benchtop team.',
         },
       ],
     },
@@ -45,7 +45,7 @@ export const billing: HelpSection = {
             'The account owner goes to [Settings → Billing](/settings/billing).',
             'Choose **Monthly · $25/month** or **Annual · $250/year**.',
             'Click `Subscribe` (or `Resubscribe` if you had one before).',
-            'You’re taken to Stripe, our secure payment provider. Enter your card details there and confirm. benchtop never sees your card number.',
+            'You’re taken to Stripe, our secure payment provider. Enter your card details there and confirm. Benchtop never sees your card number.',
             'You come back to the Billing page. It shows “Confirming your payment…” for a moment, then your status changes to **Active**.',
           ],
         },
@@ -70,7 +70,7 @@ export const billing: HelpSection = {
             'The owner goes to [Settings → Billing](/settings/billing).',
             'Click `Manage billing`. Stripe’s billing page opens.',
             'From there you can update your payment card, see and download invoices, or cancel.',
-            'When you’re done, use the link on Stripe’s page to return to benchtop.',
+            'When you’re done, use the link on Stripe’s page to return to Benchtop.',
           ],
         },
         {
@@ -104,7 +104,7 @@ export const billing: HelpSection = {
             { term: 'Active', text: 'You’re subscribed and paid up. The page shows when it renews.' },
             { term: 'Trial', text: 'You’ve subscribed, but the first charge waits until your free time ends.' },
             { term: 'Payment past due', text: 'Your last payment failed. You still have access while Stripe tries again, but the owner should update the card under `Manage billing`.' },
-            { term: 'Canceled, Unpaid, Incomplete, Expired, Paused', text: 'The subscription isn’t active, so most of benchtop is locked until the owner subscribes again.' },
+            { term: 'Canceled, Unpaid, Incomplete, Expired, Paused', text: 'The subscription isn’t active, so most of Benchtop is locked until the owner subscribes again.' },
             { term: 'No subscription', text: 'No free time is left and nobody has subscribed.' },
           ],
         },
@@ -117,7 +117,7 @@ export const billing: HelpSection = {
       blocks: [
         {
           type: 'p',
-          text: 'If the account has no free time left and no active subscription, every page except Settings sends you to the Billing page with “A subscription is required to use benchtop.”',
+          text: 'If the account has no free time left and no active subscription, every page except Settings sends you to the Billing page with “A subscription is required to use Benchtop.”',
         },
         {
           type: 'list',
@@ -134,7 +134,7 @@ export const billing: HelpSection = {
   ],
   faqs: [
     {
-      q: 'How much does benchtop cost?',
+      q: 'How much does Benchtop cost?',
       a: '$25 a month or $250 a year, which includes the owner. Each extra person is $10 a month or $100 a year. New paid accounts start with a 60-day free trial.',
     },
     {
@@ -178,7 +178,7 @@ export const billing: HelpSection = {
       a: 'Yes. On [Settings → Billing](/settings/billing), click **Switch to annual billing**, then confirm. You’re charged for the year straight away, less a credit for what’s left of your current month. Switching back works the same way.',
     },
     {
-      q: 'Is my card information stored by benchtop?',
+      q: 'Is my card information stored by Benchtop?',
       a: 'No. Payments are handled by Stripe, and your card details go straight to them.',
     },
   ],

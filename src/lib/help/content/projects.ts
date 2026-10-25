@@ -170,12 +170,12 @@ export const projects: HelpSection = {
             { term: 'Pass (green check)', text: 'The target is met.' },
             { term: 'Warn (yellow)', text: 'Close but not quite: within 5% of the limit (for “= exact”, between 2% and 5% off).' },
             { term: 'Fail (red X)', text: 'More than 5% off.' },
-            { term: '— (no data)', text: 'benchtop can’t check it. See the FAQ below.' },
+            { term: '— (no data)', text: 'Benchtop can’t check it. See the FAQ below.' },
           ],
         },
         {
           type: 'p',
-          text: 'Nutrition is measured on the **finished** product, after any losses you entered in process steps (such as water lost in baking). For per-serving targets benchtop uses the formulation’s serving size, or the target’s own reference serving size if the formulation doesn’t have one.',
+          text: 'Nutrition is measured on the **finished** product, after any losses you entered in process steps (such as water lost in baking). For per-serving targets Benchtop uses the formulation’s serving size, or the target’s own reference serving size if the formulation doesn’t have one.',
         },
         {
           type: 'tip',
@@ -215,7 +215,7 @@ export const projects: HelpSection = {
     },
     {
       q: 'Why does a target show “—” instead of pass or fail?',
-      a: 'benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as IU versus mcg; (4) a “between” target has no maximum.',
+      a: 'Benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as IU versus mcg; (4) a “between” target has no maximum.',
     },
     {
       q: 'Why can’t I save a target of 0 (for example, 0 g trans fat)?',

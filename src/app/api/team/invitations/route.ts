@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   // A login belongs to exactly one account, so an existing user can't be added to a team
   if (await findAuthUserIdByEmail(email)) {
     return NextResponse.json(
-      { error: 'This email already has a benchtop login, so it cannot join another team.', code: 'user_exists' },
+      { error: 'This email already has a Benchtop login, so it cannot join another team.', code: 'user_exists' },
       { status: 409 },
     )
   }

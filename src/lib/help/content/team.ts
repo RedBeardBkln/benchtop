@@ -70,7 +70,7 @@ export const team: HelpSection = {
             'If you picked Member, choose what they can see and do. See [Choosing what a member can see](#member-access). A new member starts with **no projects** and **view-only** ingredients.',
             'Click `Create invitation`.',
             'A green box shows the invitation link. **Copy it now**: click `Copy`. The link is shown only once.',
-            'Send the link to your coworker yourself, by email or chat. benchtop does not send it for you.',
+            'Send the link to your coworker yourself, by email or chat. Benchtop does not send it for you.',
           ],
         },
         {
@@ -85,7 +85,7 @@ export const team: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: '“This email already has a benchtop login”', text: 'Each email can be on only one account. Ask them for a different email address.' },
+            { term: '“This email already has a Benchtop login”', text: 'Each email can be on only one account. Ask them for a different email address.' },
             { term: '“There is already a pending invitation for this email”', text: 'Revoke the old one first, or ask them to use the link they already have.' },
             { term: '“Your plan allows up to N additional user(s)”', text: 'Some free plans have a limit on users. Pending invitations count toward it. Revoke unused invitations or remove someone.' },
             { term: '“An active subscription is required to add team members”', text: 'The account’s trial or subscription has ended. The owner needs to subscribe first. See [Billing & plans](/help/billing).' },
@@ -213,7 +213,7 @@ export const team: HelpSection = {
     },
     {
       q: 'Why can’t I invite someone? It says their email already has a login.',
-      a: 'Each email address can belong to only one benchtop account. Ask them for another email, or they need to be removed from their current account first.',
+      a: 'Each email address can belong to only one Benchtop account. Ask them for another email, or they need to be removed from their current account first.',
     },
     {
       q: 'How much does each extra person cost?',

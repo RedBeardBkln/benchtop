@@ -41,7 +41,7 @@ export function FeedbackLink() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          data-tip="Send a bug report or feature request to the benchtop team. The page you’re on is included."
+          data-tip="Send a bug report or feature request to the Benchtop team. The page you’re on is included."
           className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors"
         >
           <MessageSquarePlus size={14} />
@@ -103,7 +103,7 @@ function FeedbackDialog({ contact, onClose }: { contact: FeedbackContext['contac
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 id="feedback-title" className="text-base font-semibold text-gray-900">Report a bug or request a feature</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Goes straight to the benchtop team.</p>
+            <p className="text-sm text-gray-500 mt-0.5">Goes straight to the Benchtop team.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" data-tip="Close without sending" className="text-gray-400 hover:text-gray-600">
             <X size={18} />
@@ -128,7 +128,7 @@ function FeedbackDialog({ contact, onClose }: { contact: FeedbackContext['contac
         </div>
 
         <Field
-          label={kind === 'bug' ? 'What happened?' : 'What would you like benchtop to do?'}
+          label={kind === 'bug' ? 'What happened?' : 'What would you like Benchtop to do?'}
           htmlFor="feedback-message"
           error={errors.message}
           hint={kind === 'bug' ? 'What you did, what you expected, and what you saw instead.' : undefined}
@@ -161,7 +161,7 @@ function FeedbackDialog({ contact, onClose }: { contact: FeedbackContext['contac
         </fieldset>
 
         <label className="flex items-start gap-2 text-sm text-gray-700"
-          data-tip="Tick if you’d like the benchtop team to get back to you about this">
+          data-tip="Tick if you’d like the Benchtop team to get back to you about this">
           <input
             type="checkbox"
             checked={wantsContact}
@@ -174,7 +174,7 @@ function FeedbackDialog({ contact, onClose }: { contact: FeedbackContext['contac
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onClose} className={btnSecondary}>Cancel</button>
           <button type="submit" disabled={saving || !message.trim()} className={btnPrimary}
-            data-tip={message.trim() ? 'Sends this to the benchtop team, with the page you were on' : 'Describe it first.'}>
+            data-tip={message.trim() ? 'Sends this to the Benchtop team, with the page you were on' : 'Describe it first.'}>
             {saving ? 'Sending…' : 'Send'}
           </button>
         </div>

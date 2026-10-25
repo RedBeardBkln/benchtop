@@ -6,7 +6,7 @@ import { HELP_SECTIONS, POPULAR_QUESTIONS } from '@/lib/help'
 import { faqAnchor } from '@/lib/help/search'
 import { requirePage } from '@/lib/auth/context'
 
-export const metadata = { title: 'Help & FAQ — benchtop' }
+export const metadata = { title: 'Help & FAQ — Benchtop' }
 
 export default async function HelpHome() {
   await requirePage({ allowUnentitled: true })
@@ -59,7 +59,7 @@ export default async function HelpHome() {
 
       <p className="text-sm text-gray-500">
         Can’t find what you need? Use <strong className="text-gray-700">Report a bug or request a feature</strong> at the
-        bottom of any page and the benchtop team will help.
+        bottom of any page and the Benchtop team will help.
       </p>
     </div>
   )

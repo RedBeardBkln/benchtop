@@ -1,6 +1,6 @@
 import { LOGO_MARK, LOGO_WORDMARK } from '@/lib/brand'
 
-// The benchtop logo: a "B" mark or "BENCHTOP" wordmark in the DS-Digital LCD font, drawn from
+// The Benchtop logo: a "B" mark or "BENCHTOP" wordmark in the DS-Digital LCD font, drawn from
 // its glyph outlines. `height` is the cap height in px. Colour comes from `currentColor`.
 export function Logo({
   variant = 'mark',
@@ -13,7 +13,7 @@ export function Logo({
 }) {
   const { box, d } = variant === 'mark' ? LOGO_MARK : LOGO_WORDMARK
   return (
-    <span role="img" aria-label="benchtop" className={`inline-flex ${className ?? ''}`}>
+    <span role="img" aria-label="Benchtop" className={`inline-flex ${className ?? ''}`}>
       <svg
         viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`}
         style={{ display: 'block', height, width: (height * box.width) / box.height }}

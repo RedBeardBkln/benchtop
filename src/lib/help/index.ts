@@ -33,5 +33,5 @@ export const POPULAR_QUESTIONS: { section: string; q: string }[] = [
   { section: 'formulations', q: 'Why does my Nutrition Facts panel say “Amount per 100g”?' },
   { section: 'ingredients', q: 'Why can’t I delete an ingredient?' },
   { section: 'projects', q: 'How do I delete a project?' },
-  { section: 'billing', q: 'How much does benchtop cost?' },
+  { section: 'billing', q: 'How much does Benchtop cost?' },
 ]

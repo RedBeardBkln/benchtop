@@ -13,7 +13,7 @@ type Props = { params: Promise<{ section: string }> }
 export async function generateMetadata({ params }: Props) {
   const { section } = await params
   const sec = HELP_SECTIONS.find(s => s.slug === section)
-  return { title: sec ? `${sec.title} — benchtop help` : 'Help — benchtop' }
+  return { title: sec ? `${sec.title} — Benchtop help` : 'Help — Benchtop' }
 }
 
 export default async function HelpSectionPage({ params }: Props) {

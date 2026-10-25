@@ -118,7 +118,7 @@ export const clients: HelpSection = {
       blocks: [
         {
           type: 'p',
-          text: '**Renaming:** change the **Client name** and click `Save`. benchtop updates every linked project and every teammate’s access automatically, so nobody loses access.',
+          text: '**Renaming:** change the **Client name** and click `Save`. Benchtop updates every linked project and every teammate’s access automatically, so nobody loses access.',
         },
         { type: 'h', text: 'Deleting a client' },
         {

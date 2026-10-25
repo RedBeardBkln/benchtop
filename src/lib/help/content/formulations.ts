@@ -43,7 +43,7 @@ export const formulations: HelpSection = {
       blocks: [
         {
           type: 'warning',
-          text: 'Changes to the ingredient grid are **not saved automatically**. When you change something, a blue `Save` button appears in the top-right corner. Click it before you leave the page or switch versions. If you try to leave with unsaved changes, benchtop asks you to confirm first; choosing to leave anyway throws them away.',
+          text: 'Changes to the ingredient grid are **not saved automatically**. When you change something, a blue `Save` button appears in the top-right corner. Click it before you leave the page or switch versions. If you try to leave with unsaved changes, Benchtop asks you to confirm first; choosing to leave anyway throws them away.',
         },
         {
           type: 'terms',
@@ -158,7 +158,7 @@ export const formulations: HelpSection = {
             { term: '“Locked percentages add up to 100% or more…”', text: 'Your locked percentages leave no room for anything else. Unlock one or lower it.' },
             { term: '“Locked values leave … g of the … g batch unassigned”', text: 'Everything is locked but it doesn’t fill the batch. Leave at least one ingredient unlocked.' },
             { term: '“Locked values exceed the … g batch…”', text: 'Locked amounts add up to more than the locked batch. Unlock something or raise the batch size.' },
-            { term: '“…that value was adjusted to fit the other locked values”', text: 'With the batch locked, there wasn’t room for the number you typed, so benchtop used the largest amount that fits.' },
+            { term: '“…that value was adjusted to fit the other locked values”', text: 'With the batch locked, there wasn’t room for the number you typed, so Benchtop used the largest amount that fits.' },
           ],
         },
       ],
@@ -166,14 +166,14 @@ export const formulations: HelpSection = {
     {
       slug: 'nutrition',
       title: 'Nutrition: columns, totals and the full profile',
-      summary: 'How benchtop works out the nutrition, and how to read it.',
+      summary: 'How Benchtop works out the nutrition, and how to read it.',
       blocks: [
         { type: 'h', text: 'How the numbers are calculated' },
         {
           type: 'steps',
           items: [
             'Each ingredient in your library has its nutrients recorded **per 100 g**.',
-            'For each ingredient, benchtop works out how much of each nutrient it adds to the batch. For example, 200 g of an ingredient with 10 g protein per 100 g adds 20 g protein.',
+            'For each ingredient, Benchtop works out how much of each nutrient it adds to the batch. For example, 200 g of an ingredient with 10 g protein per 100 g adds 20 g protein.',
             'It adds those up for the whole batch.',
             'It divides by the finished weight to get the amount **per 100 g of finished product**, and multiplies by your serving size to get **per serving**.',
           ],
@@ -281,13 +281,13 @@ export const formulations: HelpSection = {
     {
       slug: 'validation-solve',
       title: 'Checking targets and using Solve',
-      summary: 'See whether the recipe meets the project’s goals, and let benchtop suggest amounts.',
+      summary: 'See whether the recipe meets the project’s goals, and let Benchtop suggest amounts.',
       blocks: [
         {
           type: 'p',
           text: 'If the project has [nutritional targets](/help/projects#targets), a **Validation** table appears under the recipe showing **pass**, **warn** or **fail** for each one, using the amounts on screen (even before you save).',
         },
-        { type: 'h', text: 'Solve: let benchtop suggest amounts' },
+        { type: 'h', text: 'Solve: let Benchtop suggest amounts' },
         {
           type: 'p',
           text: '`Solve` looks for new percentages that meet **every** target while changing your recipe **as little as possible**. Locked ingredients stay exactly as they are.',
@@ -329,7 +329,7 @@ export const formulations: HelpSection = {
         {
           type: 'steps',
           items: [
-            'Click `Save` first. Copies are made from the saved recipe, so benchtop asks you to save if you haven’t.',
+            'Click `Save` first. Copies are made from the saved recipe, so Benchtop asks you to save if you haven’t.',
             'Click `Duplicate`.',
             'Choose **New iteration** to make the next version of this formulation (for example v4), or **New formulation** to make a separate formulation with a new name, starting at v1, in the same project.',
             'The copy opens straight away as a **draft** you can edit.',
@@ -415,7 +415,7 @@ export const formulations: HelpSection = {
       blocks: [
         {
           type: 'p',
-          text: 'In the NFP window, tick **Include ingredient statement**. benchtop lists your ingredients **heaviest first**, using each ingredient’s **label name** (set on the ingredient’s page) and putting its sub-ingredients in parentheses.',
+          text: 'In the NFP window, tick **Include ingredient statement**. Benchtop lists your ingredients **heaviest first**, using each ingredient’s **label name** (set on the ingredient’s page) and putting its sub-ingredients in parentheses.',
         },
         {
           type: 'list',
@@ -424,7 +424,7 @@ export const formulations: HelpSection = {
             '**Combine into parentheses:** drag an ingredient onto the middle of another, then name the group. For example, “Chocolate Chips (sugar, cocoa butter)”.',
             '**Rename for this label only:** click a name and type. This doesn’t change the ingredient in your library.',
             '**Separate a group:** use the ungroup icon.',
-            'If you move things out of weight order, benchtop warns “Not in descending order by weight.” Click `Sort by weight` to fix it. **Reset from formulation** starts over.',
+            'If you move things out of weight order, Benchtop warns “Not in descending order by weight.” Click `Sort by weight` to fix it. **Reset from formulation** starts over.',
             '**Edit as text** lets you type the whole statement freely.',
           ],
         },
@@ -449,7 +449,7 @@ export const formulations: HelpSection = {
             'Click `Save` first. Printing uses the last saved version.',
             'Click `Print`.',
             'Choose what to include: **Formulation** (ingredients and settings), **Process steps**, **Full nutrient profile**, and **Validation vs project targets**.',
-            'Click `Print`. A print-friendly page opens in a new tab. (If nothing opens, allow pop-ups for benchtop in your browser.)',
+            'Click `Print`. A print-friendly page opens in a new tab. (If nothing opens, allow pop-ups for Benchtop in your browser.)',
             'Click `Print` on that page, or choose “Save as PDF” in your browser’s print window.',
           ],
         },
@@ -484,7 +484,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'warning',
-          text: 'benchtop doesn’t stop you completing a batch when there isn’t enough stock (Preview warns you), so stock can go below zero. Recorded batches can’t be undone from the app; fix any mistake by correcting the stock on the ingredient’s page.',
+          text: 'Benchtop doesn’t stop you completing a batch when there isn’t enough stock (Preview warns you), so stock can go below zero. Recorded batches can’t be undone from the app; fix any mistake by correcting the stock on the ingredient’s page.',
         },
       ],
     },
@@ -507,7 +507,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: 'benchtop copies the nutrition per 100 g of **finished** product (after process losses), all the allergens, the ingredient list (for your label) and, if every ingredient has a cost, the cost per kg (worked out the same way as the **COGS** tab, using each ingredient’s chosen supplier price or its manual cost). It’s a **snapshot**: later changes to the formulation don’t change the ingredient. To refresh it, open the same version and click `Save as ingredient` → `Update ingredient`.',
+          text: 'Benchtop copies the nutrition per 100 g of **finished** product (after process losses), all the allergens, the ingredient list (for your label) and, if every ingredient has a cost, the cost per kg (worked out the same way as the **COGS** tab, using each ingredient’s chosen supplier price or its manual cost). It’s a **snapshot**: later changes to the formulation don’t change the ingredient. To refresh it, open the same version and click `Save as ingredient` → `Update ingredient`.',
         },
         {
           type: 'note',
@@ -555,7 +555,7 @@ export const formulations: HelpSection = {
     {
       slug: 'reverse',
       title: 'Reverse engineering a product from its label',
-      summary: 'Start from a competitor’s or a target label and let benchtop work out a matching recipe.',
+      summary: 'Start from a competitor’s or a target label and let Benchtop work out a matching recipe.',
       blocks: [
         {
           type: 'p',
@@ -567,8 +567,8 @@ export const formulations: HelpSection = {
             '**Start.** Choose **Upload product label** (AI reads photos of the label) or **Enter manually**.',
             '**Label data.** Upload 1 to 4 photos (JPG, PNG or WebP, up to 12 MB each) of the nutrition panel and ingredient list and click `Parse with AI`, or type the information in. Check the **Product name**, **Serving size (g)**, **Batch to produce (g)**, the **Nutritional panel (per serving)** values, the **Ingredient deck** (the ingredient list, which you can paste and split with **Parse into ingredient list**), and any **Label claims**. Click `Next: link ingredients`.',
             '**Link ingredients.** For each ingredient on the label, connect it to nutrition data: **Library** (your ingredients), **USDA**, **URL** (a web page with nutrition facts), **New** (add it to your library), or **Skip**. You can set min and max % **Bounds** for each, and add extra ingredients the label doesn’t list. Then click `Run AI research`.',
-            '**AI research.** benchtop’s AI suggests the product category, matches from what you have on hand, likely % ranges (applied to the bounds), and ways to link anything still unlinked (USDA, URL, typing values, or uploading a spec sheet). Click `Proceed to solve`.',
-            '**Solve.** Click `Run solver`. benchtop finds the percentages whose nutrition comes closest to the label, and shows a comparison (green within 5%, yellow 5–20%, red over 20%). Click `Apply to formulation`.',
+            '**AI research.** Benchtop’s AI suggests the product category, matches from what you have on hand, likely % ranges (applied to the bounds), and ways to link anything still unlinked (USDA, URL, typing values, or uploading a spec sheet). Click `Proceed to solve`.',
+            '**Solve.** Click `Run solver`. Benchtop finds the percentages whose nutrition comes closest to the label, and shows a comparison (green within 5%, yellow 5–20%, red over 20%). Click `Apply to formulation`.',
           ],
         },
         {
@@ -588,11 +588,11 @@ export const formulations: HelpSection = {
     {
       slug: 'import',
       title: 'Importing a formulation from Excel or CSV',
-      summary: 'Turn a recipe you keep in a spreadsheet into a benchtop formulation.',
+      summary: 'Turn a recipe you keep in a spreadsheet into a Benchtop formulation.',
       blocks: [
         {
           type: 'p',
-          text: 'If you already keep formulations in spreadsheets, you don’t have to type them in again. Upload the file, and benchtop reads it and builds a matching formulation for you to check. Nothing is added to your account until you click `Create formulation`.',
+          text: 'If you already keep formulations in spreadsheets, you don’t have to type them in again. Upload the file, and Benchtop reads it and builds a matching formulation for you to check. Nothing is added to your account until you click `Create formulation`.',
         },
         {
           type: 'steps',
@@ -620,7 +620,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: 'Amounts can be in **g**, **kg**, **mg**, **lb**, **oz** or **%**. Fix any amount or unit that was read wrongly; a red box means it’s missing. Amounts in mL, cups or pieces can’t be converted, so enter them in grams. When the file gives only percentages, benchtop needs a **Batch size** to turn them into grams; if the file doesn’t give one it starts at 1,000 g. If two rows link to the same ingredient, they’re combined into one line.',
+          text: 'Amounts can be in **g**, **kg**, **mg**, **lb**, **oz** or **%**. Fix any amount or unit that was read wrongly; a red box means it’s missing. Amounts in mL, cups or pieces can’t be converted, so enter them in grams. When the file gives only percentages, Benchtop needs a **Batch size** to turn them into grams; if the file doesn’t give one it starts at 1,000 g. If two rows link to the same ingredient, they’re combined into one line.',
         },
         { type: 'h', text: 'Saving a draft' },
         {
@@ -645,7 +645,7 @@ export const formulations: HelpSection = {
   faqs: [
     {
       q: 'Can I import formulations I keep in Excel?',
-      a: 'Yes. Click `Import formulation` on [Projects](/projects) and upload the .xlsx or .csv file. benchtop builds a matching formulation for you to check before it’s saved. See [Importing a formulation from Excel or CSV](/help/formulations#import).',
+      a: 'Yes. Click `Import formulation` on [Projects](/projects) and upload the .xlsx or .csv file. Benchtop builds a matching formulation for you to check before it’s saved. See [Importing a formulation from Excel or CSV](/help/formulations#import).',
     },
     {
       q: 'An ingredient in my spreadsheet isn’t in my library. What do I do?',
@@ -657,7 +657,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'I made changes and they disappeared. What happened?',
-      a: 'Ingredient grid changes only save when you click the blue `Save` button. benchtop asks before you leave with unsaved changes, but if you choose to leave anyway (or the browser closes), they’re lost. Process steps, notes and column choices save on their own.',
+      a: 'Ingredient grid changes only save when you click the blue `Save` button. Benchtop asks before you leave with unsaved changes, but if you choose to leave anyway (or the browser closes), they’re lost. Process steps, notes and column choices save on their own.',
     },
     {
       q: 'How do I scale my recipe to a bigger batch?',
@@ -665,7 +665,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Why did the number I typed change by itself?',
-      a: 'The batch size is locked and there wasn’t room for that amount, so benchtop used the biggest amount that fits. Unlock the batch (padlock next to **Batch (g)**) to change the total freely.',
+      a: 'The batch size is locked and there wasn’t room for that amount, so Benchtop used the biggest amount that fits. Unlock the batch (padlock next to **Batch (g)**) to change the total freely.',
     },
     {
       q: 'What’s the difference between the weight lock and the % lock?',
@@ -737,7 +737,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Print didn’t open anything.',
-      a: 'The print page opens in a new tab. Allow pop-ups for benchtop in your browser and try again.',
+      a: 'The print page opens in a new tab. Allow pop-ups for Benchtop in your browser and try again.',
     },
     {
       q: 'What does Solve do?',

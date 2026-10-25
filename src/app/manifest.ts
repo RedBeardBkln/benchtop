@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'benchtop',
-    short_name: 'benchtop',
+    name: 'Benchtop',
+    short_name: 'Benchtop',
     description: 'Food formulation R&D',
     start_url: '/',
     display: 'standalone',

@@ -1,9 +1,9 @@
-// Short definitions of benchtop's terms, shown when you hover or tap a word with a dotted
+// Short definitions of Benchtop's terms, shown when you hover or tap a word with a dotted
 // underline (components/term.tsx). Plain text, one or two sentences, worded to match the Help center.
 
 export const GLOSSARY = {
   // ── Formulations ──
-  formulation: 'A recipe: ingredients and amounts. benchtop works out its totals, nutrition, label text and cost.',
+  formulation: 'A recipe: ingredients and amounts. Benchtop works out its totals, nutrition, label text and cost.',
   project: 'A folder for one product idea. It holds that product’s formulations and its nutrition targets.',
   client: 'The customer a project is for. Linking one lets you limit who sees their projects.',
   version: 'Each saved iteration of a formulation (v1, v2…). Earlier versions stay unchanged so you can go back or compare.',
@@ -11,7 +11,7 @@ export const GLOSSARY = {
   draftStatus: 'Draft: the formulation can still be edited.',
   lockedStatus: 'Locked (finalized): approved and protected from changes. Unlock it, or make a new iteration, to change it.',
   groundUp: 'Ground up: you build the recipe yourself, ingredient by ingredient.',
-  reverse: 'Reverse: you start from an existing product label and benchtop works out a recipe that matches it.',
+  reverse: 'Reverse: you start from an existing product label and Benchtop works out a recipe that matches it.',
   weightG: 'How many grams of this ingredient go into the batch.',
   usagePct: 'This ingredient’s share of the whole batch: its weight ÷ the total weight × 100. All rows add up to 100%.',
   batchSize: 'The total weight of all the ingredients you put in, before any cooking or processing losses.',

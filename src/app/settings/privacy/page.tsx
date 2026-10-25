@@ -10,7 +10,7 @@ export default async function PrivacySettingsPage() {
 
   return (
     <>
-      <Card title="Terms and Privacy Policy" description="The documents that govern your use of benchtop.">
+      <Card title="Terms and Privacy Policy" description="The documents that govern your use of Benchtop.">
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm mb-4">
           <div>
             <dt className="text-gray-500">Terms of Service</dt>

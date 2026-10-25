@@ -1,4 +1,4 @@
-// benchtop brand constants, taken from design_system/ (tokens/colors.css, assets/logo-*.svg).
+// Benchtop brand constants, taken from design_system/ (tokens/colors.css, assets/logo-*.svg).
 
 export const BRAND = {
   lcd: '#D6F55A', // LCD backlight lime: the hero colour

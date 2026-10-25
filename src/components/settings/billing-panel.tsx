@@ -37,9 +37,9 @@ const STATUS_TIP: Record<string, string> = {
   'Payment past due': 'Your last payment failed. You keep access while Stripe retries; update the card under Manage billing.',
   'Free period': 'Your account is free until the date shown. Subscribe before then to keep access.',
   'Free trial': 'You’re in your free trial. Subscribe before it ends to keep access; you won’t be charged until then.',
-  'No subscription': 'No free time is left and nobody has subscribed, so most of benchtop is locked.',
+  'No subscription': 'No free time is left and nobody has subscribed, so most of Benchtop is locked.',
 }
-const INACTIVE_TIP = 'The subscription isn’t active, so most of benchtop is locked until the owner subscribes again. Your data is kept.'
+const INACTIVE_TIP = 'The subscription isn’t active, so most of Benchtop is locked until the owner subscribes again. Your data is kept.'
 
 const PORTAL_TIP = 'Opens Stripe’s billing page, where you can change your card, see and download invoices, or cancel.'
 
@@ -119,10 +119,10 @@ export function BillingPanel(props: Props) {
   return (
     <>
       {props.reason === 'subscription_required' && !props.entitled && (
-        <Notice tone="warning">A subscription is required to use benchtop. Subscribe below to get access.</Notice>
+        <Notice tone="warning">A subscription is required to use Benchtop. Subscribe below to get access.</Notice>
       )}
       {props.welcome && !props.entitled && (
-        <Notice tone="info">Welcome to benchtop. Your account is ready. Start your subscription to unlock all features.</Notice>
+        <Notice tone="info">Welcome to Benchtop. Your account is ready. Start your subscription to unlock all features.</Notice>
       )}
       {props.checkout === 'cancelled' && <Notice tone="info">Checkout was cancelled. You have not been charged.</Notice>}
       {syncing && <Notice tone="info">Confirming your payment…</Notice>}
@@ -162,7 +162,7 @@ export function BillingPanel(props: Props) {
             )}
             {!props.freeAccess && props.freeUntil && !props.entitled && (
               <Notice tone="warning">
-                {props.plan === 'free_period' ? 'Your free period' : 'Your free trial'} ended on {formatDate(props.freeUntil)}. Subscribe to keep using benchtop.
+                {props.plan === 'free_period' ? 'Your free period' : 'Your free trial'} ended on {formatDate(props.freeUntil)}. Subscribe to keep using Benchtop.
               </Notice>
             )}
             {props.devBypass && !sub && (
@@ -187,7 +187,7 @@ export function BillingPanel(props: Props) {
                   <Term tip="One plan with every feature, billed monthly or annually. Extra team members are billed as seats.">Plan</Term>
                 </dt>
                 <dd className="text-gray-900">
-                  benchtop (all features)
+                  Benchtop (all features)
                   {sub && props.entitled && ` · ${sub.interval === 'year' ? 'Annual' : 'Monthly'}, ${formatPlanPrice(sub.interval)}`}
                 </dd>
               </div>
@@ -277,7 +277,7 @@ export function BillingPanel(props: Props) {
                   <button className={btnPrimary} disabled={busy !== null} onClick={() => go('checkout')}
                     data-tip={props.freeAccess
                       ? 'Takes you to Stripe to enter your card. Billing starts when your free time ends (straight away if that’s within two days).'
-                      : 'Takes you to Stripe to enter your card and start the subscription. benchtop never sees your card number.'}
+                      : 'Takes you to Stripe to enter your card and start the subscription. Benchtop never sees your card number.'}
                   >
                     {busy === 'checkout' ? 'Redirecting…' : sub ? 'Resubscribe' : 'Subscribe'}
                   </button>

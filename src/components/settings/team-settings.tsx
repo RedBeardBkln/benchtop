@@ -265,7 +265,7 @@ export function TeamSettings() {
         <form onSubmit={invite} className="space-y-4">
           <Field label="Email" htmlFor="teamInviteEmail">
             <input id="teamInviteEmail" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} disabled={!canInvite}
-              data-tip="The invitation link works only for this email address. It can’t already have a benchtop login." />
+              data-tip="The invitation link works only for this email address. It can’t already have a Benchtop login." />
           </Field>
           <Field label="Role" htmlFor="teamInviteRole">
             <RoleSelect id="teamInviteRole" value={role} onChange={setRole} />

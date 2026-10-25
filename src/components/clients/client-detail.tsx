@@ -186,7 +186,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
             <input id="client-currency" list="currencies" value={form.currency} onChange={text('currency')} placeholder="USD" maxLength={10} className={inputCls} />
             <datalist id="currencies">{CURRENCIES.map(t => <option key={t} value={t} />)}</datalist>
           </Field>
-          <Field label="Invoices go to" htmlFor="client-billing-email" tip="The email address this client wants invoices sent to, usually accounts payable. For your records; benchtop doesn’t send invoices.">
+          <Field label="Invoices go to" htmlFor="client-billing-email" tip="The email address this client wants invoices sent to, usually accounts payable. For your records; Benchtop doesn’t send invoices.">
             <input id="client-billing-email" type="email" value={form.billingEmail} onChange={text('billingEmail')} placeholder="ap@client.com" className={inputCls} />
           </Field>
           <label className="flex items-center gap-2 text-sm text-gray-700 sm:mt-6"

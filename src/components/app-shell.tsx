@@ -15,7 +15,7 @@ const NAV = [
   { href: '/ingredients', label: 'Ingredients', icon: FlaskConical, tip: 'Your ingredient library: nutrition, allergens, suppliers, costs and stock' },
   { href: '/suppliers', label: 'Suppliers', icon: Truck, tip: 'The companies you buy ingredients from, with contacts and terms' },
   { href: '/settings', label: 'Settings', icon: Settings, tip: 'Your profile, password, preferences, team and billing' },
-  { href: '/help', label: 'Help', icon: HelpCircle, tip: 'Step-by-step guides and answers for every part of benchtop' },
+  { href: '/help', label: 'Help', icon: HelpCircle, tip: 'Step-by-step guides and answers for every part of Benchtop' },
 ]
 
 // The phone's bottom bar shows the first four of these the user has; the rest of the menu sits under More.
@@ -116,6 +116,12 @@ export function AppShell({
 
       {/* Main content — extra bottom padding on mobile for the nav bar */}
       <main className="flex-1 min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0 print:pb-0 flex flex-col">
+        {/* Slim logo strip — mobile only, where there's no sidebar. It scrolls away with the page. */}
+        <div className="sm:hidden px-4 py-2 bg-ink-900 print:hidden">
+          <Link href="/projects" aria-label="Benchtop home" className="inline-flex">
+            <Logo variant="wordmark" height={11} className="text-lcd-300" />
+          </Link>
+        </div>
         {isPlatformAdmin && <UnreadFeedbackBanner count={unreadFeedback} />}
         <div className="flex-1 min-w-0">{children}</div>
         <FeedbackLink />

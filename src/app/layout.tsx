@@ -17,11 +17,11 @@ const dmMono = DM_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'benchtop — Food formulation R&D',
+  title: 'Benchtop — Food formulation R&D',
   description: 'Formulation R&D workspace',
   appleWebApp: {
     capable: true,
-    title: 'benchtop',
+    title: 'Benchtop',
     statusBarStyle: 'black-translucent',
   },
 }

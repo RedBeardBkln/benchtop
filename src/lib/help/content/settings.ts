@@ -64,7 +64,7 @@ export const settings: HelpSection = {
       blocks: [
         {
           type: 'p',
-          text: '**COGS** means “cost of goods sold”. In benchtop it means the raw material cost of a recipe: what the ingredients in a batch, a kilogram, a serving or a package cost you. It is off by default so people who don’t deal with costs never see it.',
+          text: '**COGS** means “cost of goods sold”. In Benchtop it means the raw material cost of a recipe: what the ingredients in a batch, a kilogram, a serving or a package cost you. It is off by default so people who don’t deal with costs never see it.',
         },
         {
           type: 'steps',
@@ -100,12 +100,12 @@ export const settings: HelpSection = {
           items: [
             'Go to [Settings → Account](/settings/account) and find the **Sign-in email** card.',
             'Type your **New email** and click `Change email`.',
-            'Open your new inbox and click the confirmation link benchtop sent. Your sign-in email changes only after you click it. Until then, keep signing in with your old email.',
+            'Open your new inbox and click the confirmation link Benchtop sent. Your sign-in email changes only after you click it. Until then, keep signing in with your old email.',
           ],
         },
         {
           type: 'tip',
-          text: 'Don’t see the confirmation email? Check your spam or junk folder. It comes from benchtop <noreply@benchtop.solutions>. Depending on security settings, a link may also be sent to your old address; if so, click both.',
+          text: 'Don’t see the confirmation email? Check your spam or junk folder. It comes from Benchtop <noreply@benchtop.solutions>. Depending on security settings, a link may also be sent to your old address; if so, click both.',
         },
       ],
     },
@@ -119,7 +119,7 @@ export const settings: HelpSection = {
           items: [
             'On the [sign-in page](/login), click **Forgot password?** next to the Password label (or go straight to [Reset password](/forgot-password)).',
             'Type your email and click `Send reset link`. You’ll see “Check your email”.',
-            'Open the email from benchtop **on the same device and in the same browser** you used to ask for it, and click the link.',
+            'Open the email from Benchtop **on the same device and in the same browser** you used to ask for it, and click the link.',
             'On **Set new password**, type your new password twice (at least 8 characters) and click `Update password`.',
             'You’ll see “Password updated — please sign in”.',
           ],
@@ -152,11 +152,11 @@ export const settings: HelpSection = {
     {
       slug: 'accept-terms',
       title: 'Accepting updated Terms and Privacy Policy',
-      summary: 'Why benchtop sometimes asks you to agree again before continuing.',
+      summary: 'Why Benchtop sometimes asks you to agree again before continuing.',
       blocks: [
         {
           type: 'p',
-          text: 'When the Terms of Service or Privacy Policy change, everyone on the account (not just the owner) is asked to accept the new version before using benchtop again.',
+          text: 'When the Terms of Service or Privacy Policy change, everyone on the account (not just the owner) is asked to accept the new version before using Benchtop again.',
         },
         {
           type: 'steps',

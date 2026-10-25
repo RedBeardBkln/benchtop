@@ -2453,7 +2453,7 @@ export function ReverseWizard({
               <div>
                 <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                   <Sparkles size={16} className="text-violet-500" />
-                  <Term tip="benchtop’s AI estimates the product category, on-hand matches, likely % ranges and data sources. It can be wrong; always check.">AI research</Term> synthesis
+                  <Term tip="Benchtop’s AI estimates the product category, on-hand matches, likely % ranges and data sources. It can be wrong; always check.">AI research</Term> synthesis
                 </h3>
                 <p className="text-sm text-gray-500">
                   Claude analyzes the product profile and suggests identification, percentages, and formulation notes.

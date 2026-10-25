@@ -470,7 +470,7 @@ export function ProjectDetail({ id }: { id: string }) {
                       <tr>
                         <th className="px-4 py-3 text-left font-medium">Name</th>
                         <th className="px-4 py-3 text-left font-medium">
-                          <Term tip="Ground up: you build the recipe yourself. Reverse: benchtop works out a recipe that matches an existing label.">Mode</Term>
+                          <Term tip="Ground up: you build the recipe yourself. Reverse: Benchtop works out a recipe that matches an existing label.">Mode</Term>
                         </th>
                         <th className="px-4 py-3 text-left font-medium"><Term t="version">Version</Term></th>
                         <th className="px-4 py-3 text-left font-medium">

@@ -34,7 +34,7 @@ export const suppliers: HelpSection = {
         },
         {
           type: 'tip',
-          text: 'You don’t need to type “https://” in the website; benchtop adds it. You can also create a supplier while linking one to an ingredient (**+ New supplier…** on the ingredient’s **Suppliers** tab).',
+          text: 'You don’t need to type “https://” in the website; Benchtop adds it. You can also create a supplier while linking one to an ingredient (**+ New supplier…** on the ingredient’s **Suppliers** tab).',
         },
       ],
     },
@@ -162,7 +162,7 @@ export const suppliers: HelpSection = {
     },
     {
       q: 'Can two suppliers have the same name?',
-      a: 'No. benchtop tells you when a supplier with that name already exists (capital letters and spaces at the ends don’t count as a difference). Open the existing supplier instead, or add something to tell them apart, such as the country.',
+      a: 'No. Benchtop tells you when a supplier with that name already exists (capital letters and spaces at the ends don’t count as a difference). Open the existing supplier instead, or add something to tell them apart, such as the country.',
     },
   ],
 }

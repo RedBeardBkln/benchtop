@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* benchtop brand tokens, from design_system/tokens. LCD lime is the hero (the lit
+/* Benchtop brand tokens, from design_system/tokens. LCD lime is the hero (the lit
    backlight), ink is every lit segment (text, borders, dark surfaces), paper is the page,
    tangerine is the one warm accent (AI and human touches). Never pure black or white. */
 :root {

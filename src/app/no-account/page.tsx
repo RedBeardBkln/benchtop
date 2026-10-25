@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { Logo } from '@/components/logo'
 import { getContext } from '@/lib/auth/context'
 import { SignOutButton } from '@/components/settings/sign-out-button'
 
@@ -13,11 +14,12 @@ export default async function NoAccountPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-sm border border-gray-200 p-8 space-y-4">
+        <Logo variant="wordmark" height={13} className="text-ink-700" />
         <h1 className="text-2xl font-semibold text-gray-900">No account found</h1>
         <p className="text-sm text-gray-600">
-          You are signed in, but this login is not linked to a benchtop account. Access is by invitation only. If you
+          You are signed in, but this login is not linked to a Benchtop account. Access is by invitation only. If you
           were invited, open the invitation link you were sent. Otherwise, please contact the person who manages
-          benchtop access.
+          Benchtop access.
         </p>
         <SignOutButton />
       </div>

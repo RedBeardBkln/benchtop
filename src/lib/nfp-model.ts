@@ -293,7 +293,7 @@ export function buildNfpModel(input: BuildNfpInput): NfpModel {
         declared: `${formatExtraAmount(n.value, n.unit)} ${n.unit}`,
         applied: 'Voluntary nutrient shown to a readable precision.',
         lines: ['grams → 1 decimal', 'under 0.1 → 2 decimals', 'under 10 → 1 decimal', '10 and above → whole number'],
-        note: 'FDA lists specific “levels of significance” for voluntary vitamins and minerals; benchtop does not apply those yet, so confirm this value before relying on it.',
+        note: 'FDA lists specific “levels of significance” for voluntary vitamins and minerals; Benchtop does not apply those yet, so confirm this value before relying on it.',
       },
     }
     if (n.dailyValue != null && n.dailyValue > 0) {

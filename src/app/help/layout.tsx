@@ -12,7 +12,7 @@ export default async function HelpLayout({ children }: { children: React.ReactNo
       <div className="px-4 py-5 sm:px-8 sm:py-8 max-w-6xl">
         <div className="mb-5">
           <h1 className="text-2xl font-semibold text-gray-900">Help & FAQ</h1>
-          <p className="text-sm text-gray-500 mt-1">Step-by-step guides for everything in benchtop, and answers to common questions.</p>
+          <p className="text-sm text-gray-500 mt-1">Step-by-step guides for everything in Benchtop, and answers to common questions.</p>
         </div>
         <div className="mb-6 max-w-2xl">
           <HelpSearch />

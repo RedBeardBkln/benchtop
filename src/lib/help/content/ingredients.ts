@@ -201,12 +201,12 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'p',
-          text: 'Categories have three levels, such as **Starches › Tapioca › Native**. benchtop comes with 20 standard categories (Proteins, Sweeteners, Fats & Oils, Hydrocolloids & Gums and so on). Categories you add become available to everyone on your account.',
+          text: 'Categories have three levels, such as **Starches › Tapioca › Native**. Benchtop comes with 20 standard categories (Proteins, Sweeteners, Fats & Oils, Hydrocolloids & Gums and so on). Categories you add become available to everyone on your account.',
         },
         { type: 'h', text: 'Automatic capitalization' },
         {
           type: 'p',
-          text: 'benchtop capitalizes every word of an ingredient’s name so your library looks consistent: “tapioca starch, native” becomes “Tapioca Starch, Native”. Common abbreviations stay in capitals (MCT, DATEM, WPI, GMO and so on), words you already capitalized such as “pH” or “McCormick” are left alone, and units after numbers stay lowercase (“500 mg”).',
+          text: 'Benchtop capitalizes every word of an ingredient’s name so your library looks consistent: “tapioca starch, native” becomes “Tapioca Starch, Native”. Common abbreviations stay in capitals (MCT, DATEM, WPI, GMO and so on), words you already capitalized such as “pH” or “McCormick” are left alone, and units after numbers stay lowercase (“500 mg”).',
         },
       ],
     },
@@ -278,7 +278,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'tip',
-          text: 'Leave pack size or cost **blank** if you don’t know them; benchtop won’t accept 0. If you type a **New supplier** name that already exists, the ingredient is linked to the existing supplier instead of making a second one.',
+          text: 'Leave pack size or cost **blank** if you don’t know them; Benchtop won’t accept 0. If you type a **New supplier** name that already exists, the ingredient is linked to the existing supplier instead of making a second one.',
         },
         {
           type: 'p',
@@ -315,7 +315,7 @@ export const ingredients: HelpSection = {
           type: 'list',
           items: [
             'A supplier price **in use** always wins over the manual price.',
-            'Only prices per **kg, g, lb, oz or tonne (mt)** can be used, because benchtop needs a weight to convert. Prices per case, bag, drum, pail, each, L or gal can’t (the button is greyed out). Re-enter the price per kg or lb, or type a manual price.',
+            'Only prices per **kg, g, lb, oz or tonne (mt)** can be used, because Benchtop needs a weight to convert. Prices per case, bag, drum, pail, each, L or gal can’t (the button is greyed out). Re-enter the price per kg or lb, or type a manual price.',
             'Only one supplier price can be in use. To stop using it, click **✓ In use**.',
           ],
         },
@@ -380,7 +380,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'p',
-          text: 'benchtop stops you creating a new duplicate with the message “An ingredient with the same name, brand, supplier and item code already exists”. Change one of the four, or use the existing ingredient. If duplicates already exist, the list shows a yellow banner and a **Duplicate — rename or merge** button on each one.',
+          text: 'Benchtop stops you creating a new duplicate with the message “An ingredient with the same name, brand, supplier and item code already exists”. Change one of the four, or use the existing ingredient. If duplicates already exist, the list shows a yellow banner and a **Duplicate — rename or merge** button on each one.',
         },
         { type: 'h', text: 'Fixing a duplicate' },
         {
@@ -411,7 +411,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'note',
-          text: 'An ingredient that’s used in a formulation (archived ones count too) can’t be deleted; benchtop tells you how many formulations use it. Check its **Formulations** tab, remove it from those recipes (or swap it out), then try again. If it’s a duplicate, merge it instead.',
+          text: 'An ingredient that’s used in a formulation (archived ones count too) can’t be deleted; Benchtop tells you how many formulations use it. Check its **Formulations** tab, remove it from those recipes (or swap it out), then try again. If it’s a duplicate, merge it instead.',
         },
         { type: 'h', text: 'Archived ingredients' },
         {
@@ -427,7 +427,7 @@ export const ingredients: HelpSection = {
       blocks: [
         {
           type: 'p',
-          text: 'Lab Intake is for getting lots of materials into benchtop quickly, for example when you set up a new lab or do a stock count. Go to [Ingredients](/ingredients) and click `Lab intake`. The list is shared with your team and stays until you upload it.',
+          text: 'Lab Intake is for getting lots of materials into Benchtop quickly, for example when you set up a new lab or do a stock count. Go to [Ingredients](/ingredients) and click `Lab intake`. The list is shared with your team and stays until you upload it.',
         },
         { type: 'h', text: 'Step 1: Add items' },
         {
@@ -499,10 +499,10 @@ export const ingredients: HelpSection = {
     },
     {
       q: 'My spec sheet gives vitamin D in IU. What do I enter?',
-      a: 'benchtop doesn’t accept IU. Convert to the unit shown (for vitamin D, mcg: divide IU by 40).',
+      a: 'Benchtop doesn’t accept IU. Convert to the unit shown (for vitamin D, mcg: divide IU by 40).',
     },
     {
-      q: 'Why did benchtop change the capitalization of my ingredient’s name?',
+      q: 'Why did Benchtop change the capitalization of my ingredient’s name?',
       a: 'Names are automatically capitalized word by word so the library is consistent. Abbreviations like MCT and DATEM stay in capitals, and words you capitalized yourself are kept.',
     },
     {
@@ -531,7 +531,7 @@ export const ingredients: HelpSection = {
     },
     {
       q: 'Why is “Use this price” greyed out on the Cost tab?',
-      a: 'That supplier price is per case, bag, drum, pail, each, L or gal, so benchtop can’t turn it into a price per kg. Enter the price per kg or lb instead.',
+      a: 'That supplier price is per case, bag, drum, pail, each, L or gal, so Benchtop can’t turn it into a price per kg. Enter the price per kg or lb instead.',
     },
     {
       q: 'Which cost does a formulation use if I have both a manual price and a supplier price?',

@@ -96,7 +96,7 @@ export function AccountSettings({
             </dd>
           </div>
           <div><dt className="text-gray-500">Created</dt><dd className="text-gray-900">{formatDate(createdAt)}</dd></div>
-          <div className="sm:col-span-2"><dt className="text-gray-500"><Term tip="Your account’s unique ID. Quote it if you contact benchtop about this account.">Account ID</Term></dt><dd className="text-gray-900 font-mono text-xs break-all">{accountId}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-gray-500"><Term tip="Your account’s unique ID. Quote it if you contact Benchtop about this account.">Account ID</Term></dt><dd className="text-gray-900 font-mono text-xs break-all">{accountId}</dd></div>
         </dl>
         <form onSubmit={saveName} className="space-y-3 max-w-lg">
           <Field label="Account name" htmlFor="accountName" hint={isOwner ? undefined : 'Only the account owner can rename the account.'}>
