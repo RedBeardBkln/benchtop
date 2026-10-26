@@ -79,11 +79,14 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   }
 
   // Targets go into each nutrient's own unit, the unit ingredient amounts are stored in
-  const units = await db.select({ name: nutrients.name, unit: nutrients.unit }).from(nutrients)
+  const units = await db
+    .select({ name: nutrients.name, unit: nutrients.unit, dv: nutrients.dailyValueAmount })
+    .from(nutrients)
   const { targets, unconvertible } = targetsInNutrientUnits(
     (project?.targets ?? []) as SolverInput['targets'],
     t => t.nutrient,
     new Map(units.map(u => [u.name, u.unit])),
+    new Map(units.map(u => [u.name, u.dv != null ? parseFloat(u.dv) : null])),
   )
 
   const input: SolverInput = {

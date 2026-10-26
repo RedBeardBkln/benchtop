@@ -41,3 +41,44 @@ export function convertToUnit(value: number, fromUnit: string, toUnit: string): 
   if (from.base === 'kj' && to.base === 'kcal') return value / 4.184
   return null
 }
+
+// Project targets can also be typed as a share instead of an amount:
+//   "%"    — percent of the product's weight, i.e. grams per 100 g (20% protein = 20 g per 100 g)
+//   "% DV" — percent of the nutrient's FDA Daily Value (20% DV calcium = 260 mg when the DV is 1,300 mg)
+export const PCT_OF_100G = '%'
+export const PCT_DV = '% DV'
+
+export const isPctUnit = (unit: string) => unit === PCT_OF_100G || unit === PCT_DV
+
+/** "20 g", "20%", "20% DV": a value with its unit, as targets show it */
+export function withUnit(value: number | string, unit: string): string {
+  return isPctUnit(unit) ? `${value}${unit}` : `${value} ${unit}`
+}
+
+/**
+ * An amount of a nutrient, in its own unit, expressed in a target's unit. A % DV needs the
+ * nutrient's Daily Value (in the nutrient's unit). Null when the two can't be compared, e.g.
+ * a % of weight for an energy nutrient, or a % DV for a nutrient without a Daily Value.
+ */
+export function amountInTargetUnit(
+  amount: number,
+  nutrientUnit: string,
+  targetUnit: string,
+  dailyValue: number | null | undefined,
+): number | null {
+  if (targetUnit === PCT_OF_100G) return convertToUnit(amount, nutrientUnit, 'g')
+  if (targetUnit === PCT_DV) return dailyValue && dailyValue > 0 ? (amount / dailyValue) * 100 : null
+  return convertToUnit(amount, nutrientUnit, targetUnit)
+}
+
+/** The reverse of amountInTargetUnit: a target value, in the nutrient's own unit */
+export function targetValueInNutrientUnit(
+  value: number,
+  targetUnit: string,
+  nutrientUnit: string,
+  dailyValue: number | null | undefined,
+): number | null {
+  if (targetUnit === PCT_OF_100G) return convertToUnit(value, 'g', nutrientUnit)
+  if (targetUnit === PCT_DV) return dailyValue && dailyValue > 0 ? (value / 100) * dailyValue : null
+  return convertToUnit(value, targetUnit, nutrientUnit)
+}

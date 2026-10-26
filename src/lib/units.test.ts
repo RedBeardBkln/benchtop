@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { convertToUnit, parseUnit } from './units'
+import { amountInTargetUnit, convertToUnit, parseUnit, targetValueInNutrientUnit, withUnit } from './units'
+import { evaluateTargets } from './target-validation'
+import type { NutrientResult } from './formulation-calc'
+import type { ProjectTarget } from './types'
 import { targetsInNutrientUnits } from './solver'
 
 describe('convertToUnit', () => {
@@ -64,5 +67,60 @@ describe('targetsInNutrientUnits', () => {
     )
     expect(targets).toEqual([])
     expect(unconvertible).toHaveLength(1)
+  })
+})
+
+describe('% of 100g and % DV targets', () => {
+  it('converts a share to and from the nutrient’s unit', () => {
+    // 20% = 20 g per 100 g
+    expect(targetValueInNutrientUnit(20, '%', 'g', 50)).toBe(20)
+    expect(targetValueInNutrientUnit(0.5, '%', 'mg', null)).toBe(500)
+    expect(amountInTargetUnit(500, 'mg', '%', null)).toBe(0.5)
+    // 20% DV of calcium (DV 1,300 mg) = 260 mg
+    expect(targetValueInNutrientUnit(20, '% DV', 'mg', 1300)).toBe(260)
+    expect(amountInTargetUnit(260, 'mg', '% DV', 1300)).toBe(20)
+  })
+
+  it('can’t give energy as % of weight, or % DV without a Daily Value', () => {
+    expect(targetValueInNutrientUnit(10, '%', 'kcal', 2000)).toBeNull()
+    expect(amountInTargetUnit(5, 'g', '% DV', null)).toBeNull()
+  })
+
+  it('formats shares without a space', () => {
+    expect(withUnit(20, '%')).toBe('20%')
+    expect(withUnit(20, '% DV')).toBe('20% DV')
+    expect(withUnit(20, 'mg')).toBe('20 mg')
+  })
+
+  it('solves % targets in the nutrient’s unit, with % of weight always per 100 g', () => {
+    const { targets, unconvertible } = targetsInNutrientUnits(
+      [
+        { nutrient: 'Protein', value: 20, unit: '%', basis: 'per_serving' },
+        { nutrient: 'Calcium', value: 10, valueMax: 20, unit: '% DV', basis: 'per_serving' },
+        { nutrient: 'Fiber', value: 10, unit: '% DV', basis: 'per_serving' },
+      ],
+      t => t.nutrient,
+      new Map([['Protein', 'g'], ['Calcium', 'mg'], ['Fiber', 'g']]),
+      new Map([['Protein', 50], ['Calcium', 1300], ['Fiber', null]]),
+    )
+    expect(targets[0]).toMatchObject({ value: 20, unit: 'g', basis: 'per_100g' })
+    expect(targets[1]).toMatchObject({ value: 130, valueMax: 260, unit: 'mg', basis: 'per_serving' })
+    expect(unconvertible.map(t => t.nutrient)).toEqual(['Fiber'])
+  })
+
+  it('checks a formulation against % targets', () => {
+    const results: NutrientResult[] = [
+      { nutrientId: 'p', name: 'Protein', unit: 'g', category: 'macros', perFinished100g: 22, dailyValueAmount: 50 },
+      { nutrientId: 'c', name: 'Calcium', unit: 'mg', category: 'minerals', perFinished100g: 400, dailyValueAmount: 1300 },
+    ]
+    const targets: ProjectTarget[] = [
+      { nutrient: 'Protein', label: 'Protein', comparator: '>=', value: 20, unit: '%', basis: 'per_100g' },
+      // 400 mg/100 g × 50 g serving = 200 mg = 15.4% DV
+      { nutrient: 'Calcium', label: 'Calcium', comparator: '>=', value: 20, unit: '% DV', basis: 'per_serving' },
+    ]
+    const [protein, calcium] = evaluateTargets(targets, results, 50)
+    expect(protein).toMatchObject({ status: 'pass', actual: 22 })
+    expect(calcium.status).toBe('fail')
+    expect(calcium.actual).toBeCloseTo(15.38, 2)
   })
 })

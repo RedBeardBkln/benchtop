@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Printer, ArrowLeft } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
+import { withUnit } from '@/lib/units'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
 import { formatWeightG } from '@/lib/weight'
@@ -349,7 +350,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                         </td>
                         <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">
                           {actual != null
-                            ? `${formatAmt(actual, t.unit)} ${t.unit}`
+                            ? withUnit(formatAmt(actual, t.unit), t.unit)
                             : <span className="text-gray-500 text-xs">
                                 {t.basis === 'per_serving' && !servingSizeG ? 'set serving size' : '—'}
                               </span>

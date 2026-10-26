@@ -14,7 +14,7 @@
 const Solver = require('javascript-lp-solver')
 
 import type { ProjectTarget } from '@/lib/types'
-import { convertToUnit } from '@/lib/units'
+import { PCT_OF_100G, targetValueInNutrientUnit } from '@/lib/units'
 
 /**
  * Ingredient amounts are in each nutrient's own unit, so targets must be too: a "Vitamin K ≥ 0.1 mg"
@@ -25,6 +25,8 @@ export function targetsInNutrientUnits<T extends { unit: string; value: number; 
   targets: T[],
   nutrientOf: (t: T) => string | null | undefined,
   unitByNutrient: Map<string, string>,
+  // Daily Values in each nutrient's own unit, for targets typed as % DV
+  dvByNutrient?: Map<string, number | null>,
 ): { targets: T[]; unconvertible: T[] } {
   const out: T[] = []
   const unconvertible: T[] = []
@@ -32,10 +34,13 @@ export function targetsInNutrientUnits<T extends { unit: string; value: number; 
     const name = nutrientOf(t)
     const unit = name ? unitByNutrient.get(name) : undefined
     if (!unit) { out.push(t); continue }   // unknown nutrient: the solver reports it as no-data
-    const value = convertToUnit(t.value, t.unit, unit)
-    const valueMax = t.valueMax != null ? convertToUnit(t.valueMax, t.unit, unit) : undefined
+    const dv = dvByNutrient?.get(name!)
+    const value = targetValueInNutrientUnit(t.value, t.unit, unit, dv)
+    const valueMax = t.valueMax != null ? targetValueInNutrientUnit(t.valueMax, t.unit, unit, dv) : undefined
     if (value == null || valueMax === null) { unconvertible.push(t); continue }
-    out.push({ ...t, value, ...(valueMax !== undefined ? { valueMax } : {}), unit })
+    // A % of weight is grams per 100 g, whatever basis the target was given
+    const basis = t.unit === PCT_OF_100G && 'basis' in t ? { basis: 'per_100g' } : {}
+    out.push({ ...t, value, ...(valueMax !== undefined ? { valueMax } : {}), unit, ...basis })
   }
   return { targets: out, unconvertible }
 }

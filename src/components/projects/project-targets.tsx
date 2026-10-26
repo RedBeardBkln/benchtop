@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react'
 import type { Nutrient, ProjectTarget } from '@/lib/types'
 import { Term } from '@/components/term'
+import { PCT_DV, PCT_OF_100G, convertToUnit, isPctUnit, withUnit } from '@/lib/units'
 
 const COMPARATOR_LABELS: Record<string, string> = {
   '>=': '≥ min',
@@ -23,9 +24,30 @@ const EMPTY_TARGET = (): ProjectTarget => ({
   basis: 'per_100g',
 })
 
+const UNIT_TIP = 'The nutrient’s own unit, % of 100g (a share of the product’s weight: 20% = 20 g in every 100 g), or % DV (a share of the FDA Daily Value).'
+
+/**
+ * Units a target can be given in: the nutrient's own, % of 100g for nutrients measured by weight,
+ * and % DV for nutrients with a Daily Value. `ok: false` keeps a saved unit that no longer fits listed.
+ */
+function targetUnitOptions(
+  nutrient: Nutrient | undefined,
+  current: string,
+): Array<{ value: string; label: string; ok: boolean }> {
+  const base = nutrient?.unit ?? (isPctUnit(current) ? 'g' : current)
+  const dv = nutrient?.dailyValueAmount != null ? parseFloat(nutrient.dailyValueAmount) : null
+  const opts = [{ value: base, label: base, ok: true }]
+  if (current !== base && !isPctUnit(current)) opts.push({ value: current, label: current, ok: true })
+  const byWeight = convertToUnit(1, base, 'g') != null
+  if (byWeight || current === PCT_OF_100G) opts.push({ value: PCT_OF_100G, label: '% of 100g', ok: byWeight })
+  const hasDv = !!dv && dv > 0
+  if (hasDv || current === PCT_DV) opts.push({ value: PCT_DV, label: '% DV', ok: hasDv })
+  return opts
+}
+
 function fmtTarget(t: ProjectTarget): string {
-  const v = `${t.value} ${t.unit}`
-  if (t.comparator === 'range') return `${t.value} – ${t.valueMax ?? '?'} ${t.unit}`
+  const v = withUnit(t.value, t.unit)
+  if (t.comparator === 'range') return `${t.value} – ${withUnit(t.valueMax ?? '?', t.unit)}`
   if (t.comparator === '>=') return `≥ ${v}`
   if (t.comparator === '<=') return `≤ ${v}`
   return `= ${v}`
@@ -46,16 +68,29 @@ function TargetForm({
 }) {
   const [draft, setDraft] = useState<ProjectTarget>(initial)
 
+  const nutrient = nutrients?.find(n => n.name === draft.nutrient)
+  const unitOptions = targetUnitOptions(nutrient, draft.unit)
+
   function handleNutrientChange(name: string) {
     const n = nutrients?.find(n => n.name === name)
-    setDraft(d => ({ ...d, nutrient: name || null, label: name || d.label, unit: n?.unit ?? d.unit }))
+    setDraft(d => {
+      // Keep a % choice when the new nutrient allows it; otherwise use the nutrient's unit
+      const keep = isPctUnit(d.unit) && targetUnitOptions(n, d.unit).some(o => o.value === d.unit && o.ok)
+      return { ...d, nutrient: name || null, label: name || d.label, unit: keep ? d.unit : n?.unit ?? d.unit }
+    })
   }
 
-  const canSave = !!(draft.nutrient || draft.label.trim()) && draft.value > 0
+  function handleUnitChange(unit: string) {
+    // A % of weight is grams per 100 g, so it's always per 100g
+    setDraft(d => ({ ...d, unit, ...(unit === PCT_OF_100G ? { basis: 'per_100g' as const, servingSizeG: undefined } : {}) }))
+  }
+
+  const unitOk = unitOptions.find(o => o.value === draft.unit)?.ok !== false
+  const canSave = !!(draft.nutrient || draft.label.trim()) && draft.value > 0 && unitOk
 
   return (
     <div className="border border-blue-100 rounded-lg p-3 bg-blue-50/30 space-y-3">
-      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center">
+      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_auto] sm:items-center">
         {/* Nutrient */}
         <select
           value={draft.nutrient ?? ''}
@@ -67,7 +102,7 @@ function TargetForm({
           {nutrients?.map(n => <option key={n.id} value={n.name}>{n.name}</option>)}
         </select>
 
-        <div className="flex gap-2 items-center sm:contents">
+        <div className="flex flex-wrap gap-2 items-center">
           {/* Comparator */}
           <select
             value={draft.comparator}
@@ -90,8 +125,7 @@ function TargetForm({
             className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
           />
 
-          {/* ValueMax or unit label */}
-          {draft.comparator === 'range' ? (
+          {draft.comparator === 'range' && (
             <input
               type="number" min="0" step="any"
               value={draft.valueMax ?? ''}
@@ -100,9 +134,18 @@ function TargetForm({
               data-tip="The highest allowed amount"
               className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
             />
-          ) : (
-            <span className="text-xs text-gray-400 w-20 text-center">{draft.unit}</span>
           )}
+
+          {/* Unit: the nutrient's own, or a share */}
+          <select
+            value={draft.unit}
+            onChange={e => handleUnitChange(e.target.value)}
+            aria-label="Unit"
+            data-tip={UNIT_TIP}
+            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+          >
+            {unitOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
 
           {/* Basis */}
           <select
@@ -112,8 +155,11 @@ function TargetForm({
               basis: e.target.value as ProjectTarget['basis'],
               servingSizeG: e.target.value === 'per_100g' ? undefined : d.servingSizeG,
             }))}
-            data-tip="per 100g: measured in 100 g of the finished product. per serving: measured in one serving."
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            disabled={draft.unit === PCT_OF_100G}
+            data-tip={draft.unit === PCT_OF_100G
+              ? 'A % of weight is always per 100 g: 20% means 20 g in every 100 g, and in every serving’s weight.'
+              : 'per 100g: measured in 100 g of the finished product. per serving: measured in one serving.'}
+            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white disabled:text-gray-400"
           >
             <option value="per_100g">per 100g</option>
             <option value="per_serving">per serving</option>
@@ -147,7 +193,9 @@ function TargetForm({
           disabled={!canSave || saving}
           data-tip={canSave
             ? 'Saves the target to the project. Every formulation in it is checked against it.'
-            : 'Choose a nutrient and enter a value greater than 0 first.'}
+            : !unitOk
+              ? 'This nutrient can’t be given in that unit. Choose another.'
+              : 'Choose a nutrient and enter a value greater than 0 first.'}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           <Check size={12} />

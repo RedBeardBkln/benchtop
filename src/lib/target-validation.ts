@@ -1,6 +1,6 @@
 import type { ProjectTarget } from '@/lib/types'
 import type { NutrientResult } from '@/lib/formulation-calc'
-import { convertToUnit } from '@/lib/units'
+import { PCT_OF_100G, amountInTargetUnit, convertToUnit, withUnit } from '@/lib/units'
 
 export { convertToUnit }
 
@@ -26,16 +26,18 @@ function resolveActual(
   if (!r) return null
   // Use formulation serving size first, then fall back to the target's own reference serving size
   const servingSizeG = formulationServingG ?? t.servingSizeG
-  if (t.basis === 'per_serving' && !servingSizeG) return null
+  // A % of weight is the same per 100 g and per serving
+  const perServing = t.basis === 'per_serving' && t.unit !== PCT_OF_100G
+  if (perServing && !servingSizeG) return null
 
   // Convert the actual per-100g value into the target's unit before comparing.
   // Without this, a target specified in g would silently never match a value
-  // stored in mg (or vice-versa). We only handle the common FDA mass/energy
-  // conversions — anything else returns null ('no-data') to surface the mismatch.
-  const converted = convertToUnit(r.perFinished100g, r.unit, t.unit)
+  // stored in mg (or vice-versa). Handles the common FDA mass/energy conversions,
+  // % of weight and % DV; anything else returns null ('no-data') to surface the mismatch.
+  const converted = amountInTargetUnit(r.perFinished100g, r.unit, t.unit, r.dailyValueAmount)
   if (converted == null) return null
 
-  return t.basis === 'per_serving'
+  return perServing
     ? converted * (servingSizeG! / 100)
     : converted
 }
@@ -67,11 +69,11 @@ export function validateTarget(
 }
 
 export function fmtRequirement(t: ProjectTarget): string {
-  const v = `${t.value} ${t.unit}`
+  const v = withUnit(t.value, t.unit)
   if (t.comparator === '>=') return `≥ ${v}`
   if (t.comparator === '<=') return `≤ ${v}`
   if (t.comparator === '=') return `= ${v}`
-  if (t.comparator === 'range') return `${t.value} – ${t.valueMax ?? '?'} ${t.unit}`
+  if (t.comparator === 'range') return `${t.value} – ${withUnit(t.valueMax ?? '?', t.unit)}`
   return v
 }
 

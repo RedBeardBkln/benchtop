@@ -20,6 +20,7 @@ import { LockToggle } from '@/components/formulations/lock-toggle'
 import { resolveLines, type Anchor } from '@/lib/formula-lock'
 import { PCT_DECIMALS_MIN, PCT_DECIMALS_MAX, readPctDecimals, writePctDecimals } from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
+import { withUnit } from '@/lib/units'
 import { serializePrintSections, type PrintSection } from '@/lib/print-sections'
 import type { SolverResult } from '@/lib/solver'
 import { IngredientSidePanel } from '@/components/ingredients/ingredient-side-panel'
@@ -1801,7 +1802,7 @@ export function FormulationGrid({ id }: { id: string }) {
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums text-gray-700">
                         {actual != null
-                          ? `${formatAmt(actual, t.unit)} ${t.unit}`
+                          ? withUnit(formatAmt(actual, t.unit), t.unit)
                           : <span className="text-gray-300 text-xs">
                               {t.basis === 'per_serving' && !serving ? 'set serving size' : '—'}
                             </span>

@@ -151,7 +151,8 @@ export const projects: HelpSection = {
             'Choose the nutrient from the list. Its unit (g, mg, kcal…) fills in automatically.',
             'Choose the rule: `≥ min` (at least), `≤ max` (no more than), `= exact`, or `between` (a range, with a min and a max).',
             'Type the number. It must be greater than 0.',
-            'Choose the basis: `per 100g` or `per serving`. For per serving, you can also type a reference serving size in grams.',
+            'Choose the unit: the nutrient’s own unit, `% of 100g` (a share of the product’s weight, so 20% protein means 20 g of protein in every 100 g), or `% DV` (a share of the FDA Daily Value, so 20% DV calcium means 260 mg). `% of 100g` is offered only for nutrients measured by weight, and `% DV` only for nutrients that have a Daily Value.',
+            'Choose the basis: `per 100g` or `per serving`. For per serving, you can also type a reference serving size in grams. A `% of 100g` target is always per 100g, since the share is the same in any amount of the product.',
             'Click `Save target`. You’ll see “Target saved”.',
           ],
         },
@@ -215,7 +216,7 @@ export const projects: HelpSection = {
     },
     {
       q: 'Why does a target show “—” instead of pass or fail?',
-      a: 'Benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as IU versus mcg; (4) a “between” target has no maximum.',
+      a: 'Benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as IU versus mcg, or a % DV target for a nutrient that has no Daily Value; (4) a “between” target has no maximum.',
     },
     {
       q: 'Why can’t I save a target of 0 (for example, 0 g trans fat)?',
