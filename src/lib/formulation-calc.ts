@@ -6,6 +6,8 @@ export type CalcLine = {
   ingredientId: string
   weightG: number
   nutrients: Array<{ nutrientId: string; amountPer100g: number }>
+  /** The ingredient's water, % of its weight; needed for dry-basis values */
+  moisturePct?: number | null
 }
 
 export type CalcNutrient = {
@@ -88,7 +90,23 @@ export function calcNutrientProfile(opts: {
     })
   }
 
-  return { results, totalWeightG, finishedWeightG, concentrationWeightG, processYield }
+  // Dry matter: what's left of the batch without its water. Process losses don't change the dry-basis
+  // profile (production loss takes solids and nutrients alike; moisture loss takes only water), so it's
+  // measured on the ingredients as weighed. Unknown when any ingredient used has no moisture %.
+  const missingMoistureIds = lines.filter(l => l.weightG > 0 && l.moisturePct == null).map(l => l.ingredientId)
+  const dryMatterG = missingMoistureIds.length > 0
+    ? null
+    : lines.reduce((s, l) => s + (l.weightG > 0 ? l.weightG * (1 - Math.min(100, Math.max(0, l.moisturePct ?? 0)) / 100) : 0), 0)
+
+  return { results, totalWeightG, finishedWeightG, concentrationWeightG, processYield, dryMatterG, missingMoistureIds }
+}
+
+/**
+ * Multiplier from a per-100 g finished value to per 100 g of dry matter, or null when the dry matter
+ * isn't known (an ingredient without a moisture %) or is zero.
+ */
+export function dryBasisFactor(calc: Pick<CalcResult, 'concentrationWeightG' | 'dryMatterG'>): number | null {
+  return calc.dryMatterG != null && calc.dryMatterG > 0 ? calc.concentrationWeightG / calc.dryMatterG : null
 }
 
 export type CalcResult = {
@@ -98,6 +116,10 @@ export type CalcResult = {
   /** Weight the batch's nutrients are spread over once moisture has left (the per-100 g basis) */
   concentrationWeightG: number
   processYield: ProcessYield
+  /** Grams of dry matter in the batch, or null when an ingredient's moisture % is unknown */
+  dryMatterG: number | null
+  /** Ingredients in the batch without a moisture % */
+  missingMoistureIds: string[]
 }
 
 export type NutrientContribution<L> = {

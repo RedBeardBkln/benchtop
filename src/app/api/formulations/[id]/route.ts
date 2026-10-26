@@ -53,6 +53,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       ingredientName: ingredients.name,
       ingredientVerification: ingredients.verification,
       ingredientDensityGPerMl: ingredients.densityGPerMl,
+      ingredientMoisturePct: ingredients.moisturePct,
       position: formulationLines.position,
       weightG: formulationLines.weightG,
       pct: formulationLines.pct,

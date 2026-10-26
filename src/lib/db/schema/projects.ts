@@ -11,6 +11,7 @@ import { clients } from './clients'
 //   valueMax?: number,         // range only
 //   unit: string,
 //   basis: 'per_serving' | 'per_100g',
+//   dryBasis?: boolean,        // per 100 g of dry matter instead of as is (basis is then per_100g)
 // }>
 export const projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),

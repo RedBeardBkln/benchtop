@@ -5,13 +5,13 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Printer, ArrowLeft } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
-import { calcNutrientProfile, formatAmt } from '@/lib/formulation-calc'
+import { calcNutrientProfile, dryBasisFactor, formatAmt } from '@/lib/formulation-calc'
 import { withUnit } from '@/lib/units'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
 import { formatWeightG } from '@/lib/weight'
 import { PCT_DECIMALS_MIN, readPctDecimals } from '@/lib/pct-display'
-import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
+import { CATEGORY_ORDER, evaluateTargets, fmtBasis, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
 import { formulationFileName } from '@/lib/download-name'
 import { Logo } from '@/components/logo'
@@ -106,6 +106,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
             nutrientId: n.nutrientId,
             amountPer100g: parseFloat(n.amountPer100g),
           })),
+          moisturePct: l.ingredientMoisturePct != null ? parseFloat(l.ingredientMoisturePct) : null,
         })),
         allNutrients: allNutrients.map(n => ({
           id: n.id,
@@ -119,7 +120,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
       })
     : null
   const projectTargets = (data.project?.targets ?? []) as ProjectTarget[]
-  const validations = calcResult ? evaluateTargets(projectTargets, calcResult.results, servingSizeG) : []
+  const validations = calcResult ? evaluateTargets(projectTargets, calcResult.results, servingSizeG, dryBasisFactor(calcResult)) : []
   const showPerServing = !!servingSizeG && servingSizeG > 0
 
   return (
@@ -354,13 +355,13 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                         <td className="py-1.5 pr-2 text-gray-900">{t.label || t.nutrient}</td>
                         <td className="py-1.5 px-2 text-gray-700">
                           {fmtRequirement(t)}{' '}
-                          <span className="text-gray-500">/ {t.basis === 'per_100g' ? '100 g' : 'serving'}</span>
+                          <span className="text-gray-500">{fmtBasis(t)}</span>
                         </td>
                         <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">
                           {actual != null
                             ? withUnit(formatAmt(actual, t.unit), t.unit)
                             : <span className="text-gray-500 text-xs">
-                                {t.basis === 'per_serving' && !servingSizeG ? 'set serving size' : '—'}
+                                {t.dryBasis ? 'needs moisture %' : t.basis === 'per_serving' && !servingSizeG ? 'set serving size' : '—'}
                               </span>
                           }
                         </td>

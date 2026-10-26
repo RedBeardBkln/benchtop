@@ -55,7 +55,7 @@ export const GLOSSARY = {
   labelName: 'How the ingredient is written on a product label, if different from its library name.',
   subIngredients: 'The components of a compound ingredient (e.g. chocolate chips: sugar, cocoa butter…), listed in the ingredient statement.',
   naturallyDerived: 'Comes from a natural source. Used to flag formulations that contain anything synthetic.',
-  moisturePct: 'How much of the ingredient is water, as a % of its weight.',
+  moisturePct: 'How much of the ingredient is water, as a % of its weight. Needed for dry-basis nutrition targets.',
   density: 'How heavy the ingredient is for its volume, in grams per millilitre (water is 1). Lets a formula show its amount in mL, cups, tsp and other volume units.',
   weightUnit: 'The unit amounts are shown and typed in. Benchtop stores every amount in grams, so changing the unit never changes the formula. Volume units need the ingredient’s density.',
   category: 'Where the ingredient sits in your categories (category › subcategory › type), used for filtering and swap suggestions.',

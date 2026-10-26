@@ -73,6 +73,7 @@ export type FormulationLineDetail = FormulationLine & {
   ingredientName: string
   ingredientVerification: string
   ingredientDensityGPerMl: string | null
+  ingredientMoisturePct: string | null
   nutrients: Array<{
     nutrientId: string
     amountPer100g: string
@@ -91,6 +92,8 @@ export type ProjectTarget = {
   unit: string
   basis: 'per_serving' | 'per_100g'
   servingSizeG?: number   // reference serving size for per_serving targets
+  // Measured per 100 g of dry matter (water removed) instead of the finished product as is; always per_100g
+  dryBasis?: boolean
 }
 
 export type FormulationDetail = Formulation & {

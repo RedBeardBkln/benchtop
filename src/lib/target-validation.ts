@@ -21,20 +21,23 @@ function resolveActual(
   t: ProjectTarget,
   results: NutrientResult[],
   formulationServingG: number | undefined,
+  dryFactor: number | null | undefined,
 ): number | null {
   const r = results.find(r => r.name === t.nutrient)
   if (!r) return null
   // Use formulation serving size first, then fall back to the target's own reference serving size
   const servingSizeG = formulationServingG ?? t.servingSizeG
-  // A % of weight is the same per 100 g and per serving
-  const perServing = t.basis === 'per_serving' && t.unit !== PCT_OF_100G
+  // A % of weight is the same per 100 g and per serving; a dry-basis target is always per 100 g of dry matter
+  const perServing = t.basis === 'per_serving' && t.unit !== PCT_OF_100G && !t.dryBasis
   if (perServing && !servingSizeG) return null
+  if (t.dryBasis && !dryFactor) return null
+  const per100g = t.dryBasis ? r.perFinished100g * dryFactor! : r.perFinished100g
 
   // Convert the actual per-100g value into the target's unit before comparing.
   // Without this, a target specified in g would silently never match a value
   // stored in mg (or vice-versa). Handles the common FDA mass/energy conversions,
   // % of weight and % DV; anything else returns null ('no-data') to surface the mismatch.
-  const converted = amountInTargetUnit(r.perFinished100g, r.unit, t.unit, r.dailyValueAmount)
+  const converted = amountInTargetUnit(per100g, r.unit, t.unit, r.dailyValueAmount)
   if (converted == null) return null
 
   return perServing
@@ -46,8 +49,9 @@ export function validateTarget(
   t: ProjectTarget,
   results: NutrientResult[],
   formulationServingG: number | undefined,
+  dryFactor?: number | null,
 ): ValidationStatus {
-  const actual = resolveActual(t, results, formulationServingG)
+  const actual = resolveActual(t, results, formulationServingG, dryFactor)
   if (actual == null) return 'no-data'
 
   const W = 0.05  // 5% warn margin
@@ -87,10 +91,18 @@ export function evaluateTargets(
   targets: ProjectTarget[],
   results: NutrientResult[],
   serving: number | undefined,
+  // From dryBasisFactor(); dry-basis targets have no data without it
+  dryFactor?: number | null,
 ): Array<{ t: ProjectTarget; status: ValidationStatus; actual: number | null }> {
   return targets.map(t => ({
     t,
-    status: validateTarget(t, results, serving),
-    actual: resolveActual(t, results, serving),
+    status: validateTarget(t, results, serving, dryFactor),
+    actual: resolveActual(t, results, serving, dryFactor),
   }))
+}
+
+/** What a target is measured against, e.g. "/ 100 g", "/ serving", "/ 100 g dry" */
+export function fmtBasis(t: ProjectTarget): string {
+  if (t.dryBasis) return '/ 100 g dry'
+  return t.basis === 'per_serving' && t.unit !== PCT_OF_100G ? '/ serving' : '/ 100 g'
 }

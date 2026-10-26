@@ -53,6 +53,8 @@ export type SolverLine = {
   minPct: number   // 0 if unset
   maxPct: number   // 100 if unset
   nutrients: Array<{ name: string; amountPer100g: number }>
+  // The ingredient's water, % of its weight; dry-basis targets need it for every line
+  moisturePct?: number | null
 }
 
 export type SolverInput = {
@@ -85,7 +87,7 @@ function san(s: string): string {
 
 function fmtReq(t: ProjectTarget): string {
   const v = `${t.value} ${t.unit}`
-  const basis = t.basis === 'per_serving' ? '/ serving' : '/ 100 g'
+  const basis = t.dryBasis ? '/ 100 g dry' : t.basis === 'per_serving' ? '/ serving' : '/ 100 g'
   if (t.comparator === '>=')    return `≥ ${v} ${basis}`
   if (t.comparator === '<=')    return `≤ ${v} ${basis}`
   if (t.comparator === '=')     return `= ${v} ${basis}`
@@ -173,7 +175,7 @@ export function solve(input: SolverInput): SolverResult {
   const nutRawName = new Map<string, string>()  // sanitized → original name
 
   for (const target of input.targets) {
-    if (!target.nutrient) continue
+    if (!target.nutrient || target.dryBasis) continue
 
     const nc    = san(target.nutrient)
     const lj    = lockedContrib.get(target.nutrient) ?? 0
@@ -206,6 +208,28 @@ export function solve(input: SolverInput): SolverResult {
     model.constraints[nc] = bounds
   }
 
+  // Dry-basis targets: nutrient per 100 g of dry matter = Σ x·n / Σ x·d (d = a line's dry fraction).
+  // The dry matter changes with the mix, so each limit v is its own linear row: Σ x·(n − v·d) ≥ 0 (or ≤ 0),
+  // with the locked lines' part moved to the right-hand side. Process losses don't change it.
+  const dryFrac = (l: SolverLine) => 1 - Math.min(100, Math.max(0, l.moisturePct ?? 0)) / 100
+  const amountOf = (l: SolverLine, name: string) => l.nutrients.find(n => n.name === name)?.amountPer100g ?? 0
+  input.targets.forEach((target, ti) => {
+    if (!target.nutrient || !target.dryBasis) return
+    const limits: Array<[number, 'min' | 'max']> =
+      target.comparator === '>=' ? [[target.value, 'min']]
+        : target.comparator === '<=' ? [[target.value, 'max']]
+          : target.comparator === '=' ? [[target.value, 'min'], [target.value, 'max']]
+            : target.valueMax != null ? [[target.value, 'min'], [target.valueMax, 'max']] : []
+    for (const [v, side] of limits) {
+      const row = `dry_${ti}_${side}`
+      const lockedPart = locked.reduce((s, l) => s + l.pct * (amountOf(l, target.nutrient!) - v * dryFrac(l)), 0)
+      model.constraints[row] = { [side]: -lockedPart }
+      for (const line of unlocked) {
+        model.variables[`x_${san(line.key)}`][row] = amountOf(line, target.nutrient) - v * dryFrac(line)
+      }
+    }
+  })
+
   // ── Solve ─────────────────────────────────────────────────────────────────
   let lpResult: Record<string, unknown>
   try {
@@ -219,7 +243,7 @@ export function solve(input: SolverInput): SolverResult {
       status: 'infeasible',
       message: 'No combination of these ingredients can satisfy all targets simultaneously. Try relaxing a target or adding a different ingredient.',
       suggestedPcts: {},
-      auditTrace: buildAuditTrace(input.targets, null, input.yieldPct, input.servingSizeG),
+      auditTrace: buildAuditTrace(input.targets, null, null, input.yieldPct, input.servingSizeG),
       solveTimeMs: Date.now() - t0,
     }
   }
@@ -234,16 +258,22 @@ export function solve(input: SolverInput): SolverResult {
 
   // Compute achieved nutrients from suggested solution
   const achieved = new Map<string, number>()
-  for (const line of [...locked, ...unlocked.map(l => ({ ...l, pct: suggestedPcts[l.key] }))]) {
+  const inMix = new Map<string, number>()   // per 100 g of the mix as weighed, for dry basis
+  const solved = [...locked, ...unlocked.map(l => ({ ...l, pct: suggestedPcts[l.key] }))]
+  for (const line of solved) {
     for (const n of line.nutrients) {
       achieved.set(n.name, (achieved.get(n.name) ?? 0) + (n.amountPer100g * line.pct / input.yieldPct))
+      inMix.set(n.name, (inMix.get(n.name) ?? 0) + (n.amountPer100g * line.pct / 100))
     }
   }
+  // Grams of dry matter in 100 g of the mix
+  const dryPer100 = solved.reduce((s, l) => s + l.pct * dryFrac(l), 0)
+  const achievedDry = new Map([...inMix].map(([name, v]) => [name, dryPer100 > 0 ? (v / dryPer100) * 100 : 0]))
 
   return {
     status: 'optimal',
     suggestedPcts,
-    auditTrace: buildAuditTrace(input.targets, achieved, input.yieldPct, input.servingSizeG),
+    auditTrace: buildAuditTrace(input.targets, achieved, achievedDry, input.yieldPct, input.servingSizeG),
     solveTimeMs: Date.now() - t0,
   }
 }
@@ -447,15 +477,16 @@ function buildReverseResult(
 
 function buildAuditTrace(
   targets: ProjectTarget[],
-  achieved: Map<string, number> | null,   // nutrient name → per 100g finished
+  achieved: Map<string, number> | null,      // nutrient name → per 100g finished
+  achievedDry: Map<string, number> | null,   // nutrient name → per 100g of dry matter
   _yieldPct: number,
   servingSizeG: number | null,
 ): AuditEntry[] {
   return targets
     .filter(t => t.nutrient)
     .map(t => {
-      const ach_per100g = achieved?.get(t.nutrient!) ?? null
-      const bf = (t.basis === 'per_serving' && servingSizeG) ? servingSizeG / 100 : 1
+      const ach_per100g = (t.dryBasis ? achievedDry : achieved)?.get(t.nutrient!) ?? null
+      const bf = (t.basis === 'per_serving' && servingSizeG && !t.dryBasis) ? servingSizeG / 100 : 1
       const ach = ach_per100g != null ? ach_per100g * bf : null
 
       let slack: number | null = null

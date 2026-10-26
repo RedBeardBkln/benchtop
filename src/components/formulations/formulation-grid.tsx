@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import type { FormulationDetail, IngredientDetail, IngredientListRow, Nutrient, ProjectTarget } from '@/lib/types'
 import { categoryPath, onHandAlternatives } from '@/lib/ingredient-categories'
-import { calcNutrientContributions, calcNutrientProfile, formatAmt, type NutrientContribution } from '@/lib/formulation-calc'
+import { calcNutrientContributions, calcNutrientProfile, dryBasisFactor, formatAmt, type NutrientContribution } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
 import { WeightInput } from '@/components/formulations/weight-input'
@@ -23,7 +23,7 @@ import { PctInput } from '@/components/formulations/pct-input'
 import { LockToggle } from '@/components/formulations/lock-toggle'
 import { resolveLines, type Anchor } from '@/lib/formula-lock'
 import { PCT_DECIMALS_MIN, PCT_DECIMALS_MAX, readPctDecimals, writePctDecimals } from '@/lib/pct-display'
-import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
+import { CATEGORY_ORDER, evaluateTargets, fmtBasis, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import { withUnit } from '@/lib/units'
 import { serializePrintSections, type PrintSection } from '@/lib/print-sections'
 import type { SolverResult } from '@/lib/solver'
@@ -163,6 +163,7 @@ type LineState = {
   weightG: number
   weightUnit: WeightUnit | null  // this line's own display unit; null = the column's
   densityGPerMl: number | null   // the ingredient's, for volume units
+  moisturePct: number | null     // the ingredient's, for dry-basis targets
   locked: boolean          // quantity lock: keeps its grams
   pctLocked: boolean       // %-lock: always `lockedPct` % of the batch
   lockedPct: number | null
@@ -459,6 +460,7 @@ export function FormulationGrid({ id }: { id: string }) {
         weightG: parseFloat(l.weightG),
         weightUnit: isWeightUnit(l.weightUnit) ? l.weightUnit : null,
         densityGPerMl: l.ingredientDensityGPerMl != null ? parseFloat(l.ingredientDensityGPerMl) : null,
+        moisturePct: numOrNull(l.ingredientMoisturePct),
         locked: l.locked,
         pctLocked: l.pctLocked,
         lockedPct: l.pctLocked ? parseFloat(l.pct) : null,
@@ -499,7 +501,7 @@ export function FormulationGrid({ id }: { id: string }) {
   const calcResult = useMemo(() => {
     if (!allNutrients || lines.length === 0) return null
     return calcNutrientProfile({
-      lines: lines.map(l => ({ ingredientId: l.ingredientId, weightG: l.weightG, nutrients: l.nutrients })),
+      lines: lines.map(l => ({ ingredientId: l.ingredientId, weightG: l.weightG, nutrients: l.nutrients, moisturePct: l.moisturePct })),
       allNutrients: allNutrients.map(n => ({
         id: n.id, name: n.name, unit: n.unit, category: n.category,
         dailyValueAmount: n.dailyValueAmount != null ? Number(n.dailyValueAmount) : null,
@@ -952,6 +954,7 @@ export function FormulationGrid({ id }: { id: string }) {
       weightG: 0,
       weightUnit: null,
       densityGPerMl: numOrNull(libraryById.get(ing.id)?.densityGPerMl),
+      moisturePct: numOrNull(libraryById.get(ing.id)?.moisturePct),
       locked: false,
       pctLocked: false,
       lockedPct: null,
@@ -1006,6 +1009,7 @@ export function FormulationGrid({ id }: { id: string }) {
         ingredientName: detail.name,
         ingredientVerification: detail.verification,
         densityGPerMl: numOrNull(detail.densityGPerMl),
+        moisturePct: numOrNull(detail.moisturePct),
         nutrients: (detail.nutrients ?? []).map((n: {
           nutrientId: string
           amountPer100g: string
@@ -1934,7 +1938,11 @@ export function FormulationGrid({ id }: { id: string }) {
         const projectTargets = (data.project?.targets ?? []) as ProjectTarget[]
         if (!calcResult || projectTargets.length === 0) return null
         const serving = servingSizeG ? parseFloat(servingSizeG) : undefined
-        const validations = evaluateTargets(projectTargets, calcResult.results, serving)
+        const validations = evaluateTargets(projectTargets, calcResult.results, serving, dryBasisFactor(calcResult))
+        const noMoisture = calcResult.missingMoistureIds
+          .map(iid => lines.find(l => l.ingredientId === iid)?.ingredientName)
+          .filter(Boolean)
+          .join(', ')
         const passes = validations.filter(v => v.status === 'pass').length
         const fails  = validations.filter(v => v.status === 'fail').length
         const warns  = validations.filter(v => v.status === 'warn').length
@@ -1972,14 +1980,18 @@ export function FormulationGrid({ id }: { id: string }) {
                       <td className="px-4 py-2 text-gray-500 text-xs">
                         {fmtRequirement(t)}
                         {' '}
-                        <span className="text-gray-400">/ {t.basis === 'per_100g' ? '100 g' : 'serving'}</span>
+                        <span className="text-gray-400">{fmtBasis(t)}</span>
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums text-gray-700">
                         {actual != null
                           ? withUnit(formatAmt(actual, t.unit), t.unit)
-                          : <span className="text-gray-300 text-xs">
-                              {t.basis === 'per_serving' && !serving ? 'set serving size' : '—'}
-                            </span>
+                          : t.dryBasis && noMoisture
+                            ? <span className="text-amber-600 text-xs" data-tip={`Dry basis needs every ingredient’s moisture %. Add it with Edit on each ingredient’s page: ${noMoisture}.`}>
+                                add moisture %
+                              </span>
+                            : <span className="text-gray-300 text-xs">
+                                {t.basis === 'per_serving' && !serving ? 'set serving size' : '—'}
+                              </span>
                         }
                       </td>
                       <td className="px-4 py-2 flex justify-center">
@@ -2265,6 +2277,7 @@ export function FormulationGrid({ id }: { id: string }) {
             setLines(newLines.map(l => ({
               ...l, pctLocked: false, lockedPct: null, minPct: null, maxPct: null,
               weightUnit: null, densityGPerMl: numOrNull(libraryById.get(l.ingredientId)?.densityGPerMl),
+              moisturePct: numOrNull(libraryById.get(l.ingredientId)?.moisturePct),
             })))
             setIsDirty(true)
             setShowReverseWizard(false)

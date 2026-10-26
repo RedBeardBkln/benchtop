@@ -18,6 +18,7 @@ const targetSchema = z.object({
   unit: z.string().min(1).max(50),
   basis: z.enum(['per_serving', 'per_100g']),
   servingSizeG: z.number().positive().optional(),
+  dryBasis: z.boolean().optional(),
 })
 
 const patchSchema = z.object({

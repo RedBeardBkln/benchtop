@@ -153,12 +153,18 @@ export const projects: HelpSection = {
             'Type the number. It must be greater than 0.',
             'Choose the unit: the nutrient’s own unit, `% of 100g` (a share of the product’s weight, so 20% protein means 20 g of protein in every 100 g), or `% DV` (a share of the FDA Daily Value, so 20% DV calcium means 260 mg). `% of 100g` is offered only for nutrients measured by weight, and `% DV` only for nutrients that have a Daily Value.',
             'Choose the basis: `per 100g` or `per serving`. For per serving, you can also type a reference serving size in grams. A `% of 100g` target is always per 100g, since the share is the same in any amount of the product.',
+            'Choose what it’s measured on: `as is` (the finished batch, water included) or `dry basis` (the dry matter only, with the water taken out). A dry-basis target is always per 100g of dry matter.',
             'Click `Save target`. You’ll see “Target saved”.',
           ],
         },
         {
           type: 'p',
           text: 'To change a target, move your mouse over it and click the pencil. To remove it, click the **X** and confirm. Every change saves immediately.',
+        },
+        { type: 'h', text: 'Dry basis' },
+        {
+          type: 'p',
+          text: 'A dry-basis target ignores water. For example, “Protein at least 70 g per 100 g dry” is met by a yogurt base with 34% protein as is, if 54% of it is water. Benchtop works out the batch’s dry matter from each ingredient’s **Moisture %**, so every ingredient in the formula needs one; set it with `Edit` on the ingredient’s page. Ingredients added from USDA get it automatically. Drying steps don’t change a dry-basis value, since only water leaves. **Solve** works with dry-basis targets too.',
         },
         { type: 'h', text: 'How formulations are checked' },
         {
@@ -216,7 +222,7 @@ export const projects: HelpSection = {
     },
     {
       q: 'Why does a target show “—” instead of pass or fail?',
-      a: 'Benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as IU versus mcg, or a % DV target for a nutrient that has no Daily Value; (4) a “between” target has no maximum.',
+      a: 'Benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as IU versus mcg, or a % DV target for a nutrient that has no Daily Value; (4) a “between” target has no maximum; (5) it’s a dry-basis target and an ingredient has no moisture %, so the Actual column says “add moisture %”.',
     },
     {
       q: 'Why can’t I save a target of 0 (for example, 0 g trans fat)?',

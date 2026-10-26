@@ -155,14 +155,31 @@ function TargetForm({
               basis: e.target.value as ProjectTarget['basis'],
               servingSizeG: e.target.value === 'per_100g' ? undefined : d.servingSizeG,
             }))}
-            disabled={draft.unit === PCT_OF_100G}
-            data-tip={draft.unit === PCT_OF_100G
-              ? 'A % of weight is always per 100 g: 20% means 20 g in every 100 g, and in every serving’s weight.'
-              : 'per 100g: measured in 100 g of the finished product. per serving: measured in one serving.'}
+            disabled={draft.unit === PCT_OF_100G || !!draft.dryBasis}
+            data-tip={draft.dryBasis
+              ? 'A dry-basis target is always per 100 g of dry matter.'
+              : draft.unit === PCT_OF_100G
+                ? 'A % of weight is always per 100 g: 20% means 20 g in every 100 g, and in every serving’s weight.'
+                : 'per 100g: measured in 100 g of the finished product. per serving: measured in one serving.'}
             className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white disabled:text-gray-400"
           >
             <option value="per_100g">per 100g</option>
             <option value="per_serving">per serving</option>
+          </select>
+
+          {/* As is, or dry matter only */}
+          <select
+            value={draft.dryBasis ? 'dry' : 'as_is'}
+            onChange={e => {
+              const dry = e.target.value === 'dry'
+              setDraft(d => ({ ...d, dryBasis: dry || undefined, ...(dry ? { basis: 'per_100g' as const, servingSizeG: undefined } : {}) }))
+            }}
+            aria-label="Measured on"
+            data-tip="As is: the finished batch, water included. Dry basis: the dry matter only, with the water taken out, so the value doesn’t change with moisture. Dry basis needs every ingredient’s moisture %."
+            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+          >
+            <option value="as_is">as is</option>
+            <option value="dry">dry basis</option>
           </select>
         </div>
       </div>
@@ -311,8 +328,10 @@ export function ProjectTargets({
 
               {/* Basis badge */}
               <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded shrink-0">
-                {t.basis === 'per_100g'
-                  ? <Term tip="Checked against 100 g of the finished product, after process losses.">per 100g</Term>
+                {t.dryBasis
+                  ? <Term tip="Checked against 100 g of the dry matter: the finished batch with its water taken out. Needs every ingredient’s moisture %.">per 100g dry</Term>
+                  : t.basis === 'per_100g' || t.unit === PCT_OF_100G
+                  ? <Term tip="Checked against 100 g of the finished product as is, after process losses.">per 100g</Term>
                   : (
                     <Term tip={t.servingSizeG
                       ? `Checked against one serving. ${t.servingSizeG} g is used when a formulation has no serving size of its own.`

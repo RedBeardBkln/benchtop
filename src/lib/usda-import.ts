@@ -4,7 +4,7 @@
 
 import { db as defaultDb } from '@/lib/db'
 import { ingredients, ingredientNutrients, nutrients } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { findDuplicate } from '@/lib/ingredient-duplicates'
 import { formatIngredientName } from '@/lib/ingredient-name'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
@@ -54,6 +54,23 @@ export function parseUsdaNutrients(
       return { nutrientId, amountPer100g: value.toString(), sourceRef, sourceUrl }
     })
     .filter((r): r is Omit<NutrientRow, 'ingredientId'> => r !== null)
+}
+
+// USDA's Water nutrient: id 1051 in full records, code 255 in abridged ones
+const FDC_WATER_IDS = new Set([1051, 255])
+
+/** The food's water, g per 100 g (= its moisture %), or null when USDA doesn't give it */
+export function parseUsdaWater(foodNutrients: unknown[]): number | null {
+  for (const fn of foodNutrients) {
+    const f = fn as Record<string, unknown>
+    const nutrient = f.nutrient as Record<string, unknown> | undefined
+    const idRaw = (nutrient?.id ?? f.nutrientId ?? f.number ?? f.nutrientNumber) as string | number | undefined
+    const value = (nutrient ? f.amount : (f.value ?? f.amount)) as number | undefined
+    if (idRaw == null || value == null) continue
+    const id = typeof idRaw === 'number' ? idRaw : parseInt(idRaw, 10)
+    if (FDC_WATER_IDS.has(id) && value >= 0 && value <= 100) return value
+  }
+  return null
 }
 
 export type ImportResult = {
@@ -151,6 +168,7 @@ export async function importUsdaIngredient(
   const nutrientMap = new Map(allNutrients.filter(n => n.fdcNutrientNumber != null).map(n => [n.fdcNutrientNumber!, n.id]))
 
   const parsedNutrients = parseUsdaNutrients((fdcFood.foodNutrients as unknown[]) ?? [], nutrientMap, fdcId)
+  const waterPct = parseUsdaWater((fdcFood.foodNutrients as unknown[]) ?? [])
 
   const ingredientName = formatIngredientName(opts.nameOverride ?? (fdcFood.description as string) ?? `FDC ${fdcId}`)
   const repairId = existing[0]?.id
@@ -162,6 +180,13 @@ export async function importUsdaIngredient(
     ingredientId = repairId
     if (parsedNutrients.length > 0) {
       await database.insert(ingredientNutrients).values(parsedNutrients.map(r => ({ ...r, ingredientId: repairId })))
+    }
+    // Fill in the moisture % if it was never set (it powers dry-basis targets)
+    if (waterPct != null) {
+      await database
+        .update(ingredients)
+        .set({ moisturePct: waterPct.toString() })
+        .where(and(eq(ingredients.id, repairId), isNull(ingredients.moisturePct)))
     }
   } else if (nameDupe) {
     // The library already has this ingredient (same name, no brand/supplier/code): use it rather than adding a duplicate
@@ -178,6 +203,7 @@ export async function importUsdaIngredient(
         fdcFetchedAt: new Date(),
         verification: 'unverified',
         naturallyDerived: true,
+        moisturePct: waterPct != null ? waterPct.toString() : null,
         notes: opts.notes ?? (sourceType === 'ai_extracted' ? `Auto-imported via AI research. Data: ${sourceUrl}` : null),
       })
       .returning()
