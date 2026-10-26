@@ -224,7 +224,19 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
       <div className="space-y-5">
         {draft.warnings.length > 0 && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <div className="flex items-center gap-1.5 font-medium mb-1"><AlertTriangle size={14} /> Notes from reading the file</div>
+            <div className="flex items-start justify-between gap-3 mb-1">
+              <div>
+                <div className="flex items-center gap-1.5 font-medium"><AlertTriangle size={14} /> Notes from reading the file</div>
+                <p className="text-xs text-amber-700">Written when the file was read, so they don’t update as you make changes below.</p>
+              </div>
+              <button
+                onClick={() => change({ warnings: [] })}
+                data-tip="Hides these notes once you’ve dealt with them. Anything still missing is listed at the bottom of the page."
+                className="shrink-0 px-2 py-1 text-xs rounded-md border border-amber-300 bg-white hover:bg-amber-100"
+              >
+                Dismiss
+              </button>
+            </div>
             <ul className="list-disc pl-5 space-y-0.5">
               {draft.warnings.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
@@ -575,8 +587,8 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
         )}
       </div>
 
-      {/* What's left, and the two ways to save */}
-      <div className="fixed bottom-0 right-0 left-0 sm:left-56 z-30 border-t border-gray-200 bg-white/95 backdrop-blur print:hidden">
+      {/* What's left, and the two ways to save. On phones it sits just above the bottom menu bar. */}
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] sm:bottom-0 right-0 left-0 sm:left-56 z-30 border-t border-gray-200 bg-white/95 backdrop-blur print:hidden">
         <div className="max-w-5xl px-4 sm:px-8 py-3 flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[16rem] text-sm">
             {complete ? (
@@ -590,9 +602,10 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
               <span className="block text-xs text-gray-500">Optional: {missing.optional.join('; ')}</span>
             )}
           </div>
+          <div className="flex gap-2 w-full sm:w-auto">
           <button onClick={() => saveDraft.mutate()} disabled={busy}
             data-tip="Saves your progress as a draft, private to you. It isn’t a formulation until you click Create formulation."
-            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50">
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50">
             {saveDraft.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {importId && !dirty ? 'Draft saved' : 'Save as draft'}
           </button>
@@ -600,10 +613,11 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
             data-tip={complete
               ? 'Creates the formulation as version 1 in the chosen project and opens it.'
               : 'Add the missing information first, or save a draft'}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
             {commit.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
             Create formulation
           </button>
+          </div>
         </div>
       </div>
 

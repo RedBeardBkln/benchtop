@@ -85,7 +85,7 @@ Find every distinct formulation in the file (usually one; a workbook may hold on
 - batchSizeG: the total batch weight in grams if stated, else 0.
 - lines: one entry per ingredient row, in the order they appear. name is the ingredient name exactly as written (keep brand or grade words). quantityText is the amount cell(s) as written. amount and unit are the amount used in the batch: prefer a weight column (g, kg, mg, lb, oz) over a percentage column when both exist; use "%" when only percentages are given; use "other" when the unit can't be expressed as one of those (mL, cups, pieces) and "" when there is no amount (amount 0 then). supplier, itemCode and note only when the row has them, else "".
 - steps: the method / process instructions in order, one per step, if the file has them. Otherwise [].
-- warnings: short notes for the person checking the import, e.g. that you assumed an unlabeled column was grams, or skipped rows you couldn't read. [] if none.
+- warnings: short notes for the person checking the import, e.g. that you assumed an unlabeled column was grams, or skipped rows you couldn't read. Don't list rows that are missing an amount or unit; the review screen marks those itself. [] if none.
 
 Leave out rows that are not ingredients: headers, subtotals and totals, cost or price summaries, nutrition-facts rows, blank rows, sign-off fields. Never invent ingredients, amounts or names that aren't in the file. If the file has no formulation at all, return an empty formulations list.`
 
