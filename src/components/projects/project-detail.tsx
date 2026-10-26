@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { ClientSelect, useClientOptions } from '@/components/clients/client-select'
 import { readErrorMessage } from '@/lib/utils'
 import { Term } from '@/components/term'
+import { useImportDrafts } from '@/components/formulations/import/use-import-drafts'
 
 // formulations holds the latest iteration of each formulation
 type ProjectWithFormulations = Project & {
@@ -127,6 +128,9 @@ export function ProjectDetail({ id }: { id: string }) {
   const [editingObjective, setEditingObjective] = useState(false)
   const [objectiveEdit, setObjectiveEdit] = useState('')
   const { data: clientOptions } = useClientOptions()
+  // Your own unfinished spreadsheet imports that are filed under this project
+  const { data: importDrafts = [] } = useImportDrafts()
+  const projectImports = importDrafts.filter(d => d.projectId === id)
 
   const { data, isLoading, error } = useQuery<ProjectWithFormulations>({
     queryKey: ['project', id],
@@ -451,6 +455,33 @@ export function ProjectDetail({ id }: { id: string }) {
                   )}
                 </div>
               </div>
+
+              {projectImports.length > 0 && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="text-sm font-medium text-amber-900">
+                    <Term tip="Spreadsheet imports saved as drafts for this project before they were complete. They aren’t formulations yet, and only you can see them.">Unfinished imports</Term>
+                  </div>
+                  <ul className="mt-1.5 divide-y divide-amber-100">
+                    {projectImports.map(d => (
+                      <li key={d.id} className="flex items-start gap-3 py-2">
+                        <FileSpreadsheet size={15} className="text-amber-700 mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-900 truncate">{d.name}</div>
+                          <div className="text-xs text-gray-500 truncate">{d.fileName}</div>
+                          {d.missing.length > 0 && <div className="text-xs text-amber-700 mt-0.5">Missing: {d.missing.join('; ')}</div>}
+                        </div>
+                        <Link
+                          href={`/formulations/import?draft=${d.id}&project=${id}`}
+                          data-tip="Reopens this draft where you left off, so you can fill in what’s missing and create the formulation."
+                          className="px-3 py-1.5 text-sm border border-amber-300 bg-white rounded-md hover:bg-amber-100 text-gray-700 shrink-0"
+                        >
+                          Continue
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {active.length === 0 && !showArchived ? (
                 <div className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">

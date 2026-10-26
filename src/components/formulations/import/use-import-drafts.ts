@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { readErrorMessage } from '@/lib/utils'
 
-export type ImportDraftSummary = { id: string; name: string; fileName: string; missing: string[]; updatedAt: string }
+export type ImportDraftSummary = { id: string; name: string; fileName: string; projectId: string | null; missing: string[]; updatedAt: string }
 
 export const IMPORTS_KEY = ['formulation-imports']
 

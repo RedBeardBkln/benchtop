@@ -21,6 +21,7 @@ export async function GET() {
     id: r.id,
     name: r.name,
     fileName: r.fileName,
+    projectId: r.draft.project.id,
     missing: missingInfo(r.draft).vital,
     updatedAt: r.updatedAt,
   })))

@@ -629,7 +629,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: 'A draft isn’t a formulation yet and doesn’t appear in any project. Your drafts are listed under **Unfinished imports** on the import page, and the Projects page reminds you about them. Click `Continue` to pick up where you left off, then `Create formulation` once everything is filled in. Drafts are private to you.',
+          text: 'A draft isn’t a formulation yet. Your drafts are listed under **Unfinished imports** on the import page, and the Projects page reminds you about them. If you chose or created a project before saving, the draft is also listed under **Unfinished imports** on that project’s page. Click `Continue` to pick up where you left off, then `Create formulation` once everything is filled in. Drafts are private to you.',
         },
         {
           type: 'note',
@@ -653,7 +653,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Where did my unfinished import go?',
-      a: 'Click `Import formulation` on [Projects](/projects). Your drafts are listed under **Unfinished imports**; click `Continue`. Drafts aren’t formulations yet, so they don’t show in any project until you click `Create formulation`.',
+      a: 'Click `Import formulation` on [Projects](/projects). Your drafts are listed under **Unfinished imports**; click `Continue`. If the draft already has a project, it’s also listed on that project’s page. It becomes a formulation in the project once you click `Create formulation`.',
     },
     {
       q: 'I made changes and they disappeared. What happened?',
