@@ -164,7 +164,7 @@ export const projects: HelpSection = {
         { type: 'h', text: 'Dry basis' },
         {
           type: 'p',
-          text: 'A dry-basis target ignores water. For example, “Protein at least 70 g per 100 g dry” is met by a yogurt base with 34% protein as is, if 54% of it is water. Benchtop works out the batch’s dry matter from each ingredient’s **Moisture %**, so every ingredient in the formula needs one; set it with `Edit` on the ingredient’s page. Ingredients added from USDA get it automatically. Drying steps don’t change a dry-basis value, since only water leaves. **Solve** works with dry-basis targets too.',
+          text: 'A dry-basis target ignores water. For example, “Protein at least 70 g per 100 g dry” is met by a yogurt base with 34% protein as is, if 54% of it is water. Benchtop works out the batch’s dry matter from each ingredient’s **Moisture %**, so every ingredient in the formula needs one. To add it without leaving the formula, click the ingredient’s name and type it in the **Moisture** box at the top of the panel; it saves when you leave the box. You can also use `Edit` on the ingredient’s page. Ingredients added from USDA get it automatically. Drying steps don’t change a dry-basis value, since only water leaves. **Solve** works with dry-basis targets too.',
         },
         { type: 'h', text: 'How formulations are checked' },
         {

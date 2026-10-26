@@ -31,6 +31,75 @@ type NutrientEdit = NutrientEditSource & {
   rowId?: string
 }
 
+export type IngredientProperties = { moisturePct?: number | null; densityGPerMl?: number | null }
+
+const propInput = 'w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded-md bg-white tabular-nums focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500'
+
+/**
+ * Moisture % and density, editable right in the panel: they drive dry-basis targets and volume
+ * units in the formula. Each saves when you leave the box or press Enter.
+ */
+function PropertyFields({ moisturePct, densityGPerMl, disabledReason, saving, onSave }: {
+  moisturePct: string | null
+  densityGPerMl: string | null
+  disabledReason: string | null
+  saving: boolean
+  onSave: (patch: IngredientProperties) => void
+}) {
+  const shown = (v: string | null) => (v != null ? String(parseFloat(v)) : '')
+  const [moisture, setMoisture] = useState(shown(moisturePct))
+  const [density, setDensity] = useState(shown(densityGPerMl))
+  useEffect(() => { setMoisture(shown(moisturePct)) }, [moisturePct])
+  useEffect(() => { setDensity(shown(densityGPerMl)) }, [densityGPerMl])
+
+  const moistureVal = moisture.trim() === '' ? null : Number(moisture)
+  const moistureBad = moistureVal != null && !(moistureVal >= 0 && moistureVal <= 100)
+  const densityVal = density.trim() === '' ? null : Number(density)
+  const densityBad = densityVal != null && !(densityVal > 0 && densityVal <= 100)
+
+  function commit(field: 'moisture' | 'density') {
+    if (field === 'moisture') {
+      if (moistureBad) { setMoisture(shown(moisturePct)); toast.error('Moisture must be from 0 to 100%'); return }
+      if (moistureVal !== (moisturePct != null ? parseFloat(moisturePct) : null)) onSave({ moisturePct: moistureVal })
+    } else {
+      if (densityBad) { setDensity(shown(densityGPerMl)); toast.error('Density must be greater than 0, up to 100 g/mL'); return }
+      if (densityVal !== (densityGPerMl != null ? parseFloat(densityGPerMl) : null)) onSave({ densityGPerMl: densityVal })
+    }
+  }
+
+  const disabled = !!disabledReason || saving
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2.5 border-b border-gray-100 bg-gray-50/60">
+      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+        <Term t="moisturePct">Moisture</Term>
+        <input
+          inputMode="decimal" value={moisture} disabled={disabled} placeholder="—"
+          onChange={e => setMoisture(e.target.value)}
+          onBlur={() => commit('moisture')}
+          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+          aria-label="Moisture %"
+          data-tip={disabledReason ?? 'Water, as a % of the ingredient’s weight. Needed for dry-basis targets. Saves to the ingredient when you leave the box.'}
+          className={`${propInput} ${moistureBad ? 'border-red-300' : moisturePct == null ? 'border-amber-300' : ''}`}
+        />
+        <span>%</span>
+      </label>
+      <label className="flex items-center gap-1.5 text-xs text-gray-500">
+        <Term t="density">Density</Term>
+        <input
+          inputMode="decimal" value={density} disabled={disabled} placeholder="—"
+          onChange={e => setDensity(e.target.value)}
+          onBlur={() => commit('density')}
+          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+          aria-label="Density in g per mL"
+          data-tip={disabledReason ?? 'Grams per millilitre (water is 1). Needed to show this ingredient in mL, cups or other volume units. Saves to the ingredient when you leave the box.'}
+          className={`${propInput} ${densityBad ? 'border-red-300' : ''}`}
+        />
+        <span>g/mL</span>
+      </label>
+    </div>
+  )
+}
+
 // fetch(...).then(okOrThrow('…')) — a refused change shows its error instead of looking like it worked
 const okOrThrow = (fallback: string) => async (r: Response) => {
   if (!r.ok) throw new Error(await readErrorMessage(r, fallback))
@@ -42,6 +111,7 @@ export function IngredientSidePanel({
   formulationLocked,
   canEditLibrary,
   onNutrientsSaved,
+  onPropertiesSaved,
   onClose,
   onSwap,
 }: {
@@ -52,6 +122,8 @@ export function IngredientSidePanel({
   canEditLibrary: boolean
   /** Called after nutrients are saved, so the open formulation can pick up the new values */
   onNutrientsSaved?: (ingredientId: string) => void
+  /** Called after moisture % or density is saved, so the open formulation can use it straight away */
+  onPropertiesSaved?: (ingredientId: string, patch: IngredientProperties) => void
   onClose: () => void
   onSwap: (lineKey: string, ingredientName: string) => void
 }) {
@@ -118,6 +190,21 @@ export function IngredientSidePanel({
         body: JSON.stringify({ verification: data?.verification === 'verified' ? 'unverified' : 'verified' }),
       }).then(okOrThrow('Could not update verification')),
     onSuccess: () => { invalidate(); toast.success('Verification updated') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const savePropertiesMutation = useMutation({
+    mutationFn: (patch: IngredientProperties) =>
+      fetch(`/api/ingredients/${ingredientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      }).then(okOrThrow('Could not save')),
+    onSuccess: (_r, patch) => {
+      invalidate()
+      onPropertiesSaved?.(ingredientId, patch)
+      toast.success('moisturePct' in patch ? 'Moisture saved' : 'Density saved')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -303,6 +390,16 @@ export function IngredientSidePanel({
             </button>
           </div>
         </div>
+
+        {data && (
+          <PropertyFields
+            moisturePct={data.moisturePct}
+            densityGPerMl={data.densityGPerMl}
+            disabledReason={!canEditLibrary ? 'You can view this but not edit the ingredient library.' : null}
+            saving={savePropertiesMutation.isPending}
+            onSave={patch => savePropertiesMutation.mutate(patch)}
+          />
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-gray-100 px-5">
@@ -542,12 +639,6 @@ export function IngredientSidePanel({
                       <div>
                         <div className="text-xs text-gray-400 mb-0.5"><Term tip="The manually entered price per kg. A supplier price chosen on the Cost tab overrides it.">Cost / kg</Term></div>
                         <div className="text-xs font-medium text-gray-700">${parseFloat(data.defaultCostPerKg).toFixed(2)}</div>
-                      </div>
-                    )}
-                    {data.moisturePct && (
-                      <div>
-                        <div className="text-xs text-gray-400 mb-0.5"><Term t="moisturePct">Moisture %</Term></div>
-                        <div className="text-xs font-medium text-gray-700">{parseFloat(data.moisturePct).toFixed(2)}%</div>
                       </div>
                     )}
                   </div>

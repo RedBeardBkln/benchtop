@@ -161,7 +161,7 @@ export const formulations: HelpSection = {
         { type: 'h', text: 'Volume units need a density' },
         {
           type: 'p',
-          text: 'To turn grams into mL or cups, Benchtop needs the ingredient’s **density**: how many grams one millilitre weighs (water is 1). If you choose a volume unit for an ingredient that doesn’t have one, Benchtop asks for it and saves it to the ingredient in your library. You can also set it with `Edit` on the ingredient’s page. When the whole column is in a volume unit, ingredients without a density stay in grams and their unit shows in amber. The Total row is in grams whenever the column is a volume unit, since a mix of ingredients has no single density.',
+          text: 'To turn grams into mL or cups, Benchtop needs the ingredient’s **density**: how many grams one millilitre weighs (water is 1). If you choose a volume unit for an ingredient that doesn’t have one, Benchtop asks for it and saves it to the ingredient in your library. You can also set it by clicking the ingredient’s name in the formula (the **Density** box at the top of the panel), or with `Edit` on the ingredient’s page. When the whole column is in a volume unit, ingredients without a density stay in grams and their unit shows in amber. The Total row is in grams whenever the column is a volume unit, since a mix of ingredients has no single density.',
         },
         {
           type: 'tip',
@@ -247,7 +247,7 @@ export const formulations: HelpSection = {
         { type: 'h', text: 'Looking up an ingredient without leaving the page' },
         {
           type: 'p',
-          text: 'Click an ingredient’s name in the grid to open a side panel with its **Nutrients**, **Allergens & Certs**, **Suppliers** and **Info**. You can edit its nutrients (`Edit nutrients`), mark it verified, or swap it for another ingredient.',
+          text: 'Click an ingredient’s name in the grid to open a side panel with its **Nutrients**, **Allergens & Certs**, **Suppliers** and **Info**. You can set its **Moisture %** and **Density** in the boxes at the top (each saves when you leave the box), edit its nutrients (`Edit nutrients`), mark it verified, or swap it for another ingredient.',
         },
         {
           type: 'warning',

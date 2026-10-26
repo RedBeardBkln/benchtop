@@ -1986,7 +1986,7 @@ export function FormulationGrid({ id }: { id: string }) {
                         {actual != null
                           ? withUnit(formatAmt(actual, t.unit), t.unit)
                           : t.dryBasis && noMoisture
-                            ? <span className="text-amber-600 text-xs" data-tip={`Dry basis needs every ingredient’s moisture %. Add it with Edit on each ingredient’s page: ${noMoisture}.`}>
+                            ? <span className="text-amber-600 text-xs" data-tip={`Dry basis needs every ingredient’s moisture %. Click an ingredient’s name in the formula to add it: ${noMoisture}.`}>
                                 add moisture %
                               </span>
                             : <span className="text-gray-300 text-xs">
@@ -2258,6 +2258,11 @@ export function FormulationGrid({ id }: { id: string }) {
           formulationLocked={isLocked}
           canEditLibrary={data?.canEditLibrary ?? false}
           onNutrientsSaved={refreshLineNutrients}
+          onPropertiesSaved={(ingredientId, patch) => setLines(prev => prev.map(l => (l.ingredientId === ingredientId ? {
+            ...l,
+            ...(patch.moisturePct !== undefined ? { moisturePct: patch.moisturePct } : {}),
+            ...(patch.densityGPerMl !== undefined ? { densityGPerMl: patch.densityGPerMl } : {}),
+          } : l)))}
           onClose={() => { setSidebarIngredientId(null); setSidebarLineKey(null) }}
           onSwap={(lk, name) => {
             setSidebarIngredientId(null)
