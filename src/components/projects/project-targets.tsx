@@ -53,6 +53,18 @@ function fmtTarget(t: ProjectTarget): string {
   return `= ${v}`
 }
 
+const control = 'px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white'
+
+/** A form control with a small label above it */
+function Field({ label, className, children }: { label: React.ReactNode; className?: string; children: React.ReactNode }) {
+  return (
+    <div className={className}>
+      <div className="text-[11px] font-medium text-gray-500 mb-1">{label}</div>
+      {children}
+    </div>
+  )
+}
+
 function TargetForm({
   initial,
   nutrients,
@@ -90,64 +102,76 @@ function TargetForm({
 
   return (
     <div className="border border-blue-100 rounded-lg p-3 bg-blue-50/30 space-y-3">
-      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_auto] sm:items-center">
-        {/* Nutrient */}
-        <select
-          value={draft.nutrient ?? ''}
-          onChange={e => handleNutrientChange(e.target.value)}
-          data-tip="The nutrient to check. Its unit (g, mg, kcal…) fills in automatically."
-          className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-        >
-          <option value="">— select nutrient —</option>
-          {nutrients?.map(n => <option key={n.id} value={n.name}>{n.name}</option>)}
-        </select>
+      {/* What: the nutrient, the rule and the amount */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-[minmax(10rem,1fr)_auto_auto_auto] sm:items-end">
+        <Field label="Nutrient" className="col-span-2 sm:col-span-1">
+          <select
+            value={draft.nutrient ?? ''}
+            onChange={e => handleNutrientChange(e.target.value)}
+            data-tip="The nutrient to check. Its unit (g, mg, kcal…) fills in automatically."
+            className={`${control} w-full`}
+          >
+            <option value="">— select nutrient —</option>
+            {nutrients?.map(n => <option key={n.id} value={n.name}>{n.name}</option>)}
+          </select>
+        </Field>
 
-        <div className="flex flex-wrap gap-2 items-center">
-          {/* Comparator */}
+        <Field label="Rule">
           <select
             value={draft.comparator}
             onChange={e => setDraft(d => ({ ...d, comparator: e.target.value as ProjectTarget['comparator'] }))}
             data-tip="The rule: ≥ min (at least), ≤ max (no more than), = exact, or between (a min and a max)."
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            className={`${control} w-full`}
           >
             {Object.entries(COMPARATOR_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
+        </Field>
 
-          {/* Value */}
-          <input
-            type="number" min="0" step="any"
-            value={draft.value || ''}
-            onChange={e => setDraft(d => ({ ...d, value: parseFloat(e.target.value) || 0 }))}
-            placeholder={draft.comparator === 'range' ? 'min' : 'value'}
-            data-tip={draft.comparator === 'range' ? 'The lowest allowed amount. Must be greater than 0.' : 'The target amount. Must be greater than 0.'}
-            className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
-          />
-
-          {draft.comparator === 'range' && (
+        <Field label={draft.comparator === 'range' ? 'Min – max' : 'Value'}>
+          <div className="flex items-center gap-1">
             <input
               type="number" min="0" step="any"
-              value={draft.valueMax ?? ''}
-              onChange={e => setDraft(d => ({ ...d, valueMax: parseFloat(e.target.value) || undefined }))}
-              placeholder="max"
-              data-tip="The highest allowed amount"
-              className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
+              value={draft.value || ''}
+              onChange={e => setDraft(d => ({ ...d, value: parseFloat(e.target.value) || 0 }))}
+              placeholder={draft.comparator === 'range' ? 'min' : 'value'}
+              aria-label={draft.comparator === 'range' ? 'Minimum' : 'Value'}
+              data-tip={draft.comparator === 'range' ? 'The lowest allowed amount. Must be greater than 0.' : 'The target amount. Must be greater than 0.'}
+              className={`${control} w-20 tabular-nums`}
             />
-          )}
+            {draft.comparator === 'range' && (
+              <>
+                <span className="text-gray-400 text-sm">–</span>
+                <input
+                  type="number" min="0" step="any"
+                  value={draft.valueMax ?? ''}
+                  onChange={e => setDraft(d => ({ ...d, valueMax: parseFloat(e.target.value) || undefined }))}
+                  placeholder="max"
+                  aria-label="Maximum"
+                  data-tip="The highest allowed amount"
+                  className={`${control} w-20 tabular-nums`}
+                />
+              </>
+            )}
+          </div>
+        </Field>
 
-          {/* Unit: the nutrient's own, or a share */}
+        <Field label="Unit">
           <select
             value={draft.unit}
             onChange={e => handleUnitChange(e.target.value)}
-            aria-label="Unit"
             data-tip={UNIT_TIP}
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            className={`${control} w-full`}
           >
             {unitOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+        </Field>
+      </div>
 
-          {/* Basis */}
+      {/* How it's measured: per what, on what, and the reference serving when per serving */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:flex sm:flex-wrap sm:items-end">
+        <Field label="Per">
           <select
             value={draft.basis}
             onChange={e => setDraft(d => ({
@@ -161,48 +185,47 @@ function TargetForm({
               : draft.unit === PCT_OF_100G
                 ? 'A % of weight is always per 100 g: 20% means 20 g in every 100 g, and in every serving’s weight.'
                 : 'per 100g: measured in 100 g of the finished product. per serving: measured in one serving.'}
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white disabled:text-gray-400"
+            className={`${control} w-full sm:w-auto disabled:text-gray-400`}
           >
-            <option value="per_100g">per 100g</option>
-            <option value="per_serving">per serving</option>
+            <option value="per_100g">100 g</option>
+            <option value="per_serving">serving</option>
           </select>
+        </Field>
 
-          {/* As is, or dry matter only */}
+        <Field label="Measured on">
           <select
             value={draft.dryBasis ? 'dry' : 'as_is'}
             onChange={e => {
               const dry = e.target.value === 'dry'
               setDraft(d => ({ ...d, dryBasis: dry || undefined, ...(dry ? { basis: 'per_100g' as const, servingSizeG: undefined } : {}) }))
             }}
-            aria-label="Measured on"
             data-tip="As is: the finished batch, water included. Dry basis: the dry matter only, with the water taken out, so the value doesn’t change with moisture. Dry basis needs every ingredient’s moisture %."
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+            className={`${control} w-full sm:w-auto`}
           >
             <option value="as_is">as is</option>
             <option value="dry">dry basis</option>
           </select>
-        </div>
-      </div>
+        </Field>
 
-      {/* Serving size — only when per_serving selected */}
-      {draft.basis === 'per_serving' && (
-        <div className="flex items-center gap-2 pl-1">
-          <span className="text-xs text-gray-500 shrink-0">
-            <Term tip="A reference serving in grams. Used only for formulations that don’t have their own serving size.">Serving size</Term>:
-          </span>
-          <input
-            type="number" min="0.1" step="any"
-            value={draft.servingSizeG ?? ''}
-            onChange={e => setDraft(d => ({ ...d, servingSizeG: parseFloat(e.target.value) || undefined }))}
-            placeholder="e.g. 240"
-            className="w-24 px-2 py-1.5 text-sm border border-blue-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums bg-white"
-          />
-          <span className="text-xs text-gray-400">g</span>
-          {!draft.servingSizeG && (
-            <span className="text-xs text-amber-500">← enter serving size in grams</span>
-          )}
-        </div>
-      )}
+        {draft.basis === 'per_serving' && (
+          <Field
+            label={<Term tip="A reference serving in grams. Used only for formulations that don’t have their own serving size.">Serving size</Term>}
+            className="col-span-2 sm:col-span-1"
+          >
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number" min="0.1" step="any"
+                value={draft.servingSizeG ?? ''}
+                onChange={e => setDraft(d => ({ ...d, servingSizeG: parseFloat(e.target.value) || undefined }))}
+                placeholder="e.g. 240"
+                className={`${control} w-24 tabular-nums`}
+              />
+              <span className="text-xs text-gray-400">g</span>
+              {!draft.servingSizeG && <span className="text-xs text-gray-400">optional</span>}
+            </div>
+          </Field>
+        )}
+      </div>
 
       <div className="flex items-center gap-2">
         <button
