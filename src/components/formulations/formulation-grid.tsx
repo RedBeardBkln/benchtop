@@ -15,6 +15,10 @@ import { calcNutrientContributions, calcNutrientProfile, formatAmt, type Nutrien
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
 import { WeightInput } from '@/components/formulations/weight-input'
+import {
+  MASS_UNITS, UNIT_LABELS, VOLUME_UNITS, effectiveUnit, formatGramsIn, isVolumeUnit, isWeightUnit,
+  type WeightUnit,
+} from '@/lib/weight-units'
 import { PctInput } from '@/components/formulations/pct-input'
 import { LockToggle } from '@/components/formulations/lock-toggle'
 import { resolveLines, type Anchor } from '@/lib/formula-lock'
@@ -73,6 +77,83 @@ const DEFAULT_GRID_NUTRIENT_NAMES = ['Energy', 'Protein', 'Total Fat', 'Total Ca
 // Shorter grid headers for long nutrient names
 const GRID_HEADER_LABELS: Record<string, string> = { 'Total Carbohydrate': 'Carbs' }
 
+function UnitOptions({ needsDensity = false }: { needsDensity?: boolean }) {
+  return (
+    <>
+      <optgroup label="Weight">
+        {MASS_UNITS.map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}
+      </optgroup>
+      <optgroup label={needsDensity ? 'Volume (asks for the density)' : 'Volume'}>
+        {VOLUME_UNITS.map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}
+      </optgroup>
+    </>
+  )
+}
+
+/** Asks for an ingredient's density (g per mL), which a volume unit needs */
+function DensityDialog({ ingredientName, unit, canEditLibrary, saving, onSave, onClose }: {
+  ingredientName: string
+  unit: WeightUnit
+  canEditLibrary: boolean
+  saving: boolean
+  onSave: (density: number) => void
+  onClose: () => void
+}) {
+  const [value, setValue] = useState('')
+  const density = parseFloat(value)
+  const valid = density > 0 && density <= 100
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <form
+        onSubmit={e => { e.preventDefault(); if (valid) onSave(density) }}
+        className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-gray-900">Density needed</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <p className="text-sm text-gray-600">
+          To show <span className="font-medium text-gray-800">{ingredientName}</span> in {UNIT_LABELS[unit]}, Benchtop needs
+          its density: how many grams one millilitre weighs. Water is 1; most oils are about 0.92 and honey about 1.42.
+        </p>
+        {canEditLibrary ? (
+          <>
+            <label className="block">
+              <span className="block text-xs font-medium text-gray-600 mb-1">Density</span>
+              <span className="flex items-center gap-2">
+                <input
+                  autoFocus inputMode="decimal" value={value} onChange={e => setValue(e.target.value)} placeholder="e.g. 1.03"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-500">g/mL</span>
+              </span>
+            </label>
+            <p className="text-xs text-gray-500">It’s saved to the ingredient in your library, so every formula can use it.</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+              <button type="submit" disabled={!valid || saving}
+                data-tip={valid ? 'Saves the density and switches this ingredient to the volume unit' : 'Enter a density greater than 0'}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                {saving ? 'Saving…' : `Save and use ${UNIT_LABELS[unit]}`}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-amber-700">You can’t edit the ingredient library, so ask someone who can to add its density.</p>
+            <div className="flex justify-end">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50">Close</button>
+            </div>
+          </>
+        )}
+      </form>
+    </div>
+  )
+}
+
+const numOrNull = (s: string | null | undefined) => (s != null && s !== '' ? parseFloat(s) : null)
+
+
 type LineState = {
   key: string           // stable React key (uuid or temp)
   ingredientId: string
@@ -80,6 +161,8 @@ type LineState = {
   ingredientVerification: string
   position: number
   weightG: number
+  weightUnit: WeightUnit | null  // this line's own display unit; null = the column's
+  densityGPerMl: number | null   // the ingredient's, for volume units
   locked: boolean          // quantity lock: keeps its grams
   pctLocked: boolean       // %-lock: always `lockedPct` % of the batch
   lockedPct: number | null
@@ -293,6 +376,10 @@ export function FormulationGrid({ id }: { id: string }) {
   const [expandedNutrients, setExpandedNutrients] = useState<Set<string>>(new Set())
   // null = the default columns
   const [gridNutrientIds, setGridNutrientIds] = useState<string[] | null>(null)
+  // Unit the amount column is shown and typed in. Like the columns, a view choice saved straight away.
+  const [columnUnit, setColumnUnit] = useState<WeightUnit>('g')
+  // A line waiting for its ingredient's density before it can switch to a volume unit
+  const [densityPrompt, setDensityPrompt] = useState<{ key: string; unit: WeightUnit } | null>(null)
   const gridSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showManualDialog, setShowManualDialog] = useState(false)
   const [manualInitialName, setManualInitialName] = useState('')
@@ -370,6 +457,8 @@ export function FormulationGrid({ id }: { id: string }) {
         ingredientVerification: l.ingredientVerification,
         position: l.position,
         weightG: parseFloat(l.weightG),
+        weightUnit: isWeightUnit(l.weightUnit) ? l.weightUnit : null,
+        densityGPerMl: l.ingredientDensityGPerMl != null ? parseFloat(l.ingredientDensityGPerMl) : null,
         locked: l.locked,
         pctLocked: l.pctLocked,
         lockedPct: l.pctLocked ? parseFloat(l.pct) : null,
@@ -387,6 +476,7 @@ export function FormulationGrid({ id }: { id: string }) {
     setServingSizeG(data.servingSizeG ? String(parseFloat(data.servingSizeG)) : '')
     setBatchLocked(data.batchLocked)
     setGridNutrientIds(data.gridNutrientIds ?? null)
+    setColumnUnit(isWeightUnit(data.weightUnit) ? data.weightUnit : 'g')
     setBatchTargetG(data.batchLocked && data.batchSizeG ? parseFloat(data.batchSizeG) : null)
     // Auto-launch wizard for new reverse-mode formulations with no lines yet
     if (data.mode === 'reverse' && data.lines.length === 0) {
@@ -481,6 +571,50 @@ export function FormulationGrid({ id }: { id: string }) {
     pendingGridIdsRef.current = null
     if (pending) await gridColumnsMutation.mutateAsync(pending.ids).catch(() => {})
   }
+
+  function changeColumnUnit(unit: WeightUnit) {
+    setColumnUnit(unit)
+    queryClient.setQueryData<FormulationDetail>(['formulation', id], old => old && { ...old, weightUnit: unit })
+    // View-only members can switch units for themselves, but it isn't saved for everyone
+    if (data?.canEdit === false) return
+    fetch(`/api/formulations/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weightUnit: unit }),
+    }).then(r => { if (!r.ok) toast.error('Could not save the unit') }).catch(() => toast.error('Could not save the unit'))
+  }
+
+  // Gives one line its own unit (null follows the column again); saved with the formula
+  function changeLineUnit(key: string, unit: WeightUnit | null) {
+    const line = lines.find(l => l.key === key)
+    if (!line) return
+    if (unit && isVolumeUnit(unit) && !line.densityGPerMl) { setDensityPrompt({ key, unit }); return }
+    setLines(prev => prev.map(l => (l.key === key ? { ...l, weightUnit: unit } : l)))
+    markDirty()
+  }
+
+  // Saves the ingredient's density to the library, then switches the line to the volume unit
+  const saveDensity = useMutation({
+    mutationFn: async ({ ingredientId, density }: { ingredientId: string; density: number }) => {
+      const r = await fetch(`/api/ingredients/${ingredientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ densityGPerMl: density }),
+      })
+      if (!r.ok) throw new Error(await readErrorMessage(r, 'Could not save the density'))
+    },
+    onSuccess: (_r, { ingredientId, density }) => {
+      const prompt = densityPrompt
+      setLines(prev => prev.map(l => (l.ingredientId === ingredientId
+        ? { ...l, densityGPerMl: density, ...(prompt && l.key === prompt.key ? { weightUnit: prompt.unit } : {}) }
+        : l)))
+      if (prompt) markDirty()
+      queryClient.invalidateQueries({ queryKey: ['ingredients'] })
+      queryClient.invalidateQueries({ queryKey: ['ingredient', ingredientId] })
+      setDensityPrompt(null)
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
 
   function toggleNutrientExpanded(nutrientId: string) {
     setExpandedNutrients(prev => {
@@ -640,6 +774,7 @@ export function FormulationGrid({ id }: { id: string }) {
             weightG: l.weightG,
             locked: l.locked,
             pctLocked: l.pctLocked,
+            weightUnit: l.weightUnit,
             lockedPct: l.pctLocked ? l.lockedPct : null,
             minPct: l.minPct,
             maxPct: l.maxPct,
@@ -815,6 +950,8 @@ export function FormulationGrid({ id }: { id: string }) {
       ingredientVerification: ing.verification,
       position: lines.length + 1,
       weightG: 0,
+      weightUnit: null,
+      densityGPerMl: numOrNull(libraryById.get(ing.id)?.densityGPerMl),
       locked: false,
       pctLocked: false,
       lockedPct: null,
@@ -868,6 +1005,7 @@ export function FormulationGrid({ id }: { id: string }) {
         ingredientId: detail.id,
         ingredientName: detail.name,
         ingredientVerification: detail.verification,
+        densityGPerMl: numOrNull(detail.densityGPerMl),
         nutrients: (detail.nutrients ?? []).map((n: {
           nutrientId: string
           amountPer100g: string
@@ -1373,7 +1511,20 @@ export function FormulationGrid({ id }: { id: string }) {
               <th className="px-2 py-2.5 w-6 print:hidden" />
               <th className="px-3 py-2.5 text-left font-medium w-6">#</th>
               <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2.5 text-left font-medium">Ingredient</th>
-              <th className="px-3 py-2.5 text-right font-medium w-36"><Term t="weightG">Weight (g)</Term></th>
+              <th className="px-3 py-2.5 text-right font-medium w-48">
+                <span className="inline-flex items-center gap-1.5">
+                  <Term t="weightG">Amount</Term>
+                  <select
+                    value={columnUnit}
+                    onChange={e => changeColumnUnit(e.target.value as WeightUnit)}
+                    aria-label="Unit for the amount column"
+                    data-tip="Shows and types every amount in this unit. Lines given their own unit keep it. Amounts are stored in grams, so the formula doesn’t change. Volume units need each ingredient’s density; lines without one stay in grams."
+                    className="px-1 py-0.5 text-xs font-normal text-gray-700 border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <UnitOptions />
+                  </select>
+                </span>
+              </th>
               <th className="px-3 py-2.5 text-right font-medium w-40">
                 <span className="inline-flex items-center gap-1">
                   <Term t="usagePct">%</Term>
@@ -1412,6 +1563,9 @@ export function FormulationGrid({ id }: { id: string }) {
           <tbody className="divide-y divide-gray-100 bg-white">
             {lines.map((line) => {
               const linePct = totalWeightG > 0 ? (line.weightG / totalWeightG) * 100 : 0
+              const lineUnit = effectiveUnit(line.weightUnit, columnUnit, line.densityGPerMl)
+              // The column is in a volume unit but this ingredient has no density, so it stays in grams
+              const columnFallback = !line.weightUnit && isVolumeUnit(columnUnit) && !line.densityGPerMl
               const isBeingDragged = dragKey === line.key
               const isDropTarget = dragOverKey === line.key && dragKey !== line.key
               return (
@@ -1479,7 +1633,27 @@ export function FormulationGrid({ id }: { id: string }) {
                         onChange={g => updateWeight(line.key, String(g))}
                         disabled={isLocked || line.locked || line.pctLocked}
                         tip={line.pctLocked ? 'Set by the locked usage %. Unlock the % to edit.' : undefined}
+                        unit={lineUnit}
+                        densityGPerMl={line.densityGPerMl}
+                        ariaLabel={`Amount of ${line.ingredientName} (${UNIT_LABELS[lineUnit]})`}
                       />
+                      <select
+                        value={line.weightUnit ?? ''}
+                        onChange={e => changeLineUnit(line.key, (e.target.value || null) as WeightUnit | null)}
+                        disabled={isLocked}
+                        aria-label={`Unit for ${line.ingredientName}`}
+                        data-tip={line.weightUnit
+                          ? `This ingredient is shown in ${UNIT_LABELS[line.weightUnit]}, whatever the column’s unit. Choose the first option to follow the column again.`
+                          : columnFallback
+                            ? `Shown in grams: ${UNIT_LABELS[columnUnit]} needs this ingredient’s density. Choose a volume unit here to add it.`
+                            : 'Follows the column’s unit. Choose another unit for just this ingredient.'}
+                        className={`w-14 px-0.5 py-0.5 text-xs bg-transparent border border-transparent hover:border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60 ${
+                          line.weightUnit ? 'text-blue-700 font-medium' : columnFallback ? 'text-amber-600' : 'text-gray-500'
+                        }`}
+                      >
+                        <option value="">{UNIT_LABELS[effectiveUnit(null, columnUnit, line.densityGPerMl)]}</option>
+                        <UnitOptions needsDensity={!line.densityGPerMl} />
+                      </select>
                       <LockToggle
                         active={line.locked}
                         disabled={isLocked}
@@ -1542,7 +1716,7 @@ export function FormulationGrid({ id }: { id: string }) {
                   <Term tip="The total batch weight. For nutrients this row shows the amount per 100 g finished, not the sum of the column.">Total</Term>
                   {' '}({lines.length} ingredient{lines.length !== 1 ? 's' : ''})
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatGramsIn(totalWeightG, columnUnit)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   <span className={Math.abs(100 - (totalWeightG > 0 ? 100 : 0)) < 0.01 ? 'text-green-600' : 'text-gray-500'}>
                     {totalWeightG > 0 ? `${(100).toFixed(pctDecimals)}%` : '—'}
@@ -2088,7 +2262,10 @@ export function FormulationGrid({ id }: { id: string }) {
         <ReverseWizard
           formulationId={id}
           onApply={(newLines) => {
-            setLines(newLines.map(l => ({ ...l, pctLocked: false, lockedPct: null, minPct: null, maxPct: null })))
+            setLines(newLines.map(l => ({
+              ...l, pctLocked: false, lockedPct: null, minPct: null, maxPct: null,
+              weightUnit: null, densityGPerMl: numOrNull(libraryById.get(l.ingredientId)?.densityGPerMl),
+            })))
             setIsDirty(true)
             setShowReverseWizard(false)
             toast.success('Formula loaded — review and save when ready')
@@ -2125,6 +2302,21 @@ export function FormulationGrid({ id }: { id: string }) {
           }}
         />
       )}
+
+      {densityPrompt && (() => {
+        const line = lines.find(l => l.key === densityPrompt.key)
+        if (!line) return null
+        return (
+          <DensityDialog
+            ingredientName={line.ingredientName}
+            unit={densityPrompt.unit}
+            canEditLibrary={data.canEditLibrary !== false}
+            saving={saveDensity.isPending}
+            onSave={density => saveDensity.mutate({ ingredientId: line.ingredientId, density })}
+            onClose={() => setDensityPrompt(null)}
+          />
+        )
+      })()}
 
       {showNfpDialog && calcResult && (
         <NfpDialog

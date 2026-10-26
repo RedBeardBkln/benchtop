@@ -9,6 +9,7 @@ import { and, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOwnedFormulation, loadFormulationForEdit, notFoundResponse, projectLevel } from '@/lib/tenancy'
 import { canEditLibrary as canEditLibraryAccess } from '@/lib/team-access'
+import { WEIGHT_UNITS } from '@/lib/weight-units'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -25,6 +26,8 @@ const patchSchema = z.object({
   archived: z.boolean().optional(),
   // Grid column view; null resets to the default columns
   gridNutrientIds: z.array(z.string().uuid()).max(200).nullable().optional(),
+  // Unit the grid's amount column is shown in
+  weightUnit: z.enum(WEIGHT_UNITS).optional(),
 })
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
@@ -49,11 +52,13 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       ingredientId: formulationLines.ingredientId,
       ingredientName: ingredients.name,
       ingredientVerification: ingredients.verification,
+      ingredientDensityGPerMl: ingredients.densityGPerMl,
       position: formulationLines.position,
       weightG: formulationLines.weightG,
       pct: formulationLines.pct,
       locked: formulationLines.locked,
       pctLocked: formulationLines.pctLocked,
+      weightUnit: formulationLines.weightUnit,
       minPct: formulationLines.minPct,
       maxPct: formulationLines.maxPct,
     })
@@ -141,9 +146,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const d = parsed.data
   // Changing only the grid's column view or the COGS package size isn't an edit to the formula,
   // so it leaves updatedAt alone
-  const viewOnly = Object.keys(d).length > 0 && Object.keys(d).every(k => k === 'gridNutrientIds' || k === 'unitSizeG')
+  const viewOnly = Object.keys(d).length > 0 && Object.keys(d).every(k => k === 'gridNutrientIds' || k === 'unitSizeG' || k === 'weightUnit')
   const updates: Record<string, unknown> = viewOnly ? {} : { updatedAt: new Date() }
   if (d.gridNutrientIds !== undefined) updates.gridNutrientIds = d.gridNutrientIds ? [...new Set(d.gridNutrientIds)] : null
+  if (d.weightUnit !== undefined) updates.weightUnit = d.weightUnit
   if (d.name !== undefined) updates.name = d.name
   if (d.servingSizeG !== undefined) updates.servingSizeG = d.servingSizeG?.toString() ?? null
   if (d.unitSizeG !== undefined) updates.unitSizeG = d.unitSizeG?.toString() ?? null

@@ -69,7 +69,7 @@ export const formulations: HelpSection = {
             'Click **+ Add ingredient** under the grid (or **Add first ingredient →** if the formulation is empty).',
             'Start typing the ingredient’s name in **Search ingredients…**. Up to 8 matches from your library appear. A green **On hand** badge means you have it in the lab; a ✓ means it’s verified.',
             'Click the one you want. It’s added with a weight of 0.',
-            'Type its amount in the **Weight (g)** column (or a percentage in the **%** column).',
+            'Type its amount in the **Amount** column (or a percentage in the **%** column). Amounts are in grams unless you choose another unit; see [Units: g, oz, lb, mL and more](#units).',
             'Repeat for every ingredient, then click `Save`.',
           ],
         },
@@ -104,7 +104,7 @@ export const formulations: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: 'Weight (g)', text: 'How many grams of that ingredient go into the batch. Up to 4 decimal places.' },
+            { term: 'Amount', text: 'How much of that ingredient goes into the batch: grams to up to 4 decimal places, or another unit you choose. See [Units: g, oz, lb, mL and more](#units).' },
             { term: '%', text: 'That ingredient’s share of the whole batch: its weight ÷ the total weight × 100. All the percentages add up to 100%.' },
             { term: 'Batch (g)', text: 'The total weight of all ingredients you put in, before any cooking or processing losses.' },
             { term: 'Serving (g)', text: 'How much one serving weighs. It’s needed for per-serving nutrition, the Nutrition Facts panel, per-serving targets and per-serving cost.' },
@@ -127,6 +127,45 @@ export const formulations: HelpSection = {
         {
           type: 'tip',
           text: 'Want to see more decimal places in the % column? Use the **−** and **+** buttons in the % column header to show 1 to 4 decimals.',
+        },
+      ],
+    },
+    {
+      slug: 'units',
+      title: 'Units: g, oz, lb, mL and more',
+      summary: 'Show and type amounts in the unit you work in, for the whole column or one ingredient.',
+      blocks: [
+        {
+          type: 'p',
+          text: 'The **Amount** column can show and take amounts in grams, kilograms, milligrams, ounces or pounds, or by volume in mL, L, teaspoons, tablespoons, fluid ounces or cups. Benchtop always stores amounts in grams, so changing the unit never changes the formula, its percentages or its nutrition.',
+        },
+        { type: 'h', text: 'Change the unit for the whole column' },
+        {
+          type: 'steps',
+          items: [
+            'Open the formulation.',
+            'In the **Amount** column header, choose a unit from the drop-down next to the word Amount.',
+            'Every amount, and the Total row, switches to that unit. The choice is saved with the formulation straight away and copied to new iterations.',
+          ],
+        },
+        { type: 'h', text: 'Change the unit for one ingredient' },
+        {
+          type: 'steps',
+          items: [
+            'Click the small unit drop-down just right of that ingredient’s amount.',
+            'Choose a unit. The unit turns blue to show it’s the ingredient’s own, and it stays that way whatever the column’s unit is.',
+            'To follow the column again, choose the first option in the list.',
+            'Click `Save` to keep it.',
+          ],
+        },
+        { type: 'h', text: 'Volume units need a density' },
+        {
+          type: 'p',
+          text: 'To turn grams into mL or cups, Benchtop needs the ingredient’s **density**: how many grams one millilitre weighs (water is 1). If you choose a volume unit for an ingredient that doesn’t have one, Benchtop asks for it and saves it to the ingredient in your library. You can also set it with `Edit` on the ingredient’s page. When the whole column is in a volume unit, ingredients without a density stay in grams and their unit shows in amber. The Total row is in grams whenever the column is a volume unit, since a mix of ingredients has no single density.',
+        },
+        {
+          type: 'tip',
+          text: 'The printout shows each amount in the same unit as the grid. The batch size, serving size, stock and costs stay in grams.',
         },
       ],
     },

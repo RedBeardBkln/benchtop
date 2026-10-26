@@ -15,6 +15,9 @@ import { CATEGORY_ORDER, evaluateTargets, fmtRequirement, type ValidationStatus 
 import type { PrintSection } from '@/lib/print-sections'
 import { formulationFileName } from '@/lib/download-name'
 import { Logo } from '@/components/logo'
+import { effectiveUnit, formatGramsIn, isWeightUnit, type WeightUnit } from '@/lib/weight-units'
+
+const asUnit = (u: string | null): WeightUnit | null => (isWeightUnit(u) ? u : null)
 
 // Literal class names so Tailwind includes them
 const COL_SPAN: Record<number, string> = {
@@ -85,6 +88,8 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const isLocked = data.status === 'locked'
   const sortedLines = [...data.lines].sort((a, b) => a.position - b.position)
   const totalWeightG = sortedLines.reduce((s, l) => s + parseFloat(l.weightG), 0)
+  // Amounts print in the units chosen on the formula grid
+  const columnUnit = asUnit(data.weightUnit) ?? 'g'
   const servingSizeG = data.servingSizeG ? parseFloat(data.servingSizeG) : undefined
   const notes = data.notes?.trim() ?? ''
   const sortedSteps = [...data.processSteps].sort((a, b) => a.stepNo - b.stepNo)
@@ -184,25 +189,28 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
             <thead>
               <tr className="border-b-2 border-gray-800 text-xs text-gray-600 uppercase tracking-wide">
                 <th className="text-left font-medium py-2 pr-2">Ingredient</th>
-                <th className="text-right font-medium py-2 px-2 w-28">Weight (g)</th>
+                <th className="text-right font-medium py-2 px-2 w-32">Amount</th>
                 <th className="text-right font-medium py-2 pl-2 w-20">%</th>
               </tr>
             </thead>
             <tbody>
               {sortedLines.map(line => {
                 const weightG = parseFloat(line.weightG)
+                const density = line.ingredientDensityGPerMl != null ? parseFloat(line.ingredientDensityGPerMl) : null
                 const pct = totalWeightG > 0 ? (weightG / totalWeightG) * 100 : 0
                 return (
                   <tr key={line.id} className="border-b border-gray-200">
                     <td className="py-1.5 pr-2 text-gray-900">{line.ingredientName}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">{formatWeightG(weightG)}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-gray-800 whitespace-nowrap">
+                      {formatGramsIn(weightG, effectiveUnit(asUnit(line.weightUnit), columnUnit, density), density)}
+                    </td>
                     <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(pctDecimals)}%</td>
                   </tr>
                 )
               })}
               <tr className="border-t-2 border-gray-800 font-medium text-gray-900">
                 <td className="py-2 pr-2">Total ({sortedLines.length} ingredient{sortedLines.length !== 1 ? 's' : ''})</td>
-                <td className="py-2 px-2 text-right tabular-nums">{formatWeightG(totalWeightG)}</td>
+                <td className="py-2 px-2 text-right tabular-nums whitespace-nowrap">{formatGramsIn(totalWeightG, columnUnit)}</td>
                 <td className="py-2 pl-2 text-right tabular-nums">
                   {totalWeightG > 0 ? `${(100).toFixed(pctDecimals)}%` : '—'}
                 </td>

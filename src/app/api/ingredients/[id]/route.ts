@@ -153,6 +153,8 @@ const patchSchema = z.object({
   defaultCostPerKg: z.number().positive().max(1e6).nullable().optional(),
   costUnit: z.enum(COST_UNITS).optional(),
   moisturePct: z.number().min(0).max(100).nullable().optional(),
+  // Grams per mL, for showing formula amounts by volume
+  densityGPerMl: z.number().positive().max(100).nullable().optional(),
   stockG: z.number().nullable().optional(),
   category: z.string().trim().max(120).nullable().optional(),
   subcategory: z.string().trim().max(120).nullable().optional(),
@@ -197,6 +199,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null
     if (d.costUnit !== undefined) updateValues.costUnit = d.costUnit
     if (d.moisturePct !== undefined) updateValues.moisturePct = d.moisturePct?.toString() ?? null
+    if (d.densityGPerMl !== undefined) updateValues.densityGPerMl = d.densityGPerMl?.toString() ?? null
     if (d.stockG !== undefined) updateValues.stockG = d.stockG?.toString() ?? null
     if (d.category !== undefined || d.subcategory !== undefined || d.microCategory !== undefined) {
       // New values are allowed; ones matching an existing value (ignoring case) take its spelling

@@ -5,6 +5,7 @@ import { formulationLines, formulations } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { hasValidWeightPrecision } from '@/lib/weight'
+import { WEIGHT_UNITS } from '@/lib/weight-units'
 import { assertIngredientsOwned, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -15,6 +16,8 @@ const lineSchema = z.object({
   weightG: z.number().min(0).refine(hasValidWeightPrecision, 'Weights can have at most 4 decimal places'),
   locked: z.boolean().default(false),
   pctLocked: z.boolean().default(false),
+  // The line's own display unit; null follows the formulation's column unit
+  weightUnit: z.enum(WEIGHT_UNITS).nullable().optional(),
   lockedPct: z.number().min(0).max(100).nullable().optional(),
   minPct: z.number().min(0).max(100).nullable().optional(),
   maxPct: z.number().min(0).max(100).nullable().optional(),
@@ -61,6 +64,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
               : '0',
           locked: l.locked,
           pctLocked: l.pctLocked,
+          weightUnit: l.weightUnit ?? null,
           minPct: l.minPct?.toString() ?? null,
           maxPct: l.maxPct?.toString() ?? null,
         }))

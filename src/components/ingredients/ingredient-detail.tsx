@@ -732,6 +732,9 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
             {data.moisturePct != null && (
               <span className="text-xs text-gray-500"><Term t="moisturePct">Moisture</Term> {parseFloat(data.moisturePct)}%</span>
             )}
+            {data.densityGPerMl != null && (
+              <span className="text-xs text-gray-500"><Term t="density">Density</Term> {parseFloat(data.densityGPerMl)} g/mL</span>
+            )}
             {data.naturallyDerived && <span className="text-xs text-gray-500"><Term t="naturallyDerived">Naturally derived</Term></span>}
             {data.sourceFormulationId && (
               <Link

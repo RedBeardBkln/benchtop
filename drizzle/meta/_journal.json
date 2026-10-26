@@ -162,6 +162,13 @@
       "when": 1792934205407,
       "tag": "0022_client_archive",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793022955255,
+      "tag": "0023_weight_units",
+      "breakpoints": true
     }
   ]
 }

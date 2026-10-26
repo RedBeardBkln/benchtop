@@ -20,6 +20,7 @@ export type EditableIngredient = {
   onHand: boolean
   naturallyDerived: boolean
   moisturePct: string | null
+  densityGPerMl: string | null
   notes: string | null
 }
 
@@ -35,6 +36,7 @@ export function toEditable(i: Ingredient): EditableIngredient {
     onHand: i.onHand,
     naturallyDerived: i.naturallyDerived,
     moisturePct: i.moisturePct,
+    densityGPerMl: i.densityGPerMl,
     notes: i.notes,
   }
 }
@@ -56,6 +58,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
   const [onHand, setOnHand] = useState(false)
   const [naturallyDerived, setNaturallyDerived] = useState(false)
   const [moisturePct, setMoisturePct] = useState('')
+  const [density, setDensity] = useState('')
   const [notes, setNotes] = useState('')
   const taxonomy = useTaxonomy(!!ingredient)
 
@@ -69,6 +72,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
     setOnHand(ingredient.onHand)
     setNaturallyDerived(ingredient.naturallyDerived)
     setMoisturePct(ingredient.moisturePct != null ? String(parseFloat(ingredient.moisturePct)) : '')
+    setDensity(ingredient.densityGPerMl != null ? String(parseFloat(ingredient.densityGPerMl)) : '')
     setNotes(ingredient.notes ?? '')
   }, [ingredient])
 
@@ -93,11 +97,13 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
 
   const moistureValue = moisturePct.trim() === '' ? null : Number(moisturePct)
   const moistureInvalid = moistureValue != null && !(moistureValue >= 0 && moistureValue <= 100)
+  const densityValue = density.trim() === '' ? null : Number(density)
+  const densityInvalid = densityValue != null && !(densityValue > 0 && densityValue <= 100)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed || moistureInvalid) return
+    if (!trimmed || moistureInvalid || densityInvalid) return
     patchMutation.mutate({
       name: trimmed,
       stockG: stockG.trim() === '' ? null : parseFloat(stockG),
@@ -107,6 +113,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
       onHand,
       naturallyDerived,
       moisturePct: moistureValue,
+      densityGPerMl: densityValue,
       notes: notes.trim(),
     })
   }
@@ -206,6 +213,23 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
               className={inputClass}
             />
             {moistureInvalid && <p className="mt-1 text-xs text-red-600">Enter a number from 0 to 100.</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5"><Term t="density">Density</Term></label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={density}
+                onChange={e => setDensity(e.target.value)}
+                placeholder="e.g. 1.03"
+                data-tip="Grams per millilitre. Needed to show this ingredient’s amount in a formula in mL, cups, tsp or other volume units. Water is 1."
+                className={inputClass}
+              />
+              <span className="text-sm text-gray-400 shrink-0">g/mL</span>
+            </div>
+            {densityInvalid && <p className="mt-1 text-xs text-red-600">Enter a number greater than 0, up to 100.</p>}
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-700" data-tip="Comes from a natural source. Formulations containing anything not naturally derived get flagged as synthetic.">
             <input

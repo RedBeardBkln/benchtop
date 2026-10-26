@@ -1,16 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { formatWeightG, isWeightInput } from '@/lib/weight'
+import { formatInUnit, fromGrams, isAmountInput, toGrams, type WeightUnit } from '@/lib/weight-units'
 
 /**
- * Weight (g) box that keeps exactly what is typed — "0.05", "1.2500", "12." all survive
- * while editing — and accepts at most four digits after the decimal point.
+ * Weight box that keeps exactly what is typed — "0.05", "1.2500", "12." all survive
+ * while editing — and accepts at most the unit's decimal places (four for grams).
+ *
+ * `value` and `onChange` are always grams; `unit` (default g) is only what's shown and typed,
+ * with `densityGPerMl` needed for volume units.
  *
  * `commitOn="change"` (default) reports every keystroke; `"blur"` reports once, when you leave the
  * box or press Enter (for values that trigger a bigger recalculation, like the batch size).
  */
-export function WeightInput({ value, onChange, disabled, commitOn = 'change', tip, ariaLabel = 'Weight (g)', className }: {
+export function WeightInput({
+  value, onChange, disabled, commitOn = 'change', tip, ariaLabel = 'Weight (g)', className, unit = 'g', densityGPerMl,
+}: {
   value: number
   onChange: (grams: number) => void
   disabled: boolean
@@ -19,15 +24,23 @@ export function WeightInput({ value, onChange, disabled, commitOn = 'change', ti
   tip?: string
   ariaLabel?: string
   className?: string
+  unit?: WeightUnit
+  densityGPerMl?: number | null
 }) {
-  const [draft, setDraft] = useState(value ? formatWeightG(value) : '')
+  const show = (grams: number) => {
+    if (!grams) return ''
+    const amount = fromGrams(grams, unit, densityGPerMl)
+    return amount == null ? '' : formatInUnit(amount, unit)
+  }
+  const parse = (raw: string) => (raw === '' || raw === '.' ? 0 : toGrams(parseFloat(raw), unit, densityGPerMl) ?? 0)
 
-  // Follow changes made elsewhere (solver, swaps, rebalancing) without overwriting a matching in-progress edit
+  const [draft, setDraft] = useState(() => show(value))
+
+  // Follow changes made elsewhere (solver, swaps, rebalancing, a new unit) without overwriting a
+  // matching in-progress edit
   useEffect(() => {
-    setDraft(d => (Number(d || 0) === value ? d : value ? formatWeightG(value) : ''))
-  }, [value])
-
-  const parse = (raw: string) => (raw === '' || raw === '.' ? 0 : parseFloat(raw))
+    setDraft(d => (parse(d) === value && d !== '' ? d : show(value)))
+  }, [value, unit, densityGPerMl])
 
   return (
     <input
@@ -40,14 +53,14 @@ export function WeightInput({ value, onChange, disabled, commitOn = 'change', ti
       aria-label={ariaLabel}
       onChange={(e) => {
         const raw = e.target.value
-        if (!isWeightInput(raw)) return
+        if (!isAmountInput(raw, unit)) return
         setDraft(raw)
         if (commitOn === 'change') onChange(parse(raw))
       }}
       onBlur={() => {
         if (commitOn !== 'blur') return
         if (parse(draft) !== value) onChange(parse(draft))
-        else setDraft(value ? formatWeightG(value) : '')
+        else setDraft(show(value))
       }}
       onKeyDown={(e) => { if (commitOn === 'blur' && e.key === 'Enter') e.currentTarget.blur() }}
       className={className ?? `w-24 px-2 py-0.5 text-right text-sm border border-gray-200 rounded

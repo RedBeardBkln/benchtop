@@ -72,6 +72,7 @@ export type ProjectSummary = Project & { formulationCount: number }
 export type FormulationLineDetail = FormulationLine & {
   ingredientName: string
   ingredientVerification: string
+  ingredientDensityGPerMl: string | null
   nutrients: Array<{
     nutrientId: string
     amountPer100g: string

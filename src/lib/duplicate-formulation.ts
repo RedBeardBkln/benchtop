@@ -51,6 +51,7 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
         batchLocked: source.batchLocked,
         notes: source.notes,
         gridNutrientIds: source.gridNutrientIds,
+        weightUnit: source.weightUnit,
       })
       .returning()
 
@@ -71,6 +72,7 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
           maxPct: l.maxPct,
           locked: l.locked,
           pctLocked: l.pctLocked,
+          weightUnit: l.weightUnit,
         }))
       )
     }

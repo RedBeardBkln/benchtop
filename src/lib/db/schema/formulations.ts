@@ -38,6 +38,9 @@ export const formulations = pgTable('formulations', {
   // Nutrient ids shown as columns in the formula grid, in order; null = the default set.
   // A view preference: copied to new iterations, and saving it doesn't bump updated_at.
   gridNutrientIds: jsonb('grid_nutrient_ids').$type<string[]>(),
+  // Unit the grid's amount column is shown and typed in (lib/weight-units.ts); amounts are always
+  // stored in grams. A view preference like grid_nutrient_ids.
+  weightUnit: text('weight_unit').notNull().default('g'),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   archivedAt: timestamp('archived_at', { withTimezone: true }),
   // Set when archived along with its project's client (see lib/client-archive.ts)
@@ -70,6 +73,8 @@ export const formulationLines = pgTable('formulation_lines', {
   locked: boolean('locked').notNull().default(false),          // quantity lock: fixed grams, excluded from solver
   // Usage-% lock: the line is always `pct` % of the batch (pct then holds the locked value)
   pctLocked: boolean('pct_locked').notNull().default(false),
+  // This line's own display unit, overriding the formulation's weight_unit; null = follow the column
+  weightUnit: text('weight_unit'),
 }, (t) => [
   index('formulation_lines_formulation_idx').on(t.formulationId),
   index('formulation_lines_ingredient_idx').on(t.ingredientId),
