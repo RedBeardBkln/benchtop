@@ -15,6 +15,7 @@ import { calcNutrientContributions, calcNutrientProfile, dryBasisFactor, formatA
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
 import { WeightInput } from '@/components/formulations/weight-input'
+import { StickyXScroll } from '@/components/sticky-x-scroll'
 import {
   MASS_UNITS, UNIT_LABELS, VOLUME_UNITS, effectiveUnit, formatGramsIn, isVolumeUnit, isWeightUnit,
   type WeightUnit,
@@ -1507,8 +1508,9 @@ export function FormulationGrid({ id }: { id: string }) {
       )}
 
       {/* Grid table */}
-      {/* Sized to its columns, so extra nutrient columns scroll sideways; the ingredient column stays pinned */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
+      {/* Sized to its columns, so extra nutrient columns scroll sideways; the ingredient column stays pinned,
+          and the sideways scrollbar stays at the bottom of the screen while the grid is in view */}
+      <StickyXScroll className="rounded-lg border border-gray-200">
         <table className="w-max min-w-full text-sm border-collapse">
           <thead className="bg-gray-50 text-xs text-gray-500">
             <tr>
@@ -1779,7 +1781,7 @@ export function FormulationGrid({ id }: { id: string }) {
             )}
           </tbody>
         </table>
-      </div>
+      </StickyXScroll>
 
       {/* Add ingredient row */}
       {!isLocked && (

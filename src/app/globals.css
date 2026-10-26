@@ -227,3 +227,9 @@ input[type='radio'] {
     page-break-inside: avoid;
   }
 }
+
+/* Hides a box's own scrollbar while it still scrolls (StickyXScroll shows a pinned one instead) */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
