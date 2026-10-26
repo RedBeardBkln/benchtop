@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Bug, Lightbulb, Mail, Phone } from 'lucide-react'
+import { Bug, Lightbulb, Mail, MessageCircleReply, Phone } from 'lucide-react'
 import { FEEDBACK_KIND_LABELS, type FeedbackKind } from '@/lib/feedback'
 import { readErrorMessage } from '@/lib/utils'
 import { btnSecondary, Card, Notice } from '@/components/settings/ui'
@@ -28,6 +28,7 @@ type FeedbackRow = {
 
 const FILTERS = [
   { key: 'open', label: 'Open', tip: 'Show feedback not yet marked resolved' },
+  { key: 'contact', label: 'Wants a reply', tip: 'Show open feedback where the person asked to be contacted' },
   { key: 'resolved', label: 'Resolved', tip: 'Show feedback marked resolved' },
   { key: 'all', label: 'All', tip: 'Show all feedback' },
 ] as const
@@ -74,9 +75,14 @@ export function FeedbackAdmin() {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  const awaitingReply = (f: FeedbackRow) => f.wantsContact && !f.resolvedAt
   const rows = (data ?? []).filter(f =>
-    filter === 'all' ? true : filter === 'open' ? !f.resolvedAt : !!f.resolvedAt)
+    filter === 'all' ? true
+      : filter === 'open' ? !f.resolvedAt
+        : filter === 'contact' ? awaitingReply(f)
+          : !!f.resolvedAt)
   const openCount = (data ?? []).filter(f => !f.resolvedAt).length
+  const replyCount = (data ?? []).filter(awaitingReply).length
 
   return (
     <div className="space-y-4">
@@ -91,21 +97,58 @@ export function FeedbackAdmin() {
               filter === f.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            {f.label}{f.key === 'open' && openCount > 0 && ` (${openCount})`}
+            {f.label}
+            {f.key === 'open' && openCount > 0 && ` (${openCount})`}
+            {f.key === 'contact' && replyCount > 0 && ` (${replyCount})`}
           </button>
         ))}
       </div>
 
+      {replyCount > 0 && filter !== 'contact' && (
+        <button
+          type="button"
+          onClick={() => setFilter('contact')}
+          data-tip="Show only the open feedback where someone asked to be contacted"
+          className="w-full flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm font-medium text-amber-900 hover:bg-amber-100"
+        >
+          <MessageCircleReply size={16} className="shrink-0" />
+          {replyCount === 1 ? '1 person is' : `${replyCount} people are`} waiting for a reply →
+        </button>
+      )}
+
       {error && <Notice tone="error">{(error as Error).message}</Notice>}
       {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
       {data && rows.length === 0 && (
-        <p className="text-sm text-gray-500">{filter === 'open' ? 'Nothing open.' : 'No feedback yet.'}</p>
+        <p className="text-sm text-gray-500">{filter === 'open' ? 'Nothing open.' : filter === 'contact' ? 'Nobody is waiting for a reply.' : 'No feedback yet.'}</p>
       )}
 
       {rows.map(f => {
         const Icon = f.kind === 'bug' ? Bug : Lightbulb
+        const firstName = f.contactName.trim().split(/\s+/)[0] || f.contactName
         return (
-          <Card key={f.id}>
+          <Card key={f.id} tone={awaitingReply(f) ? 'highlight' : 'default'}>
+            {f.wantsContact && (
+              <div className={`-mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-4 px-5 sm:px-6 py-3 rounded-t-lg flex flex-wrap items-center gap-x-4 gap-y-2 ${
+                f.resolvedAt ? 'bg-gray-50 text-gray-600' : 'bg-amber-100 text-amber-900'
+              }`}>
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <MessageCircleReply size={16} />
+                  {f.contactName} asked to be contacted{f.resolvedAt ? '' : ' — reply needed'}
+                </span>
+                <a
+                  href={`mailto:${f.contactEmail}`}
+                  data-tip="Start an email to this person"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-amber-600 text-white text-xs font-medium hover:bg-amber-700"
+                >
+                  <Mail size={13} /> Email {firstName}
+                </a>
+                {f.contactPhone && (
+                  <a href={`tel:${f.contactPhone}`} className="inline-flex items-center gap-1 text-xs font-medium hover:underline">
+                    <Phone size={13} /> {f.contactPhone}
+                  </a>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-2 text-sm">
                 <Icon size={16} className={f.kind === 'bug' ? 'text-red-500' : 'text-amber-500'} />
@@ -142,9 +185,7 @@ export function FeedbackAdmin() {
                   <Phone size={12} /> {f.contactPhone}
                 </a>
               )}
-              <span className={f.wantsContact ? 'text-green-700 font-medium' : ''}>
-                {f.wantsContact ? 'Wants to be contacted' : 'No contact requested'}
-              </span>
+              {!f.wantsContact && <span>No contact requested</span>}
             </div>
             {(f.pagePath || f.userAgent) && (
               <div className="mt-1 text-xs text-gray-400 break-all">

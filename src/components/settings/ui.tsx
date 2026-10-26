@@ -48,11 +48,12 @@ export function Card({
   title?: string
   description?: string
   children: ReactNode
-  tone?: 'default' | 'danger'
+  tone?: 'default' | 'danger' | 'highlight'
 }) {
+  const border = tone === 'danger' ? 'border-red-200' : tone === 'highlight' ? 'border-amber-400 ring-2 ring-amber-200' : 'border-gray-200'
   return (
     <section
-      className={`bg-white rounded-lg border p-5 sm:p-6 ${tone === 'danger' ? 'border-red-200' : 'border-gray-200'}`}
+      className={`bg-white rounded-lg border p-5 sm:p-6 ${border}`}
     >
       {title && <h2 className="text-base font-semibold text-gray-900">{title}</h2>}
       {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
