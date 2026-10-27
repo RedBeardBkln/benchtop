@@ -183,7 +183,11 @@ export function AddIngredientDialog({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ stagedPath: doc.stagedPath, label }),
         }).catch(() => null)
-        if (!d?.ok) missed.push('the document')
+        if (!d?.ok) {
+          missed.push('the document')
+          // It's added again from the ingredient's page, so the staged copy isn't needed
+          discardStaged(doc.stagedPath)
+        }
       }
       if (docValues.length > 0) {
         const n = await fetch(`/api/ingredients/${id}/nutrients`, {
@@ -233,6 +237,8 @@ export function AddIngredientDialog({
       setUrlInput('')
       setUrlName('')
       setParsedNutrients(null)
+      // A document attached on the Manual tab isn't used by an ingredient added from a URL
+      removeDoc()
       onCreated(result.ingredientId)
     },
     onError: (err: Error) => toast.error(err.message),
