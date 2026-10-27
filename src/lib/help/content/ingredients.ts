@@ -48,17 +48,22 @@ export const ingredients: HelpSection = {
     {
       slug: 'add-manual',
       title: 'Adding an ingredient by hand',
-      summary: 'Type an ingredient in, then add its nutrition.',
+      summary: 'Type an ingredient in, attach its spec sheet to read the nutrition, or add nutrition afterwards.',
       blocks: [
         {
           type: 'steps',
           items: [
-            'On [Ingredients](/ingredients), click `Add`. Stay on the **Manual entry** tab.',
+            'On [Ingredients](/ingredients), click `Add`. Stay on the **Manual entry** tab. (On a formulation, choose **Add manually** when searching for an ingredient; it opens the same form.)',
             'Type the **Name**, such as “Organic Rolled Oats”. This is the only required field.',
             'Optionally fill in **Preferred name on ingredient deck** (how it should read on your label, such as “Rolled Oats”), **Brand name**, **Supplier**, **Item code**, **Source type**, **Naturally derived**, **Cost / kg ($)**, **Moisture %** and **Notes**.',
-            'Click `Add ingredient`.',
-            'Open the new ingredient and add its nutrition on the **Nutrients** tab. See [Entering nutrition values](#nutrients).',
+            'Optionally click **Attach a document and read its nutrition** and choose a spec sheet, COA or nutrition panel (PDF or image, up to 20 MB). The nutrition it finds, per 100 g, appears in the form. Check the values and correct or clear any that are wrong.',
+            'Click `Add ingredient`. The document is saved on the ingredient’s **Documents** tab and the nutrition on its **Nutrients** tab.',
+            'If you didn’t attach a document, open the new ingredient and add its nutrition on the **Nutrients** tab. See [Entering nutrition values](#nutrients).',
           ],
+        },
+        {
+          type: 'note',
+          text: 'Read values are a starting point: always check them against the document. If nothing could be read, the document is still attached and you can enter the nutrition by hand.',
         },
         {
           type: 'tip',

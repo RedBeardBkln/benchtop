@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
 import { AdminNotConfiguredError } from '@/lib/supabase/admin'
-import { createStagedUpload, STAGED_MAX_BYTES } from '@/lib/staged-upload'
+import { createStagedUpload, isOwnStagedPath, removeStaged, STAGED_MAX_BYTES } from '@/lib/staged-upload'
 
 const bodySchema = z.object({
   fileName: z.string().trim().min(1).max(255),
@@ -30,4 +30,21 @@ export async function POST(req: NextRequest) {
     console.error('staged upload sign failed', err)
     return NextResponse.json({ error: 'Could not start the upload' }, { status: 500 })
   }
+}
+
+// Discards a staged upload that won't be used (e.g. a dialog was closed before saving). Best effort.
+export async function DELETE(req: NextRequest) {
+  const auth = await requireApi({ libraryEdit: true })
+  if (!auth.ok) return auth.res
+
+  const parsed = z.object({ path: z.string().min(1).max(512) }).safeParse(await req.json().catch(() => null))
+  if (!parsed.success || !isOwnStagedPath(auth.ctx.account.id, parsed.data.path)) {
+    return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
+  }
+  try {
+    await removeStaged(parsed.data.path)
+  } catch (err) {
+    if (!(err instanceof AdminNotConfiguredError)) throw err
+  }
+  return new NextResponse(null, { status: 204 })
 }

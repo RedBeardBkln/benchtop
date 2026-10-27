@@ -75,7 +75,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: 'If the ingredient isn’t in your library yet, choose **Add manually** to type it in, or **Import from USDA** to look it up in the USDA FoodData Central database. It’s added to your library and to the recipe in one go. See [Adding ingredients](/help/ingredients#add-manual).',
+          text: 'If the ingredient isn’t in your library yet, choose **Add manually** to type it in (you can attach its spec sheet or COA there to read its nutrition), or **Import from USDA** to look it up in the USDA FoodData Central database. It’s added to your library and to the recipe in one go. See [Adding ingredients](/help/ingredients#add-manual).',
         },
         {
           type: 'list',

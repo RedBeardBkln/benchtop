@@ -21,3 +21,13 @@ export async function uploadStaged(file: File): Promise<string> {
   if (error) throw new Error(`Upload failed: ${error.message}`)
   return path
 }
+
+/** Throws away a staged upload that won't be used; failures are ignored */
+export function discardStaged(path: string): void {
+  fetch('/api/uploads', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+    keepalive: true,
+  }).catch(() => {})
+}
