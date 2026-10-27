@@ -7,6 +7,7 @@ import { projects } from './content/projects'
 import { settings } from './content/settings'
 import { suppliers } from './content/suppliers'
 import { team } from './content/team'
+import { time } from './content/time'
 import type { HelpSection } from './types'
 
 // Order here is the order in the Help sidebar and on the Help home page
@@ -17,6 +18,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   ingredients,
   suppliers,
   clients,
+  time,
   team,
   settings,
   billing,

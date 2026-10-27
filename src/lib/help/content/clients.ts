@@ -182,7 +182,7 @@ export const clients: HelpSection = {
     },
     {
       q: 'Why can’t I delete a client?',
-      a: 'It still has projects linked to it, including archived ones. Open each project and change its client (or choose **No client**), then try again.',
+      a: 'It still has projects linked to it, including archived ones, or someone has logged [billable time](/help/time) for it. Open each project and change its client (or choose **No client**), then try again. A client with logged time can’t be deleted because that time is billing history; archive it instead.',
     },
     {
       q: 'I can’t add a client because the name already exists.',

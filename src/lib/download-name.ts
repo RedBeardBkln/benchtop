@@ -1,6 +1,7 @@
 // File names for anything the user downloads or saves as PDF:
 //   formulation:  "<formulation name>_<iteration number>_<client name>_<date>"
 //   NFP panel:    "NFP_<formulation name>_<iteration number>_<client name>_<date>"
+//   time report:  "Time report_<client name>_<first day>_to_<last day>" (or "_<date>" with no period)
 // Date is yyyy-MM-dd (local) so files sort chronologically. A formulation with no client simply
 // leaves that segment out rather than leaving a gap.
 
@@ -44,3 +45,8 @@ function build(prefix: string | null, i: DownloadNameInput): string {
 
 export const formulationFileName = (i: DownloadNameInput) => build(null, i)
 export const nfpFileName = (i: DownloadNameInput) => build('NFP', i)
+
+export function timeReportFileName(i: { clientName: string; from?: string | null; to?: string | null }): string {
+  const period = i.from && i.to ? [i.from, 'to', i.to] : [localDateStamp()]
+  return ['Time report', cleanPart(i.clientName) || 'Client', ...period].join('_')
+}

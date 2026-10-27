@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { clientContacts, clients, projects } from '@/lib/db/schema'
+import { clientContacts, clients, projects, timeEntries } from '@/lib/db/schema'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import { clientPatchSchema, normalizeClientFields } from '@/lib/client-schemas'
 import { clientNameTakenResponse, getOwnedClient, isDuplicateNameError, propagateClientRename } from '@/lib/clients-server'
@@ -84,6 +84,19 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   if (linked) {
     return NextResponse.json(
       { error: 'This client still has projects. Move them to another client first.' },
+      { status: 409 },
+    )
+  }
+
+  // Logged time is billing history, so it's never deleted along with the client
+  const [logged] = await db
+    .select({ id: timeEntries.id })
+    .from(timeEntries)
+    .where(and(eq(timeEntries.accountId, ctx.account.id), eq(timeEntries.clientId, id)))
+    .limit(1)
+  if (logged) {
+    return NextResponse.json(
+      { error: 'This client has logged time, so it can’t be deleted. Archive it instead.' },
       { status: 409 },
     )
   }

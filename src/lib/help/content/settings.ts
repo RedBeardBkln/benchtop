@@ -20,7 +20,7 @@ export const settings: HelpSection = {
           type: 'terms',
           items: [
             { term: '[Profile](/settings/profile)', text: 'Your name, company, job title, phone and time zone. Everyone.' },
-            { term: '[Preferences](/settings/preferences)', text: 'Personal display choices, such as showing cost (COGS) on formulations. Everyone.' },
+            { term: '[Preferences](/settings/preferences)', text: 'Personal choices, such as showing cost (COGS) on formulations or turning on billable time tracking. Everyone.' },
             { term: '[Account](/settings/account)', text: 'The account name, your sign-in email, your password, and signing out. Everyone (only the owner can rename the account).' },
             { term: '[Team](/settings/team)', text: 'Inviting people and choosing what they can see. Owners and admins only. See [Team & permissions](/help/team).' },
             { term: '[Billing](/settings/billing)', text: 'Your plan, trial dates and subscription. Everyone can look; only the owner can subscribe or make changes. See [Billing & plans](/help/billing).' },
@@ -77,6 +77,10 @@ export const settings: HelpSection = {
         {
           type: 'note',
           text: 'This setting is only for you. Each teammate turns it on for themselves. You can record ingredient costs whether this is on or off. To learn how costs work, see [Raw material cost (COGS)](/help/formulations#cogs).',
+        },
+        {
+          type: 'tip',
+          text: 'Preferences is also where you turn on **Track billable time**, which adds Time to the menu. See [Billable time](/help/time#turn-on).',
         },
       ],
     },

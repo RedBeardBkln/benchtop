@@ -169,6 +169,13 @@
       "when": 1793022955255,
       "tag": "0023_weight_units",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793114194055,
+      "tag": "0024_time_entries",
+      "breakpoints": true
     }
   ]
 }

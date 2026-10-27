@@ -5,7 +5,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
   accountMembers, accounts, auditLog, clients, equipment, ingredientDocs, ingredients, intakeItems, profiles,
-  projects, subscriptions, suppliers,
+  projects, subscriptions, suppliers, timeEntries,
 } from '@/lib/db/schema'
 import { accountNameSchema, deleteAccountSchema } from '@/lib/account-schemas'
 import { needsStripeCancel } from '@/lib/billing/entitlement'
@@ -113,6 +113,7 @@ export async function DELETE(req: NextRequest) {
   const memberIds = members.map(m => m.userId)
 
   await db.transaction(async tx => {
+    await tx.delete(timeEntries).where(eq(timeEntries.accountId, accountId))
     await tx.delete(projects).where(eq(projects.accountId, accountId))
     await tx.delete(clients).where(eq(clients.accountId, accountId)) // cascades contacts
     await tx.delete(intakeItems).where(eq(intakeItems.accountId, accountId))

@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, Menu, MessageSquare, Settings, Truck } from 'lucide-react'
+import { Building2, Clock, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, Menu, MessageSquare, Settings, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
 import { UnreadFeedbackBanner, useUnreadFeedback } from '@/components/admin/unread-feedback'
+import { usePreferences } from '@/lib/use-preferences'
 
 // `tip` is the short description shown when you hover or focus the link
 const NAV = [
@@ -24,6 +25,9 @@ const MOBILE_PRIMARY = ['/projects', '/clients', '/ingredients', '/suppliers', '
 
 // Only shown to account owners and admins (client records hold accounting and shipping details)
 const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2, tip: 'The customers you formulate for: contacts, billing, shipping and their projects' }
+
+// Only shown to people who turned on time tracking in Settings › Preferences; it sits before Settings
+const TIME_NAV = { href: '/time', label: 'Time', icon: Clock, tip: 'Billable time you’ve logged for clients, and time reports to send them' }
 
 // Only shown to platform admins
 const ADMIN_NAV = [
@@ -44,7 +48,12 @@ export function AppShell({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const base = showClients ? [NAV[0], CLIENTS_NAV, ...NAV.slice(1)] : NAV
+  const { prefs } = usePreferences()
+  const withClients = showClients ? [NAV[0], CLIENTS_NAV, ...NAV.slice(1)] : NAV
+  const settingsAt = withClients.findIndex(n => n.href === '/settings')
+  const base = prefs.timeTracking
+    ? [...withClients.slice(0, settingsAt), TIME_NAV, ...withClients.slice(settingsAt)]
+    : withClients
   const nav = isPlatformAdmin ? [...base, ...ADMIN_NAV] : base
   const unreadFeedback = useUnreadFeedback(isPlatformAdmin)
   const badge = (href: string) => (href === '/admin/feedback' && unreadFeedback > 0 ? unreadFeedback : 0)

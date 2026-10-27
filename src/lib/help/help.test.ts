@@ -19,7 +19,7 @@ const allTexts = HELP_SECTIONS.flatMap(sec => [
 const APP_ROUTES = new Set([
   '/projects', '/clients', '/ingredients', '/suppliers', '/login', '/forgot-password',
   '/settings', '/settings/profile', '/settings/preferences', '/settings/account', '/settings/team',
-  '/settings/billing', '/settings/privacy', '/legal/terms', '/legal/privacy', '/help',
+  '/settings/billing', '/settings/privacy', '/legal/terms', '/legal/privacy', '/help', '/time',
 ])
 
 describe('help content', () => {

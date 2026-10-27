@@ -16,6 +16,8 @@ export const userPreferencesSchema = z.object({
   cogsFigures: z.array(z.enum(COGS_FIGURES)).max(COGS_FIGURES.length).optional(),
   /** Mass unit for COGS per-mass figures */
   cogsMassUnit: z.enum(COST_UNITS).optional(),
+  /** Show Time in the menu, for logging billable time against clients */
+  timeTracking: z.boolean().optional(),
 })
 export type UserPreferences = z.infer<typeof userPreferencesSchema>
 
@@ -24,6 +26,7 @@ export function resolvePreferences(p: UserPreferences | null | undefined) {
     showCogs: p?.showCogs ?? false,
     cogsFigures: p?.cogsFigures ?? (['batch', 'perMass', 'serving'] as CogsFigure[]),
     cogsMassUnit: p?.cogsMassUnit ?? ('kg' as CostUnit),
+    timeTracking: p?.timeTracking ?? false,
   }
 }
 export type ResolvedPreferences = ReturnType<typeof resolvePreferences>

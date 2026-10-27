@@ -6,7 +6,7 @@ import {
   accountMembers, batchRuns, feedback, formulationImports, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
   ingredientAllergens, ingredientCerts, ingredientDocs, ingredientNutrients, ingredientSuppliers,
   ingredients, intakeItems, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
-  subIngredients, supplierContacts, suppliers,
+  subIngredients, supplierContacts, suppliers, timeEntries,
 } from '@/lib/db/schema'
 
 // Full JSON export of the caller's account. Owner only. Stays available without an active
@@ -93,6 +93,7 @@ export async function GET() {
 
   const feedbackRows = await db.select().from(feedback).where(eq(feedback.accountId, accountId))
   const importRows = await db.select().from(formulationImports).where(eq(formulationImports.accountId, accountId))
+  const timeRows = await db.select().from(timeEntries).where(eq(timeEntries.accountId, accountId))
 
   const sub = ctx.subscription
   const payload = {
@@ -152,6 +153,8 @@ export async function GET() {
     feedback: feedbackRows,
     // Spreadsheet imports saved before they were finished
     formulationImports: importRows,
+    // Billable time logged against clients
+    timeEntries: timeRows,
   }
 
   const stamp = new Date().toISOString().slice(0, 10)
