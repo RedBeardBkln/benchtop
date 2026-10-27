@@ -40,7 +40,7 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
-        {/* Bottom centre: top-right sat over the close (X) button of side panels. On phones, above the menu bar. */}
+        {/* Bottom center: top-right sat over the close (X) button of side panels. On phones, above the menu bar. */}
         <Toaster richColors position="bottom-center" mobileOffset={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }} />
         <TooltipLayer />
       </body>

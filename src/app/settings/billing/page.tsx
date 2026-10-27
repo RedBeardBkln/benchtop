@@ -34,7 +34,8 @@ export default async function BillingSettingsPage({
       }
       reason={sp.reason ?? null}
       welcome={sp.welcome === '1'}
-      checkout={sp.checkout === 'success' || sp.checkout === 'cancelled' ? sp.checkout : null}
+      // 'cancelled' is the older spelling, still in return links from checkouts started before the change
+      checkout={sp.checkout === 'success' ? 'success' : sp.checkout === 'canceled' || sp.checkout === 'cancelled' ? 'canceled' : null}
       sessionId={sp.session_id ?? null}
     />
   )

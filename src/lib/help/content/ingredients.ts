@@ -92,7 +92,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'p',
-          text: 'USDA ingredients arrive **Verified**, with nutrition per 100 g, and each value is labelled with its USDA source. If you see “USDA rate limit reached”, wait a minute and try again.',
+          text: 'USDA ingredients arrive **Verified**, with nutrition per 100 g, and each value is labeled with its USDA source. If you see “USDA rate limit reached”, wait a minute and try again.',
         },
       ],
     },
@@ -320,7 +320,7 @@ export const ingredients: HelpSection = {
           type: 'list',
           items: [
             'A supplier price **in use** always wins over the manual price.',
-            'Only prices per **kg, g, lb, oz or tonne (mt)** can be used, because Benchtop needs a weight to convert. Prices per case, bag, drum, pail, each, L or gal can’t (the button is greyed out). Re-enter the price per kg or lb, or type a manual price.',
+            'Only prices per **kg, g, lb, oz or metric ton (mt)** can be used, because Benchtop needs a weight to convert. Prices per case, bag, drum, pail, each, L or gal can’t (the button is grayed out). Re-enter the price per kg or lb, or type a manual price.',
             'Only one supplier price can be in use. To stop using it, click **✓ In use**.',
           ],
         },
@@ -535,7 +535,7 @@ export const ingredients: HelpSection = {
       a: 'You pick which entry to keep. Formulations switch to it, missing data is copied over, allergens are combined, stock is added. It can’t be undone and can change formulation numbers.',
     },
     {
-      q: 'Why is “Use this price” greyed out on the Cost tab?',
+      q: 'Why is “Use this price” grayed out on the Cost tab?',
       a: 'That supplier price is per case, bag, drum, pail, each, L or gal, so Benchtop can’t turn it into a price per kg. Enter the price per kg or lb instead.',
     },
     {

@@ -1,11 +1,11 @@
 // Server-only utility — runs via API route, never imported client-side.
 // Uses javascript-lp-solver to find ingredient weights that satisfy nutritional targets
-// while minimising L1 deviation from the current formula weights.
+// while minimizing L1 deviation from the current formula weights.
 //
 // LP formulation (variables: x_i = % of batch for each unlocked ingredient):
-//   Minimise   Σ_i (dp_i + dn_i)          [L1 deviation from current weights]
+//   Minimize   Σ_i (dp_i + dn_i)          [L1 deviation from current weights]
 //   Subject to Σ_i x_i = (100 - lockedSum) [unlocked ingredients sum to remaining %]
-//              x_i - dp_i + dn_i = pct_i   [linearised absolute deviation]
+//              x_i - dp_i + dn_i = pct_i   [linearized absolute deviation]
 //              x_i ≥ minPct_i              [per-ingredient lower bound]
 //              x_i ≤ maxPct_i              [per-ingredient upper bound]
 //              nutritional constraints from project targets
@@ -279,10 +279,10 @@ export function solve(input: SolverInput): SolverResult {
 }
 
 // ── Reverse-engineer solver ───────────────────────────────────────────────────
-// Unlike solve() (which minimises weight deviation while hitting hard nutrient
-// constraints), reverseSolve() minimises NUTRIENT deviation from a target label.
+// Unlike solve() (which minimizes weight deviation while hitting hard nutrient
+// constraints), reverseSolve() minimizes NUTRIENT deviation from a target label.
 // Variables: x_i = % of each candidate ingredient, summing to 100.
-// Objective: minimise Σ_j (ep_j + en_j) — L1 distance from each target value.
+// Objective: minimize Σ_j (ep_j + en_j) — L1 distance from each target value.
 //
 // Key technique: add deviation-from-start-point equalities (same pattern as
 // solve()) so the LP always has a natural feasible starting basis — this

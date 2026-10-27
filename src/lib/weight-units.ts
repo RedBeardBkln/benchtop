@@ -10,7 +10,7 @@ export type WeightUnit = (typeof WEIGHT_UNITS)[number]
 const GRAMS_PER: Record<(typeof MASS_UNITS)[number], number> = {
   g: 1, kg: 1000, mg: 0.001, oz: 28.349523125, lb: 453.59237,
 }
-// Millilitres in one unit of each volume unit (US customary)
+// Milliliters in one unit of each volume unit (US customary)
 const ML_PER: Record<(typeof VOLUME_UNITS)[number], number> = {
   mL: 1, L: 1000, tsp: 4.92892159375, tbsp: 14.78676478125, 'fl oz': 29.5735295625, cup: 236.5882365,
 }

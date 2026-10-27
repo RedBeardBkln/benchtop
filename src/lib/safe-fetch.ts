@@ -11,14 +11,14 @@ import { isIP } from 'node:net'
  *   addresses must be public.
  * - Redirects are followed manually (small cap) and every hop is re-validated.
  *
- * Numeric host encodings (decimal 2130706433, hex 0x7f000001, octal 0177.0.0.1, short 127.1) are normalised to
+ * Numeric host encodings (decimal 2130706433, hex 0x7f000001, octal 0177.0.0.1, short 127.1) are normalized to
  * dotted-quad by the WHATWG URL parser before we look at them, so they hit the IP checks directly.
  *
  * KNOWN LIMITATION (DNS rebinding / TOCTOU): we validate the addresses returned by our own DNS lookup, but the
  * subsequent fetch() performs its own resolution, and Node's global fetch gives us no hook to pin the connection
  * to the validated IP. A hostile DNS server could return a public address to us and a private one to fetch().
  * Closing that fully needs a pinned dispatcher (e.g. an undici Agent with a custom connect.lookup) or an egress
- * proxy / network-level block of private ranges. Do that at the infrastructure level for defence in depth.
+ * proxy / network-level block of private ranges. Do that at the infrastructure level for defense in depth.
  */
 
 export class UnsafeUrlError extends Error {
@@ -153,7 +153,7 @@ export async function assertPublicUrl(urlStr: string, lookup: LookupFn = default
   if (host.endsWith('.')) host = host.slice(0, -1)
   if (!host) throw new UnsafeUrlError('Invalid URL')
 
-  // IP literal (URL has already normalised decimal/hex/octal forms to dotted-quad; IPv6 comes bracketed).
+  // IP literal (URL has already normalized decimal/hex/octal forms to dotted-quad; IPv6 comes bracketed).
   const bare = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host
   if (isIP(bare)) {
     if (isBlockedIp(bare)) throw new UnsafeUrlError()

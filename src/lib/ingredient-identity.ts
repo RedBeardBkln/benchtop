@@ -2,7 +2,7 @@
 // block saving a duplicate) and the UI (to flag existing ones).
 //
 // Two entries are duplicates when name, brand, supplier AND item code all match after
-// normalising (case, extra whitespace, accents). Changing any one of them makes it a different
+// normalizing (case, extra whitespace, accents). Changing any one of them makes it a different
 // entry, e.g. "Pea Protein" from two suppliers, or two brands of the same product.
 
 export type IdentityFields = {

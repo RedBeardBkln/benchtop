@@ -11,7 +11,7 @@ import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 
 export const FDC_BASE = 'https://api.nal.usda.gov/fdc/v1'
 
-// Maps FDC characterisation codes (used in abridged POST /foods) to FDC database IDs
+// Maps FDC characterization codes (used in abridged POST /foods) to FDC database IDs
 // (used in full GET /food and stored in our nutrients seed).
 export const FDC_CHAR_TO_ID: Record<number, number> = {
   203: 1003, 204: 1004, 205: 1005, 208: 1008, 269: 2000, 291: 1079, 539: 1235,

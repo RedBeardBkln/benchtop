@@ -10,7 +10,7 @@ import type { ClientRestorePlan } from '@/lib/client-archive'
 
 type Item = { id: string; label: string; detail?: string; blocked?: string | null }
 
-/** A titled list of checkboxes. Blocked items are shown greyed out with the reason. */
+/** A titled list of checkboxes. Blocked items are shown grayed out with the reason. */
 function Checklist({ title, description, items, selected, onChange }: {
   title: string
   description: string

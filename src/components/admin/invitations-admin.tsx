@@ -223,7 +223,7 @@ export function InvitationsAdmin() {
                   <th className="py-2 pr-4 font-medium">Email</th>
                   <th className="py-2 pr-4 font-medium">Account type</th>
                   <th className="py-2 pr-4 font-medium">
-                    <Term tip="pending: not used yet. accepted: the account was created. expired: the link ran out. revoked: cancelled.">Status</Term>
+                    <Term tip="pending: not used yet. accepted: the account was created. expired: the link ran out. revoked: canceled.">Status</Term>
                   </th>
                   <th className="py-2 pr-4 font-medium">Created</th>
                   <th className="py-2 pr-4 font-medium"><Term tip="When the sign-up link stops working">Expires</Term></th>

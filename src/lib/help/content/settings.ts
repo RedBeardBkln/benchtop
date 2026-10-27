@@ -50,7 +50,7 @@ export const settings: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: 'Email', text: 'Shown but greyed out here. Change it on the [Account](/settings/account) tab instead.' },
+            { term: 'Email', text: 'Shown but grayed out here. Change it on the [Account](/settings/account) tab instead.' },
             { term: 'Full name', text: 'What your teammates see on the Team list. Having one also unlocks the **Report a bug or request a feature** link.' },
             { term: 'Phone', text: 'Digits, spaces and + ( ) . - only. It pre-fills the feedback form.' },
           ],
@@ -176,7 +176,7 @@ export const settings: HelpSection = {
         },
         {
           type: 'p',
-          text: 'Only the account owner can do this. Everyone else sees the field greyed out. The account name is what invited people see (“You have been invited to join the … team”). The same card also shows your role, when the account was created, and its ID, which is useful if you contact support.',
+          text: 'Only the account owner can do this. Everyone else sees the field grayed out. The account name is what invited people see (“You have been invited to join the … team”). The same card also shows your role, when the account was created, and its ID, which is useful if you contact support.',
         },
       ],
     },
@@ -247,7 +247,7 @@ export const settings: HelpSection = {
         },
         {
           type: 'p',
-          text: 'If anything goes wrong partway (for example the subscription can’t be cancelled), nothing is deleted and you’ll see a message explaining why. Fees already paid are not refunded, except where the law requires it.',
+          text: 'If anything goes wrong partway (for example the subscription can’t be canceled), nothing is deleted and you’ll see a message explaining why. Fees already paid are not refunded, except where the law requires it.',
         },
       ],
     },

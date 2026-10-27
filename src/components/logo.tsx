@@ -1,7 +1,7 @@
 import { LOGO_MARK, LOGO_WORDMARK } from '@/lib/brand'
 
 // The Benchtop logo: a "B" mark or "BENCHTOP" wordmark in the DS-Digital LCD font, drawn from
-// its glyph outlines. `height` is the cap height in px. Colour comes from `currentColor`.
+// its glyph outlines. `height` is the cap height in px. Color comes from `currentColor`.
 export function Logo({
   variant = 'mark',
   height = 32,

@@ -106,7 +106,7 @@ export function IngredientCostPanel({
             <p className="mt-1 text-xs text-amber-700">
               {warning === 'supplier-price-missing'
                 ? 'The chosen supplier link has no price, so it isn’t used.'
-                : 'The chosen supplier price isn’t per kg, g, lb, oz or tonne, so it can’t be converted and isn’t used.'}
+                : 'The chosen supplier price isn’t per kg, g, lb, oz or metric ton, so it can’t be converted and isn’t used.'}
               {cost?.source === 'manual' && ' The manual price is used instead.'}
             </p>
           )}
@@ -165,7 +165,7 @@ export function IngredientCostPanel({
       {canEdit && <div className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="text-sm font-semibold text-gray-900">Use a <Term t="useForCost">supplier&apos;s price</Term></h3>
         <p className="text-xs text-gray-500 mb-3">
-          Choose one to use instead of the manual price. Prices per kg, g, lb, oz or tonne convert automatically.
+          Choose one to use instead of the manual price. Prices per kg, g, lb, oz or metric ton convert automatically.
         </p>
         {priced.length === 0 ? (
           <p className="text-sm text-gray-500">
@@ -205,7 +205,7 @@ export function IngredientCostPanel({
                       type="button"
                       onClick={() => chooseLink.mutate({ linkId: s.id, use: true })}
                       disabled={chooseLink.isPending || perKg == null}
-                      data-tip={perKg == null ? 'This price isn’t per kg, g, lb, oz or tonne, so it can’t be converted to a cost.' : 'Makes this supplier’s price the cost formulations use, instead of the manual price.'}
+                      data-tip={perKg == null ? 'This price isn’t per kg, g, lb, oz or metric ton, so it can’t be converted to a cost.' : 'Makes this supplier’s price the cost formulations use, instead of the manual price.'}
                       className="px-2.5 py-1 text-xs rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
                     >
                       Use this price

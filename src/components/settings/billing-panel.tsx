@@ -26,7 +26,7 @@ type Props = {
   } | null
   reason: string | null
   welcome: boolean
-  checkout: 'success' | 'cancelled' | null
+  checkout: 'success' | 'canceled' | null
   sessionId: string | null
 }
 
@@ -124,7 +124,7 @@ export function BillingPanel(props: Props) {
       {props.welcome && !props.entitled && (
         <Notice tone="info">Welcome to Benchtop. Your account is ready. Start your subscription to unlock all features.</Notice>
       )}
-      {props.checkout === 'cancelled' && <Notice tone="info">Checkout was cancelled. You have not been charged.</Notice>}
+      {props.checkout === 'canceled' && <Notice tone="info">Checkout was canceled. You have not been charged.</Notice>}
       {syncing && <Notice tone="info">Confirming your payment…</Notice>}
       {sub?.status === 'past_due' && (
         <Notice tone="warning">
@@ -195,7 +195,7 @@ export function BillingPanel(props: Props) {
                 <div>
                   <dt className="text-gray-500">
                     {sub.cancelAtPeriodEnd
-                      ? <Term tip="Your subscription is cancelled. You keep full access until this date.">Access until</Term>
+                      ? <Term tip="Your subscription is canceled. You keep full access until this date.">Access until</Term>
                       : <Term tip="The next charge, which starts a new billing period">Renews on</Term>}
                   </dt>
                   <dd className="text-gray-900">{formatDate(sub.currentPeriodEnd)}</dd>

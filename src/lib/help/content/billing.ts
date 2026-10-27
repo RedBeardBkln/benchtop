@@ -55,13 +55,13 @@ export const billing: HelpSection = {
         },
         {
           type: 'p',
-          text: 'Anyone already on your team is added to the subscription as a seat automatically. If you leave Stripe’s page without paying, you’ll see “Checkout was cancelled. You have not been charged.”',
+          text: 'Anyone already on your team is added to the subscription as a seat automatically. If you leave Stripe’s page without paying, you’ll see “Checkout was canceled. You have not been charged.”',
         },
       ],
     },
     {
       slug: 'manage',
-      title: 'Changing your card, viewing invoices, or cancelling',
+      title: 'Changing your card, viewing invoices, or canceling',
       summary: 'Use Manage billing to open Stripe’s billing page.',
       blocks: [
         {

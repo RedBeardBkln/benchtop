@@ -91,7 +91,7 @@ function PropertyFields({ moisturePct, densityGPerMl, disabledReason, saving, on
           onBlur={() => commit('density')}
           onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
           aria-label="Density in g per mL"
-          data-tip={disabledReason ?? 'Grams per millilitre (water is 1). Needed to show this ingredient in mL, cups or other volume units. Saves to the ingredient when you leave the box.'}
+          data-tip={disabledReason ?? 'Grams per milliliter (water is 1). Needed to show this ingredient in mL, cups or other volume units. Saves to the ingredient when you leave the box.'}
           className={`${propInput} ${densityBad ? 'border-red-300' : ''}`}
         />
         <span>g/mL</span>

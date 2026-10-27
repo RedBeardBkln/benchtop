@@ -70,7 +70,7 @@ export async function DELETE(req: NextRequest) {
   if (sub?.stripeSubscriptionId && needsStripeCancel(sub)) {
     if (!isBillingConfigured()) {
       return NextResponse.json(
-        { error: 'Billing is not configured, so the subscription cannot be cancelled. Account not deleted.', code: 'billing_not_configured' },
+        { error: 'Billing is not configured, so the subscription cannot be canceled. Account not deleted.', code: 'billing_not_configured' },
         { status: 503 },
       )
     }

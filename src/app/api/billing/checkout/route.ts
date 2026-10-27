@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         trial_end: checkoutTrialEnd(ctx.account),
       },
       success_url: `${origin}/settings/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/settings/billing?checkout=cancelled`,
+      cancel_url: `${origin}/settings/billing?checkout=canceled`,
     })
 
     if (!session.url) {

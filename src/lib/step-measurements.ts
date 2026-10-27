@@ -25,7 +25,7 @@ export function trimNumber(n: number, dp: number): string {
 }
 
 /**
- * Normalise a duration to "hh:mm:ss". Accepts "h:mm:ss" or "mm:ss" (read as minutes:seconds).
+ * Normalize a duration to "hh:mm:ss". Accepts "h:mm:ss" or "mm:ss" (read as minutes:seconds).
  * Returns null when it isn't a valid duration.
  */
 export function normalizeTime(raw: string): string | null {

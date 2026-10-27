@@ -22,7 +22,7 @@ export const formulations: HelpSection = {
             { term: '← Project name', text: 'Takes you back to the project.' },
             { term: 'Name and version', text: 'The formulation’s name, its version (such as `v2`), a box to describe this version, the mode (**Ground up** or **Reverse**) and status (**draft** or **locked**).' },
             { term: 'Buttons (top right)', text: '`Save`, `Solve`, `Duplicate`, `Finalize` / `Unlock`, `Save as ingredient`, `NFP`, `Print`, `Complete batch`, `Archive`, and for reverse formulations `Reverse wizard`. Some only appear when they apply.' },
-            { term: 'Grey settings bar', text: '**Batch (g)**, **Serving (g)** and **Yield**.' },
+            { term: 'Gray settings bar', text: '**Batch (g)**, **Serving (g)** and **Yield**.' },
             { term: 'Formula / COGS tabs', text: 'Only if you turned on COGS in [Preferences](/settings/preferences).' },
             { term: 'Ingredient grid', text: 'The recipe itself: each ingredient with its weight, percentage and nutrients.' },
             { term: 'Process steps', text: 'The method: how to make it, with losses, temperatures and times.' },
@@ -161,7 +161,7 @@ export const formulations: HelpSection = {
         { type: 'h', text: 'Volume units need a density' },
         {
           type: 'p',
-          text: 'To turn grams into mL or cups, Benchtop needs the ingredient’s **density**: how many grams one millilitre weighs (water is 1). If you choose a volume unit for an ingredient that doesn’t have one, Benchtop asks for it and saves it to the ingredient in your library. You can also set it by clicking the ingredient’s name in the formula (the **Density** box at the top of the panel), or with `Edit` on the ingredient’s page. When the whole column is in a volume unit, ingredients without a density stay in grams and their unit shows in amber. The Total row is in grams whenever the column is a volume unit, since a mix of ingredients has no single density.',
+          text: 'To turn grams into mL or cups, Benchtop needs the ingredient’s **density**: how many grams one milliliter weighs (water is 1). If you choose a volume unit for an ingredient that doesn’t have one, Benchtop asks for it and saves it to the ingredient in your library. You can also set it by clicking the ingredient’s name in the formula (the **Density** box at the top of the panel), or with `Edit` on the ingredient’s page. When the whole column is in a volume unit, ingredients without a density stay in grams and their unit shows in amber. The Total row is in grams whenever the column is a volume unit, since a mix of ingredients has no single density.',
         },
         {
           type: 'tip',
@@ -235,7 +235,7 @@ export const formulations: HelpSection = {
           type: 'steps',
           items: [
             'Click **Nutrient columns** above the grid.',
-            'Tick the nutrients you want to see (use **Filter nutrients…** to find one). Greyed-out nutrients have no data in any of your ingredients.',
+            'Tick the nutrients you want to see (use **Filter nutrients…** to find one). Grayed-out nutrients have no data in any of your ingredients.',
             'Close the panel. Your choice saves by itself for this version. **Reset to default** brings back Energy, Protein, Total Fat, Carbs and Dietary Fiber.',
           ],
         },
@@ -412,7 +412,7 @@ export const formulations: HelpSection = {
         {
           type: 'steps',
           items: [
-            'Set **Serving (g)** in the grey bar. Without it, the panel shows values per 100 g.',
+            'Set **Serving (g)** in the gray bar. Without it, the panel shows values per 100 g.',
             'Click `NFP`. The **Nutrition Facts Panel** window opens, with options on the left and a live preview on the right.',
             'Choose a **Layout**: **Standard (vertical)** for most packages, **Tabular** (side by side) when there isn’t room for vertical, or **Linear** (one paragraph) for very small packages.',
             'Pick the options you want (explained below).',
@@ -586,7 +586,7 @@ export const formulations: HelpSection = {
           items: [
             'If some ingredients have no cost, they’re listed in a yellow warning with links, and totals are marked “(partial)”.',
             'Because per-kg, per-serving and per-unit costs divide by the **finished** weight, process losses make them higher.',
-            'This is **raw materials only**: packaging, labour and overhead aren’t included.',
+            'This is **raw materials only**: packaging, labor and overhead aren’t included.',
             'The COGS tab uses what’s on screen, including unsaved changes.',
           ],
         },
@@ -665,7 +665,7 @@ export const formulations: HelpSection = {
         { type: 'h', text: 'Saving a draft' },
         {
           type: 'p',
-          text: 'The bar at the bottom lists what’s **Still needed**: a name, a project, an ingredient for every row, and a usable amount for every row (plus a batch size for percentages). Until all of those are there, `Create formulation` stays greyed out, but you can click `Save as draft` at any time. Optional items (serving size, the client, percentages that don’t add up to 100%) are listed but don’t stop you.',
+          text: 'The bar at the bottom lists what’s **Still needed**: a name, a project, an ingredient for every row, and a usable amount for every row (plus a batch size for percentages). Until all of those are there, `Create formulation` stays grayed out, but you can click `Save as draft` at any time. Optional items (serving size, the client, percentages that don’t add up to 100%) are listed but don’t stop you.',
         },
         {
           type: 'p',
@@ -753,7 +753,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Why does my Nutrition Facts panel say “Amount per 100g”?',
-      a: 'The formulation has no serving size. Enter one in **Serving (g)** in the grey bar.',
+      a: 'The formulation has no serving size. Enter one in **Serving (g)** in the gray bar.',
     },
     {
       q: 'Why does my label say “<1g”?',
@@ -820,7 +820,7 @@ export const formulations: HelpSection = {
       a: '`Apply to formulation` only fills in the grid. Click `Save` to keep it.',
     },
     {
-      q: 'Why is “Run AI research” greyed out?',
+      q: 'Why is “Run AI research” grayed out?',
       a: 'Link at least one label ingredient (or add an extra ingredient) first.',
     },
     {

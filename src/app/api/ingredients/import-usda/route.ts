@@ -155,19 +155,19 @@ export async function POST(request: NextRequest) {
       .map(n => [n.fdcNutrientNumber!, n.id]),
   )
 
-  // Normalise the USDA nutrient array — three response shapes exist in FDC API.
+  // Normalize the USDA nutrient array — three response shapes exist in FDC API.
   // Seeds store fdcNutrientNumber as the FDC *database ID* (e.g. 1003 for Protein),
-  // NOT the characterisation code (e.g. "203"). Use the ID fields accordingly:
+  // NOT the characterization code (e.g. "203"). Use the ID fields accordingly:
   //
   //   full (GET /food):       { nutrient: { id: 1003, number: "203" }, amount }
   //   SR Legacy flat:         { nutrientId: 1003, nutrientNumber: "203", value }
-  //   abridged (POST /foods): { number: 203, amount }  ← only has characterisation code
+  //   abridged (POST /foods): { number: 203, amount }  ← only has characterization code
   type RawNutrient = { fdcNutrientId: number; value: number }
   const rawNutrients = ((fdcFood.foodNutrients as unknown[]) ?? [])
     .map((fn: unknown): RawNutrient | null => {
       const f = fn as Record<string, unknown>
       const nutrient = f.nutrient as Record<string, unknown> | undefined
-      // Prefer the 4-digit FDC nutrient database ID; fall back to characterisation code
+      // Prefer the 4-digit FDC nutrient database ID; fall back to characterization code
       const idRaw = (nutrient?.id ?? f.nutrientId ?? f.number ?? f.nutrientNumber) as string | number | undefined
       const value = (nutrient ? f.amount : (f.value ?? f.amount)) as number | undefined
       if (idRaw == null || value == null) return null

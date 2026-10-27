@@ -63,7 +63,7 @@ export const clients: HelpSection = {
         },
         {
           type: 'p',
-          text: 'For extra carriers, click **Add carrier account**, then fill in both the carrier and the account number (or remove the row with **X**). `Save` stays greyed out while a row is half filled in.',
+          text: 'For extra carriers, click **Add carrier account**, then fill in both the carrier and the account number (or remove the row with **X**). `Save` stays grayed out while a row is half filled in.',
         },
       ],
     },
@@ -149,7 +149,7 @@ export const clients: HelpSection = {
           items: [
             'On the client record, scroll to the bottom and click `Archive client`.',
             'The dialog shows how many projects and formulations will be archived with it.',
-            'Optionally tick **ingredients** to archive too. Only ingredients this client’s formulations use are listed. Ones also used by other clients’ or projects’ formulations are greyed out with the reason.',
+            'Optionally tick **ingredients** to archive too. Only ingredients this client’s formulations use are listed. Ones also used by other clients’ or projects’ formulations are grayed out with the reason.',
             'Optionally tick **suppliers** to archive too. A supplier can only be archived when every ingredient it supplies is being archived as well.',
             'Click `Archive client`.',
           ],

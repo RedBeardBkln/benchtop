@@ -26,7 +26,7 @@ export const ingredients = pgTable('ingredients', {
   costUnit: text('cost_unit').notNull().default('kg'),
   moisturePct: numeric('moisture_pct', { precision: 6, scale: 4 }),
   stockG: numeric('stock_g', { precision: 14, scale: 4 }),
-  // Grams per millilitre, so formula amounts can be shown and typed in mL, cups, tsp…; null = unknown
+  // Grams per milliliter, so formula amounts can be shown and typed in mL, cups, tsp…; null = unknown
   densityGPerMl: numeric('density_g_per_ml', { precision: 10, scale: 5 }),
   // Preferred name as it should appear on the ingredient deck
   labelName: text('label_name'),

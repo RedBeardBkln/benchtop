@@ -26,7 +26,7 @@ export async function findDuplicate(
   excludeId?: string,
 ): Promise<DuplicateMatch | null> {
   const key = identityKey(fields)
-  // Compared in code on the normalised key (SQL can't fold accents/whitespace the same way). Only four
+  // Compared in code on the normalized key (SQL can't fold accents/whitespace the same way). Only four
   // short columns per row are read, and only for this account.
   const candidates = await db
     .select(identityColumns)
@@ -36,7 +36,7 @@ export async function findDuplicate(
   return candidates.find(c => normalizePart(c.name) === wantedName && identityKey(c) === key) ?? null
 }
 
-/** 409 body shared by every route, so the UI can recognise it by `code`. */
+/** 409 body shared by every route, so the UI can recognize it by `code`. */
 export function duplicateResponse(fields: IdentityFields, existing: DuplicateMatch) {
   return NextResponse.json(
     { error: duplicateMessage(fields), code: DUPLICATE_CODE, existing },

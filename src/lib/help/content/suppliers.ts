@@ -97,7 +97,7 @@ export const suppliers: HelpSection = {
           type: 'list',
           items: [
             'It’s **linked** to this supplier on the ingredient’s **Suppliers** tab (with pack size and price). A star means preferred.',
-            'Its **Supplier** text box matches this supplier’s name. These show a grey **Named** badge because they have no pack size or price.',
+            'Its **Supplier** text box matches this supplier’s name. These show a gray **Named** badge because they have no pack size or price.',
           ],
         },
         {
@@ -145,7 +145,7 @@ export const suppliers: HelpSection = {
       a: 'On the ingredient’s **Suppliers** tab, link the supplier and enter the pack size, unit and cost per unit. See [Linking suppliers and prices](/help/ingredients#suppliers-tab).',
     },
     {
-      q: 'What does the grey “Named” badge mean?',
+      q: 'What does the gray “Named” badge mean?',
       a: 'That ingredient mentions this supplier in its **Supplier** text box but isn’t linked with a price or pack size.',
     },
     {

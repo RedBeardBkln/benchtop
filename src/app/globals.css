@@ -128,7 +128,7 @@ a[class*=' text-blue-']:hover {
   color: var(--color-lcd-300);
 }
 
-/* Brand buttons. There is no shared Button component, so action buttons are recognised by
+/* Brand buttons. There is no shared Button component, so action buttons are recognized by
    their hover class: primary is ink with lime text, AI actions are tangerine; both get the
    "keycap" hard shadow, lift 1px on hover and sink into the shadow when pressed.
    Selected toggles share bg-blue-600 but have no hover class, so they stay flat. */

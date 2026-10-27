@@ -5,7 +5,7 @@ import {
 import { formulationFileName, nfpFileName } from './download-name'
 
 describe('ingredient identity', () => {
-  it('normalises case, whitespace and accents', () => {
+  it('normalizes case, whitespace and accents', () => {
     expect(normalizePart('  Crème   FRAÎCHE ')).toBe('creme fraiche')
     expect(normalizePart(null)).toBe('')
   })

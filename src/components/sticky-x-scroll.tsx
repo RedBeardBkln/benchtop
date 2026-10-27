@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 /**
  * A box that scrolls sideways, with its scrollbar pinned to the bottom of the screen while the box is
  * in view, so a long table can be scrolled left and right without going to its last row. The box's own
- * scrollbar is hidden in favour of this one, which follows it. Nothing shows when the content fits.
+ * scrollbar is hidden in favor of this one, which follows it. Nothing shows when the content fits.
  */
 export function StickyXScroll({ className, children }: { className?: string; children: React.ReactNode }) {
   const boxRef = useRef<HTMLDivElement>(null)

@@ -26,7 +26,7 @@ export type Anchor = { key: string; kind: 'qty' | 'pct'; value: number }
 
 export type ResolveResult = {
   weights: Record<string, number>
-  /** Human-readable reason the locks can't all be honoured; weights are left as they were. */
+  /** Human-readable reason the locks can't all be honored; weights are left as they were. */
   problem: string | null
   /** The anchor's value had to be reduced/raised to keep the batch consistent. */
   clamped: boolean

@@ -224,7 +224,7 @@ export function EditIngredientDialog({ ingredient, onClose }: EditIngredientDial
                 value={density}
                 onChange={e => setDensity(e.target.value)}
                 placeholder="e.g. 1.03"
-                data-tip="Grams per millilitre. Needed to show this ingredient’s amount in a formula in mL, cups, tsp or other volume units. Water is 1."
+                data-tip="Grams per milliliter. Needed to show this ingredient’s amount in a formula in mL, cups, tsp or other volume units. Water is 1."
                 className={inputClass}
               />
               <span className="text-sm text-gray-400 shrink-0">g/mL</span>

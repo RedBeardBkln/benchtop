@@ -22,13 +22,13 @@ export const projects: HelpSection = {
             { term: 'Project', text: 'The project’s name.' },
             { term: 'Client', text: 'The customer it’s for, if one is linked (— means none).' },
             { term: 'Formulations', text: 'How many formulations are inside. All the versions of one formulation count once, and archived formulations are included.' },
-            { term: 'Status', text: '`active` (green) or `archived` (grey).' },
+            { term: 'Status', text: '`active` (green) or `archived` (gray).' },
             { term: 'Updated', text: 'When the project itself was last changed (renamed, client changed, targets edited, archived). Editing a formulation inside doesn’t change this date.' },
           ],
         },
         {
           type: 'note',
-          text: 'On a phone, only the Project and Formulations columns fit on screen. Archived projects stay in the list with a grey badge; there is no filter to hide them.',
+          text: 'On a phone, only the Project and Formulations columns fit on screen. Archived projects stay in the list with a gray badge; there is no filter to hide them.',
         },
       ],
     },
@@ -194,11 +194,11 @@ export const projects: HelpSection = {
   faqs: [
     {
       q: 'How do I delete a project?',
-      a: 'Projects can’t be deleted. Click `Archive` on the project page instead. It stays in the list with a grey `archived` badge, and you can `Restore` it any time.',
+      a: 'Projects can’t be deleted. Click `Archive` on the project page instead. It stays in the list with a gray `archived` badge, and you can `Restore` it any time.',
     },
     {
       q: 'Can I hide archived projects?',
-      a: 'Not at the moment. Archived projects stay in the list with a grey badge so you can always find them.',
+      a: 'Not at the moment. Archived projects stay in the list with a gray badge so you can always find them.',
     },
     {
       q: 'Can I change the project objective after creating it?',

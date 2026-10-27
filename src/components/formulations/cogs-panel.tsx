@@ -293,7 +293,7 @@ export function CogsPanel({
       )}
       <p className="text-[11px] text-gray-400">
         Raw materials only, on the weights put in. Per {mass}, per-serving and per-unit figures divide by the finished
-        weight, so process loss raises them. Packaging, labour and overhead aren&apos;t included.
+        weight, so process loss raises them. Packaging, labor and overhead aren&apos;t included.
       </p>
     </div>
   )

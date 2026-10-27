@@ -39,11 +39,11 @@ function place(el: HTMLElement, text: string, bubble: HTMLElement | null): Shown
   const r = el.getBoundingClientRect()
   const w = bubble?.offsetWidth ?? Math.min(MAX_W, window.innerWidth - 16)
   const h = bubble?.offsetHeight ?? 48
-  const centre = r.left + r.width / 2
-  const left = Math.max(8, Math.min(centre - w / 2, window.innerWidth - w - 8))
+  const center = r.left + r.width / 2
+  const left = Math.max(8, Math.min(center - w / 2, window.innerWidth - w - 8))
   const above = r.bottom + GAP + h > window.innerHeight && r.top - GAP - h > 0
   const top = above ? r.top - GAP - h : r.bottom + GAP
-  return { text, top, left, above, arrowLeft: Math.max(10, Math.min(centre - left, w - 10)) }
+  return { text, top, left, above, arrowLeft: Math.max(10, Math.min(center - left, w - 10)) }
 }
 
 export function TooltipLayer() {

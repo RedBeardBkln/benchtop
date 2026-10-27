@@ -8,7 +8,7 @@ import type { FdcFood, FdcSearchResult } from '@/lib/types'
 import { Term } from '@/components/term'
 
 const DATA_TYPE_META: Record<string, { label: string; className: string; tip: string }> = {
-  'Foundation':    { label: 'Foundation', className: 'bg-green-100 text-green-700', tip: 'USDA Foundation Foods: analysed lab data for basic foods. The most reliable choice.' },
+  'Foundation':    { label: 'Foundation', className: 'bg-green-100 text-green-700', tip: 'USDA Foundation Foods: analyzed lab data for basic foods. The most reliable choice.' },
   'SR Legacy':     { label: 'SR Legacy',  className: 'bg-blue-100 text-blue-700', tip: 'USDA Standard Reference: the long-standing USDA nutrient database. Complete and reliable.' },
   'Survey (FNDDS)':{ label: 'Survey',     className: 'bg-gray-100 text-gray-500', tip: 'USDA survey data for foods as eaten (FNDDS), often prepared dishes. Less suited to raw materials.' },
   'Branded':       { label: 'Branded',    className: 'bg-orange-100 text-orange-600', tip: 'Values from a brand’s own label, so often incomplete and rounded.' },

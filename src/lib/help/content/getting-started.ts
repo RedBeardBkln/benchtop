@@ -52,7 +52,7 @@ export const gettingStarted: HelpSection = {
           type: 'steps',
           items: [
             'Open the invitation link. You will see a page titled **Join Benchtop**.',
-            'Check that the **Email** shown is yours. It is greyed out because the invitation only works for that address.',
+            'Check that the **Email** shown is yours. It is grayed out because the invitation only works for that address.',
             'Type your **Full name**. If you are creating a new company account, you can also type a **Company (optional)**. That becomes your account’s name (if you leave it blank, your name is used).',
             'Choose a **Password** of at least 8 characters, and type it again in **Confirm password**.',
             'Tick **I agree to the Terms of Service and Privacy Policy**. You can open either document first; they open in a new tab.',
@@ -65,7 +65,7 @@ export const gettingStarted: HelpSection = {
           items: [
             { term: '“This invitation has expired”', text: 'Invitation links only last a limited time (7 days for team invitations). Ask for a new one.' },
             { term: '“This invitation has already been used”', text: 'Links work once. If you already created your login, just [sign in](/login).' },
-            { term: '“This invitation has been withdrawn”', text: 'The person who invited you cancelled it. Ask them for a new one.' },
+            { term: '“This invitation has been withdrawn”', text: 'The person who invited you canceled it. Ask them for a new one.' },
             { term: '“An account with this email already exists”', text: 'This email already has a Benchtop login. Each email can belong to only one account, so sign in instead, or ask to be invited with a different email.' },
             { term: '“This team has reached its user limit”', text: 'The team’s plan allows a set number of people and it is full. Contact the person who invited you.' },
           ],

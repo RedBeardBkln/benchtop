@@ -142,7 +142,7 @@ const DATA_TYPE_BADGE: Record<string, { label: string; cls: string }> = {
 
 // What each USDA data type means, shown on its badge
 const DATA_TYPE_TIP: Record<string, string> = {
-  'Foundation':     'USDA Foundation Foods: analysed samples with detailed, well-documented values.',
+  'Foundation':     'USDA Foundation Foods: analyzed samples with detailed, well-documented values.',
   'SR Legacy':      'USDA SR Legacy: the long-standing USDA reference data, no longer updated.',
   'Survey (FNDDS)': 'USDA survey foods (FNDDS): typical foods as eaten, used in dietary surveys.',
   'Branded':        'USDA Branded Foods: values from a manufacturer’s label, often less complete.',
@@ -188,7 +188,7 @@ function newDeckItem(rawName: string, subIngredients: string[] = [], id?: string
 }
 
 function parseIngredientDeck(text: string): DeckIngredient[] {
-  // Tokenise at top level, respecting parentheses so commas inside (blend) groups don't split
+  // Tokenize at top level, respecting parentheses so commas inside (blend) groups don't split
   const topLevel: string[] = []
   let buf = ''
   let depth = 0
@@ -1484,7 +1484,7 @@ export function ReverseWizard({
     if (candidates.length === 0) { toast.error('No linked ingredients to solve with'); setIsSolving(false); return }
     if (activeTargets.length === 0) { toast.error('No nutrient targets set'); setIsSolving(false); return }
 
-    // Normalise bounds so the LP is always feasible from a bounds perspective.
+    // Normalize bounds so the LP is always feasible from a bounds perspective.
     // If max% sum < 100 the solver can never reach 100% — scale up proportionally.
     // If min% sum > 100 the solver is over-constrained from below — scale down.
     const maxSum = candidates.reduce((s, c) => s + c.maxPct, 0)

@@ -35,7 +35,7 @@ describe('supplier fields', () => {
     expect(normalizeSupplierFields({ address }).address).toEqual(address)
   })
 
-  it('summarises an address as city, region, country', () => {
+  it('summarizes an address as city, region, country', () => {
     expect(shortAddress({ ...EMPTY_ADDRESS, city: 'Ames', region: 'IA', country: 'USA' })).toBe('Ames, IA, USA')
     expect(shortAddress(null)).toBe('')
   })

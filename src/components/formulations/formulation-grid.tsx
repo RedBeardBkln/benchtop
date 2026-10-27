@@ -116,7 +116,7 @@ function DensityDialog({ ingredientName, unit, canEditLibrary, saving, onSave, o
         </div>
         <p className="text-sm text-gray-600">
           To show <span className="font-medium text-gray-800">{ingredientName}</span> in {UNIT_LABELS[unit]}, Benchtop needs
-          its density: how many grams one millilitre weighs. Water is 1; most oils are about 0.92 and honey about 1.42.
+          its density: how many grams one milliliter weighs. Water is 1; most oils are about 0.92 and honey about 1.42.
         </p>
         {canEditLibrary ? (
           <>
@@ -492,7 +492,7 @@ export function FormulationGrid({ id }: { id: string }) {
   // Derived values
   const totalWeightG = useMemo(() => lines.reduce((s, l) => s + (l.weightG || 0), 0), [lines])
 
-  // Why the current locks can't all be honoured (null when they can, or when nothing is locked)
+  // Why the current locks can't all be honored (null when they can, or when nothing is locked)
   const lockProblem = useMemo(() => {
     if (!batchLocked && !lines.some(l => l.pctLocked)) return null
     return resolveLines({ lines, batchLocked, batchG: batchTargetG }).problem

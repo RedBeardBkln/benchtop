@@ -7,7 +7,7 @@ import { CATEGORY_ORDER } from '@/lib/target-validation'
 
 /**
  * Checkbox list of every nutrient, for choosing which ones the formula grid shows as columns.
- * Nutrients none of the formula's ingredients carry are still offered, just greyed.
+ * Nutrients none of the formula's ingredients carry are still offered, just grayed.
  */
 export function GridColumnPicker({
   allNutrients,
