@@ -106,6 +106,8 @@ export type FormulationDetail = Formulation & {
     version: number
     status: Formulation['status']
     iterationNote: string | null
+    // Set when just this iteration is archived (its siblings stay live)
+    iterationArchivedAt: string | null
     updatedAt: string
   }>
   // False for team members with view-only access to the project

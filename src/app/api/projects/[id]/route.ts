@@ -39,15 +39,16 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const project = await getOwnedProject(ctx, id)
   if (!project) return notFoundResponse()
 
-  // One row per formulation: its latest iteration, plus how many iterations exist
+  // One row per formulation: its latest live (not individually archived) iteration, plus how many live
+  // iterations exist. Falls back to the latest iteration should every one be archived.
   const latestPerFamily = await db
     .selectDistinctOn([formulations.familyId], {
       formulation: formulations,
-      iterationCount: sql<number>`count(*) over (partition by ${formulations.familyId})::int`,
+      iterationCount: sql<number>`(count(*) filter (where ${formulations.iterationArchivedAt} is null) over (partition by ${formulations.familyId}))::int`,
     })
     .from(formulations)
     .where(and(eq(formulations.projectId, id), eq(formulations.accountId, ctx.account.id)))
-    .orderBy(formulations.familyId, desc(formulations.version))
+    .orderBy(formulations.familyId, sql`${formulations.iterationArchivedAt} is not null`, desc(formulations.version))
 
   const formList = latestPerFamily
     .map(r => ({ ...r.formulation, iterationCount: r.iterationCount }))

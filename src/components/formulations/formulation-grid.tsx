@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Save, Plus, X, Trash2, ChevronDown, ChevronUp, ChevronRight, Lock,
   Database, ArrowLeftRight, GitBranch, Target, CheckCircle2, XCircle, AlertCircle,
-  GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer, PackagePlus,
+  GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer, PackagePlus, RotateCcw,
 } from 'lucide-react'
 import type { FormulationDetail, IngredientDetail, IngredientListRow, Nutrient, ProjectTarget } from '@/lib/types'
 import { categoryPath, onHandAlternatives } from '@/lib/ingredient-categories'
@@ -396,7 +396,8 @@ export function FormulationGrid({ id }: { id: string }) {
   const [showSolverBounds, setShowSolverBounds] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
   const [showReverseWizard, setShowReverseWizard] = useState(false)
-  const [confirmAction, setConfirmAction] = useState<'finalize' | 'unfinalize' | 'archive' | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'finalize' | 'unfinalize' | 'archive' | 'archive-iteration' | null>(null)
+  const [showArchiveMenu, setShowArchiveMenu] = useState(false)
   const [sidebarIngredientId, setSidebarIngredientId] = useState<string | null>(null)
   const [sidebarLineKey, setSidebarLineKey] = useState<string | null>(null)
   const [editingName, setEditingName] = useState(false)
@@ -712,6 +713,30 @@ export function FormulationGrid({ id }: { id: string }) {
       setConfirmAction(null)
       toast.success('Formulation archived')
       router.push(`/projects/${data?.projectId}`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  // Archive or restore just this iteration; the formulation's other iterations stay live
+  const iterationArchiveMutation = useMutation({
+    mutationFn: (archived: boolean) =>
+      fetch(`/api/formulations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ iterationArchived: archived }),
+      }).then(async r => { if (!r.ok) throw new Error(await readErrorMessage(r, 'Failed')); return r.json() }),
+    onSuccess: (_row, archived) => {
+      // the version dropdown on every sibling, and the project page's latest iteration, change
+      queryClient.invalidateQueries({ queryKey: ['formulation'] })
+      queryClient.invalidateQueries({ queryKey: ['project'] })
+      setConfirmAction(null)
+      if (archived) {
+        toast.success(`v${data?.version} archived`)
+        const next = data?.iterations.find(it => it.id !== id && !it.iterationArchivedAt)
+        if (next) router.push(`/formulations/${next.id}`)
+      } else {
+        toast.success(`v${data?.version} restored`)
+      }
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -1078,6 +1103,11 @@ export function FormulationGrid({ id }: { id: string }) {
   // View-only team members get the same read-only grid as a finalized formulation
   const readOnly = data.canEdit === false
   const isLocked = data.status === 'locked' || readOnly
+  const isIterationArchived = !!data.iterationArchivedAt
+  const liveIterations = data.iterations.filter(it => !it.iterationArchivedAt)
+  const archivedIterations = data.iterations.filter(it => !!it.iterationArchivedAt)
+  // Archiving one iteration needs another live one to remain
+  const canArchiveIteration = !isIterationArchived && liveIterations.some(it => it.id !== data.id)
   // Why the grid's controls are disabled, for their hints
   const lockedReason = readOnly
     ? 'View only: you can’t change this formulation'
@@ -1166,11 +1196,20 @@ export function FormulationGrid({ id }: { id: string }) {
                 className="text-sm text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 print:hidden"
               >
-                {data.iterations.map(it => (
+                {liveIterations.map(it => (
                   <option key={it.id} value={it.id}>
-                    v{it.version}{iterationLabel(it.iterationNote)}{it.status === 'locked' ? ' 🔒' : ''}{it.id === data.iterations[0].id ? ' (latest)' : ''}
+                    v{it.version}{iterationLabel(it.iterationNote)}{it.status === 'locked' ? ' 🔒' : ''}{it.id === liveIterations[0]?.id ? ' (latest)' : ''}
                   </option>
                 ))}
+                {archivedIterations.length > 0 && (
+                  <optgroup label="Archived">
+                    {archivedIterations.map(it => (
+                      <option key={it.id} value={it.id}>
+                        v{it.version}{iterationLabel(it.iterationNote)}{it.status === 'locked' ? ' 🔒' : ''} (archived)
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             ) : (
               <span className="text-sm text-gray-400"><Term t="version">v{data.version}</Term></span>
@@ -1367,7 +1406,43 @@ export function FormulationGrid({ id }: { id: string }) {
               <CheckCircle2 size={13} /> Complete batch
             </button>
           )}
-          {!readOnly && (
+          {!readOnly && (canArchiveIteration ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowArchiveMenu(v => !v)}
+                aria-haspopup="menu"
+                aria-expanded={showArchiveMenu}
+                data-tip="Archive just this version, or the whole formulation"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500
+                           text-sm rounded-md hover:bg-gray-50 transition-colors"
+              >
+                <Archive size={13} /> Archive <ChevronDown size={12} />
+              </button>
+              {showArchiveMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowArchiveMenu(false)} />
+                  <div role="menu" className="absolute right-0 z-20 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg py-1">
+                    <button
+                      role="menuitem"
+                      onClick={() => { setShowArchiveMenu(false); setConfirmAction('archive-iteration') }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                    >
+                      <div className="text-sm font-medium text-gray-800">Archive v{data.version} only</div>
+                      <div className="text-xs text-gray-400">The other iterations stay live</div>
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => { setShowArchiveMenu(false); setConfirmAction('archive') }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                    >
+                      <div className="text-sm font-medium text-gray-800">Archive whole formulation</div>
+                      <div className="text-xs text-gray-400">Hides every iteration from the project</div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
             <button
               onClick={() => setConfirmAction('archive')}
               data-tip="Hides every version of this formulation from the project (asks to confirm). Restore it from the project’s Archived list."
@@ -1376,9 +1451,27 @@ export function FormulationGrid({ id }: { id: string }) {
             >
               <Archive size={13} /> Archive
             </button>
-          )}
+          ))}
         </div>
       </div>
+
+      {isIterationArchived && (
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 px-4 py-2.5 rounded-lg border border-amber-200 bg-amber-50 text-sm text-amber-800 print:hidden">
+          <span className="flex items-center gap-2">
+            <Archive size={14} className="shrink-0" />
+            v{data.version} is archived. The project page skips it; the other iterations are unaffected.
+          </span>
+          {!readOnly && (
+            <button
+              onClick={() => iterationArchiveMutation.mutate(false)}
+              disabled={iterationArchiveMutation.isPending}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs border border-amber-300 rounded-md bg-white hover:bg-amber-100 disabled:opacity-50"
+            >
+              <RotateCcw size={11} /> {iterationArchiveMutation.isPending ? 'Restoring…' : 'Restore iteration'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Settings bar */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm print:hidden">
@@ -2465,6 +2558,25 @@ export function FormulationGrid({ id }: { id: string }) {
                     className="px-4 py-2 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-50"
                   >
                     {finalizeMutation.isPending ? 'Unlocking…' : 'Yes, unlock'}
+                  </button>
+                </div>
+              </>
+            )}
+            {confirmAction === 'archive-iteration' && (
+              <>
+                <h3 className="text-base font-semibold text-gray-900">Archive v{data.version}?</h3>
+                <p className="text-sm text-gray-500">
+                  Only this iteration is archived; the other iterations of &ldquo;{data.name}&rdquo; stay live. You can
+                  still open it from the version list and restore it.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setConfirmAction(null)} className="px-4 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+                  <button
+                    onClick={() => iterationArchiveMutation.mutate(true)}
+                    disabled={iterationArchiveMutation.isPending}
+                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {iterationArchiveMutation.isPending ? 'Archiving…' : 'Yes, archive'}
                   </button>
                 </div>
               </>

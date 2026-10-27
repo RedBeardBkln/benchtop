@@ -52,7 +52,7 @@ function Delta({ a, b, fmt }: { a: number | null; b: number | null; fmt: (n: num
 }
 
 const versionLabel = (it: Iteration | undefined) =>
-  it ? `v${it.version}${it.iterationNote ? ` — ${it.iterationNote.replace(/\s+/g, ' ').slice(0, 40)}` : ''}` : ''
+  it ? `v${it.version}${it.iterationNote ? ` — ${it.iterationNote.replace(/\s+/g, ' ').slice(0, 40)}` : ''}${it.iterationArchivedAt ? ' (archived)' : ''}` : ''
 
 /** Side-by-side view of two saved versions: what changed in the recipe and in the nutrition. */
 export function CompareVersionsDialog({ currentId, iterations, allNutrients, onClose }: {

@@ -42,7 +42,10 @@ export const formulations = pgTable('formulations', {
   // stored in grams. A view preference like grid_nutrient_ids.
   weightUnit: text('weight_unit').notNull().default('g'),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
+  // Archives the whole formulation: set on every iteration together (see PATCH /api/formulations/[id])
   archivedAt: timestamp('archived_at', { withTimezone: true }),
+  // Archives just this iteration; its siblings stay live. Per-row and never copied to new iterations
+  iterationArchivedAt: timestamp('iteration_archived_at', { withTimezone: true }),
   // Set when archived along with its project's client (see lib/client-archive.ts)
   archivedWithClientId: uuid('archived_with_client_id').references(() => clients.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

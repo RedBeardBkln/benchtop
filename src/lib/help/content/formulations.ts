@@ -398,6 +398,7 @@ export const formulations: HelpSection = {
           items: [
             '**Rename:** move your mouse over the name and click the pencil. The new name applies to every version.',
             '**Archive:** click `Archive`, then `Yes, archive`. All versions are hidden from the project. To bring them back, open the project, click `Archived (N)`, then `Restore`.',
+            '**Archive one version:** when the formulation has another version that isn’t archived, `Archive` opens a menu. Choose `Archive vN only`, then `Yes, archive`. The other versions stay live, and the project page shows the newest live one. The archived version is listed under **Archived** in the version list; open it and click `Restore iteration` to bring it back. The last live version can’t be archived on its own; archive the whole formulation instead.',
             'Formulations can’t be deleted, only archived.',
           ],
         },
@@ -744,7 +745,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'How do I delete a formulation or one version?',
-      a: 'You can’t delete them, but you can `Archive` a formulation (all versions at once) and `Restore` it later from the project’s **Archived** list.',
+      a: 'You can’t delete them, but you can `Archive` a formulation (all versions at once) and `Restore` it later from the project’s **Archived** list. To set aside just one version, choose `Archive vN only` from the `Archive` menu; restore it with `Restore iteration` on that version.',
     },
     {
       q: 'Can I compare two versions side by side?',

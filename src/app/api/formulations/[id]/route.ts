@@ -5,7 +5,7 @@ import {
   formulations, formulationLines, ingredients,
   ingredientNutrients, nutrients, projects, processSteps, equipment,
 } from '@/lib/db/schema'
-import { and, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOwnedFormulation, loadFormulationForEdit, notFoundResponse, projectLevel } from '@/lib/tenancy'
 import { canEditLibrary as canEditLibraryAccess } from '@/lib/team-access'
@@ -24,6 +24,8 @@ const patchSchema = z.object({
   iterationNote: z.string().max(2000).nullable().optional(),
   status: z.enum(['draft', 'locked']).optional(),
   archived: z.boolean().optional(),
+  // Archive or restore just this iteration
+  iterationArchived: z.boolean().optional(),
   // Grid column view; null resets to the default columns
   gridNutrientIds: z.array(z.string().uuid()).max(200).nullable().optional(),
   // Unit the grid's amount column is shown in
@@ -118,6 +120,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       version: formulations.version,
       status: formulations.status,
       iterationNote: formulations.iterationNote,
+      iterationArchivedAt: formulations.iterationArchivedAt,
       updatedAt: formulations.updatedAt,
     })
     .from(formulations)
@@ -145,9 +148,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const d = parsed.data
-  // Changing only the grid's column view or the COGS package size isn't an edit to the formula,
-  // so it leaves updatedAt alone
-  const viewOnly = Object.keys(d).length > 0 && Object.keys(d).every(k => k === 'gridNutrientIds' || k === 'unitSizeG' || k === 'weightUnit')
+  // Changing only the grid's column view or the COGS package size, or archiving an iteration, isn't
+  // an edit to the formula, so it leaves updatedAt alone
+  const viewOnly = Object.keys(d).length > 0 &&
+    Object.keys(d).every(k => k === 'gridNutrientIds' || k === 'unitSizeG' || k === 'weightUnit' || k === 'iterationArchived')
   const updates: Record<string, unknown> = viewOnly ? {} : { updatedAt: new Date() }
   if (d.gridNutrientIds !== undefined) updates.gridNutrientIds = d.gridNutrientIds ? [...new Set(d.gridNutrientIds)] : null
   if (d.weightUnit !== undefined) updates.weightUnit = d.weightUnit
@@ -166,6 +170,27 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     updates.archivedAt = d.archived ? new Date() : null
     // Archiving or restoring by hand ends any link to a client archive
     updates.archivedWithClientId = null
+  }
+  if (d.iterationArchived !== undefined) {
+    updates.iterationArchivedAt = d.iterationArchived ? new Date() : null
+    if (d.iterationArchived) {
+      // Keep at least one live iteration; archiving the last one is archiving the formulation
+      const [{ live }] = await db
+        .select({ live: sql<number>`count(*)::int` })
+        .from(formulations)
+        .where(and(
+          eq(formulations.familyId, loaded.formulation.familyId),
+          eq(formulations.accountId, ctx.account.id),
+          ne(formulations.id, id),
+          isNull(formulations.iterationArchivedAt),
+        ))
+      if (live === 0) {
+        return NextResponse.json(
+          { error: 'This is the only live iteration. Archive the whole formulation instead.' },
+          { status: 409 },
+        )
+      }
+    }
   }
 
   const [row] = await db

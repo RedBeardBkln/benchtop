@@ -183,6 +183,13 @@
       "when": 1793122711465,
       "tag": "0025_company_logo",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793126666950,
+      "tag": "0026_iteration_archived",
+      "breakpoints": true
     }
   ]
 }
