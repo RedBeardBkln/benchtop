@@ -5,7 +5,7 @@ export const settings: HelpSection = {
   title: 'Your profile & settings',
   icon: 'settings',
   intro:
-    'How to update your name and contact details, turn on cost tracking, change your email or password, reset a forgotten password, accept updated terms, download your data, and delete an account.',
+    'How to update your name and contact details, add your company logo, turn on cost tracking, change your email or password, reset a forgotten password, accept updated terms, download your data, and delete an account.',
   articles: [
     {
       slug: 'settings-overview',
@@ -19,7 +19,7 @@ export const settings: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: '[Profile](/settings/profile)', text: 'Your name, company, job title, phone and time zone. Everyone.' },
+            { term: '[Profile](/settings/profile)', text: 'Your name, company, job title, phone, time zone and company logo. Everyone.' },
             { term: '[Preferences](/settings/preferences)', text: 'Personal choices, such as showing cost (COGS) on formulations or turning on billable time tracking. Everyone.' },
             { term: '[Account](/settings/account)', text: 'The account name, your sign-in email, your password, and signing out. Everyone (only the owner can rename the account).' },
             { term: '[Team](/settings/team)', text: 'Inviting people and choosing what they can see. Owners and admins only. See [Team & permissions](/help/team).' },
@@ -54,6 +54,33 @@ export const settings: HelpSection = {
             { term: 'Full name', text: 'What your teammates see on the Team list. Having one also unlocks the **Report a bug or request a feature** link.' },
             { term: 'Phone', text: 'Digits, spaces and + ( ) . - only. It pre-fills the feedback form.' },
           ],
+        },
+      ],
+    },
+    {
+      slug: 'company-logo',
+      title: 'Adding your company logo',
+      summary: 'Put your logo on formulation printouts, PDFs and time reports, for you or your whole team.',
+      blocks: [
+        {
+          type: 'steps',
+          items: [
+            'Go to [Settings → Profile](/settings/profile) and find **Company logo**.',
+            'Click `Upload logo` and choose a PNG, JPEG or WEBP image of up to 2 MB. You’ll see “Logo saved” and a preview.',
+            'To change it, click `Replace logo`. To take it off your documents, click `Remove`.',
+          ],
+        },
+        {
+          type: 'p',
+          text: 'Your logo appears at the top of a formulation’s print view (and the PDF you save from it), at the top of a formulation page you print directly, and on time reports.',
+        },
+        {
+          type: 'p',
+          text: '**Owners and admins** can put their logo on everyone’s documents. Upload your own logo, then click `Use my logo for the whole team` under **Team logo**. While a team logo is applied it replaces each member’s own logo. Click `Stop using team logo` to go back to each person’s own.',
+        },
+        {
+          type: 'note',
+          text: 'A wide logo on a transparent or white background prints best. The Nutrition Facts panel never shows a logo, because it has to follow the FDA format.',
         },
       ],
     },

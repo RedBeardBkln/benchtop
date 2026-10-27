@@ -98,12 +98,13 @@ export async function GET() {
   const sub = ctx.subscription
   const payload = {
     exportedAt: new Date().toISOString(),
-    note: 'Document files are not included; ingredientDocs lists their storage paths.',
+    note: 'Document and logo files are not included; ingredientDocs and the logo fields list their storage paths.',
     account: {
       id: ctx.account.id,
       name: ctx.account.name,
       createdAt: ctx.account.createdAt,
       billingExempt: ctx.account.billingExempt,
+      teamLogoPath: ctx.account.logoPath,
     },
     subscription: sub
       ? {
@@ -121,6 +122,7 @@ export async function GET() {
           jobTitle: ctx.profile.jobTitle,
           phone: ctx.profile.phone,
           timezone: ctx.profile.timezone,
+          logoPath: ctx.profile.logoPath,
           termsVersion: ctx.profile.termsVersion,
           termsAcceptedAt: ctx.profile.termsAcceptedAt,
           privacyVersion: ctx.profile.privacyVersion,

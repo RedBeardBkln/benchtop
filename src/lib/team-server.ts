@@ -2,6 +2,8 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { accountMembers, profiles, projects } from '@/lib/db/schema'
 import { getAuthEmails, getSupabaseAdmin, isAdminConfigured } from '@/lib/supabase/admin'
+import { isAccountLogoPath } from '@/lib/logo'
+import { removeLogo } from '@/lib/logo-server'
 import { accessForRole, type MemberAccess, type MemberRole } from '@/lib/team-access'
 
 // Server helpers for team management (DB access). Pure rules live in team-access.ts.
@@ -60,6 +62,7 @@ export async function listMembers(accountId: string) {
 // Removes a member from the account and deletes their login (a login belongs to exactly one
 // account, so it has no other use, and deleting it lets the email be invited again).
 export async function removeMember(accountId: string, userId: string): Promise<{ loginRemoved: boolean }> {
+  const [profile] = await db.select({ logoPath: profiles.logoPath }).from(profiles).where(eq(profiles.userId, userId)).limit(1)
   await db.transaction(async tx => {
     await tx
       .delete(accountMembers)
@@ -67,6 +70,7 @@ export async function removeMember(accountId: string, userId: string): Promise<{
     await tx.delete(profiles).where(eq(profiles.userId, userId))
   })
   if (!isAdminConfigured()) return { loginRemoved: false }
+  if (isAccountLogoPath(accountId, profile?.logoPath)) await removeLogo(profile.logoPath)
   const { error } = await getSupabaseAdmin().auth.admin.deleteUser(userId)
   if (error) console.error('[team] deleteUser failed:', error.message)
   return { loginRemoved: !error }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clearBranding } from '@/lib/logo-server'
 import { clearStaging } from '@/lib/staged-upload'
 import { eq, inArray } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
@@ -102,6 +103,7 @@ export async function DELETE(req: NextRequest) {
   }
   // Uploads that were started but never attached to anything; best effort
   await clearStaging(accountId).catch(err => console.error('[account delete] staging cleanup failed:', err))
+  await clearBranding(accountId).catch(err => console.error('[account delete] logo cleanup failed:', err))
 
   // 3. Database rows, FK-safe, in one transaction.
   //    projects -> cascades formulations, lines, process steps, targets, batch runs, reverse targets

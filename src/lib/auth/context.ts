@@ -28,6 +28,8 @@ export type AuthContext = {
     // Cap on additional users (free for life only); null = no cap
     userCap: number | null
     stripeCustomerId: string | null
+    // Team logo applied by an owner or admin (see lib/logo.ts)
+    logoPath: string | null
     createdAt: Date
   }
   role: MemberRole
@@ -91,6 +93,7 @@ export async function getContext(): Promise<ContextResult> {
       freeAccess,
       userCap: userCap(row.account),
       stripeCustomerId: row.account.stripeCustomerId,
+      logoPath: row.account.logoPath,
       createdAt: row.account.createdAt,
     },
     role,

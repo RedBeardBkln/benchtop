@@ -176,6 +176,13 @@
       "when": 1793114194055,
       "tag": "0024_time_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793122711465,
+      "tag": "0025_company_logo",
+      "breakpoints": true
     }
   ]
 }

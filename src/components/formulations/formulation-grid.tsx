@@ -14,6 +14,7 @@ import { categoryPath, onHandAlternatives } from '@/lib/ingredient-categories'
 import { calcNutrientContributions, calcNutrientProfile, dryBasisFactor, formatAmt, type NutrientContribution } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
 import { formatWeightG } from '@/lib/weight'
+import { CompanyLogo } from '@/components/company-logo'
 import { WeightInput } from '@/components/formulations/weight-input'
 import { StickyXScroll } from '@/components/sticky-x-scroll'
 import {
@@ -1094,6 +1095,9 @@ export function FormulationGrid({ id }: { id: string }) {
       >
         <ArrowLeft size={14} /> {data.project?.name ?? 'Project'}
       </button>
+
+      {/* Company logo when the page itself is printed (the print view has its own) */}
+      <CompanyLogo className="hidden print:block max-h-14 max-w-[220px] mb-4" />
 
       {/* Header */}
       <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:items-start sm:justify-between">

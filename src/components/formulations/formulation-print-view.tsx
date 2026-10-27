@@ -15,6 +15,7 @@ import { CATEGORY_ORDER, evaluateTargets, fmtBasis, fmtRequirement, type Validat
 import type { PrintSection } from '@/lib/print-sections'
 import { formulationFileName } from '@/lib/download-name'
 import { Logo } from '@/components/logo'
+import { CompanyLogo } from '@/components/company-logo'
 import { effectiveUnit, formatGramsIn, isWeightUnit, type WeightUnit } from '@/lib/weight-units'
 
 const asUnit = (u: string | null): WeightUnit | null => (isWeightUnit(u) ? u : null)
@@ -144,21 +145,24 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
 
       <div className="max-w-3xl mx-auto px-8 py-8 print:px-0 print:py-0 print:max-w-none">
         {/* Header */}
-        <div className="mb-6 pb-4 border-b-2 border-gray-800">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <h1 className="text-2xl font-semibold text-gray-900">{data.name}</h1>
-            <span className="text-base text-gray-500">v{data.version}</span>
-            <span className="px-2 py-0.5 text-xs font-medium rounded border border-gray-400 text-gray-700">
-              {isLocked ? 'Locked' : 'Draft'}
-            </span>
+        <div className="mb-6 pb-4 border-b-2 border-gray-800 flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h1 className="text-2xl font-semibold text-gray-900">{data.name}</h1>
+              <span className="text-base text-gray-500">v{data.version}</span>
+              <span className="px-2 py-0.5 text-xs font-medium rounded border border-gray-400 text-gray-700">
+                {isLocked ? 'Locked' : 'Draft'}
+              </span>
+            </div>
+            <div className="mt-1 text-sm text-gray-600">
+              <span className="capitalize">{data.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</span>
+              {data.project?.name && <span> · {data.project.name}</span>}
+            </div>
+            {data.iterationNote?.trim() && (
+              <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{data.iterationNote.trim()}</p>
+            )}
           </div>
-          <div className="mt-1 text-sm text-gray-600">
-            <span className="capitalize">{data.mode === 'ground_up' ? 'Ground up' : 'Reverse'}</span>
-            {data.project?.name && <span> · {data.project.name}</span>}
-          </div>
-          {data.iterationNote?.trim() && (
-            <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{data.iterationNote.trim()}</p>
-          )}
+          <CompanyLogo className="max-h-16 max-w-[200px] shrink-0" />
         </div>
 
         {/* Metadata row */}

@@ -12,6 +12,7 @@ import { timeReportFileName } from '@/lib/download-name'
 import {
   activityLabel, combineLocal, durationMinutes, formatDuration, formatHours, splitLocal, summarizeEntries, timeEntriesCsv,
 } from '@/lib/time-tracking'
+import { CompanyLogo } from '@/components/company-logo'
 import type { TimeEntryRow } from './use-time'
 
 // The client-facing time report: who it's from, who it's for, each task with its date, type and time,
@@ -161,6 +162,7 @@ export function TimeReportView() {
         {/* Header */}
         <div className="flex flex-wrap justify-between gap-6 pb-4 mb-6 border-b-2 border-gray-800">
           <div>
+            <CompanyLogo className="max-h-16 max-w-[220px] mb-2" />
             <div className="text-lg font-semibold text-gray-900">{data.from.company}</div>
             {data.from.name && <div className="text-sm text-gray-700">{data.from.name}</div>}
             {contact && <div className="text-sm text-gray-600">{contact}</div>}

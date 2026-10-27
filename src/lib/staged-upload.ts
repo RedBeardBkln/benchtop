@@ -55,9 +55,13 @@ export async function removeStaged(path: string): Promise<void> {
 }
 
 /** Remove whatever is left in the account's staging folder (uploads that were never used) */
-export async function clearStaging(accountId: string): Promise<void> {
+export function clearStaging(accountId: string): Promise<void> {
+  return removeFolder(stagingPrefix(accountId).slice(0, -1))
+}
+
+/** Remove every file directly inside a folder of the docs bucket */
+export async function removeFolder(folder: string): Promise<void> {
   const storage = getSupabaseAdmin().storage.from(DOCS_BUCKET)
-  const folder = stagingPrefix(accountId).slice(0, -1)
   for (;;) {
     const { data, error } = await storage.list(folder, { limit: 100 })
     if (error || !data || data.length === 0) return

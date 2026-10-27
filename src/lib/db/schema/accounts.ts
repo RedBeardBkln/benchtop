@@ -25,6 +25,9 @@ export const accounts = pgTable('accounts', {
   // 'free_lifetime' only: most additional users (besides the owner) the account may have; null = no cap
   maxUsers: integer('max_users'),
   stripeCustomerId: text('stripe_customer_id').unique(),
+  // Team logo an owner or admin applied to everyone's documents (Storage path, see lib/logo.ts);
+  // when set it's used instead of each member's own logo
+  logoPath: text('logo_path'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => [
@@ -55,6 +58,8 @@ export const profiles = pgTable('profiles', {
   jobTitle: text('job_title'),
   phone: text('phone'),
   timezone: text('timezone'),
+  // The user's own company logo (Storage path, see lib/logo.ts)
+  logoPath: text('logo_path'),
   // Per-user display preferences (see UserPreferences)
   preferences: jsonb('preferences').$type<UserPreferences>().notNull().default({}),
   isPlatformAdmin: boolean('is_platform_admin').notNull().default(false),
