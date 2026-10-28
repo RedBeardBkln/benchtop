@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { amountInTargetUnit, convertToUnit, parseUnit, targetValueInNutrientUnit, withUnit } from './units'
+import {
+  amountInTargetUnit, convertToUnit, parseUnit, targetValueInNutrientUnit, unitLabel, vitaminUnitOptions, withUnit,
+} from './units'
 import { evaluateTargets } from './target-validation'
 import type { NutrientResult } from './formulation-calc'
 import type { ProjectTarget } from './types'
@@ -38,6 +40,64 @@ describe('convertToUnit', () => {
 
   it('parses a qualified unit', () => {
     expect(parseUnit(' mcg DFE ')).toEqual({ base: 'mcg', qualifier: 'dfe' })
+    expect(parseUnit('IU (d-alpha-tocopherol)')).toEqual({ base: 'iu', qualifier: 'natural' })
+    expect(parseUnit('mcg β-carotene')).toEqual({ base: 'mcg', qualifier: 'beta-carotene' })
+  })
+})
+
+describe('vitamin forms', () => {
+  it('converts IU of vitamin D (40 IU = 1 mcg)', () => {
+    expect(convertToUnit(400, 'IU', 'mcg', 'Vitamin D')).toBeCloseTo(10)
+    expect(convertToUnit(10_000_000, 'IU', 'mcg', 'Vitamin D3')).toBeCloseTo(250_000)
+    expect(convertToUnit(10, 'mcg', 'IU', 'Vitamin D')).toBeCloseTo(400)
+    expect(convertToUnit(400, 'IU', 'mg', 'Vitamin D')).toBeCloseTo(0.01)
+  })
+
+  it('converts vitamin A by form to mcg RAE', () => {
+    expect(convertToUnit(5000, 'IU', 'mcg RAE', 'Vitamin A')).toBeCloseTo(1500)              // retinol
+    expect(convertToUnit(5000, 'IU retinol', 'mcg RAE', 'Vitamin A')).toBeCloseTo(1500)
+    expect(convertToUnit(5000, 'IU beta-carotene', 'mcg RAE', 'Vitamin A')).toBeCloseTo(1500) // supplement, 2:1
+    expect(convertToUnit(5000, 'IU dietary beta-carotene', 'mcg RAE', 'Vitamin A')).toBeCloseTo(250) // food, 12:1
+    expect(convertToUnit(1200, 'mcg dietary-beta-carotene', 'mcg RAE', 'Vitamin A')).toBeCloseTo(100)
+    expect(convertToUnit(1, 'mg β-carotene', 'mcg RAE', 'Vitamin A')).toBeCloseTo(500)
+    expect(convertToUnit(900, 'mcg RAE', 'IU', 'Vitamin A')).toBeCloseTo(3000)
+  })
+
+  it('converts vitamin E by form, and refuses IU with no form', () => {
+    expect(convertToUnit(100, 'IU natural', 'mg', 'Vitamin E')).toBeCloseTo(67)
+    expect(convertToUnit(100, 'IU (dl-alpha-tocopherol)', 'mg', 'Vitamin E')).toBeCloseTo(45)
+    expect(convertToUnit(30, 'mg synthetic', 'mg', 'Vitamin E')).toBeCloseTo(15)
+    expect(convertToUnit(100, 'IU', 'mg', 'Vitamin E')).toBeNull()
+  })
+
+  it('converts folic acid to mcg DFE (× 1.7) and keeps food folate as it is', () => {
+    expect(convertToUnit(400, 'mcg folic acid', 'mcg DFE', 'Folate')).toBeCloseTo(680)
+    expect(convertToUnit(0.4, 'mg folic-acid', 'mcg DFE', 'Folate')).toBeCloseTo(680)
+    expect(convertToUnit(400, 'mcg', 'mcg DFE', 'Folate')).toBe(400)
+  })
+
+  it('only converts a form for its own vitamin', () => {
+    expect(convertToUnit(400, 'IU', 'mcg', 'Vitamin K')).toBeNull()
+    expect(convertToUnit(400, 'IU', 'mcg')).toBeNull()
+    expect(convertToUnit(400, 'mcg folic acid', 'mcg DFE')).toBeNull()
+    // Plain conversions still work for a vitamin
+    expect(convertToUnit(1, 'mg', 'mcg RAE', 'Vitamin A')).toBeCloseTo(1000)
+    expect(convertToUnit(1, 'mg', 'mcg', 'Vitamin D')).toBeCloseTo(1000)
+  })
+
+  it('lists and labels a vitamin’s other units', () => {
+    expect(vitaminUnitOptions('Vitamin D').map(o => o.value)).toEqual(['IU'])
+    expect(vitaminUnitOptions('Folate').map(o => o.label)).toEqual(['mcg folic acid'])
+    expect(vitaminUnitOptions('Protein')).toEqual([])
+    expect(unitLabel('IU dietary-beta-carotene', 'Vitamin A')).toBe('IU (β-carotene, food)')
+    expect(withUnit(400, 'IU', 'Vitamin A')).toBe('400 IU (retinol)')
+    expect(withUnit(400, 'IU')).toBe('400 IU')
+  })
+
+  it('checks and solves targets given in IU', () => {
+    // 10 mcg vitamin D per 100 g = 400 IU
+    expect(amountInTargetUnit(10, 'mcg', 'IU', null, 'Vitamin D')).toBeCloseTo(400)
+    expect(targetValueInNutrientUnit(800, 'IU', 'mcg', 20, 'Vitamin D')).toBeCloseTo(20)
   })
 })
 
@@ -59,11 +119,22 @@ describe('targetsInNutrientUnits', () => {
     expect(unconvertible).toEqual([])
   })
 
-  it('sets aside targets whose unit can’t be converted', () => {
+  it('converts a vitamin D target in IU', () => {
     const { targets, unconvertible } = targetsInNutrientUnits(
       [{ name: 'Vitamin D', value: 400, unit: 'IU' }],
       t => t.name,
       units,
+    )
+    expect(targets[0].value).toBeCloseTo(10)
+    expect(targets[0].unit).toBe('mcg')
+    expect(unconvertible).toEqual([])
+  })
+
+  it('sets aside targets whose unit can’t be converted', () => {
+    const { targets, unconvertible } = targetsInNutrientUnits(
+      [{ name: 'Vitamin E', value: 30, unit: 'IU' }],
+      t => t.name,
+      new Map([['Vitamin E', 'mg']]),
     )
     expect(targets).toEqual([])
     expect(unconvertible).toHaveLength(1)

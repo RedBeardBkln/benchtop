@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react'
 import type { Nutrient, ProjectTarget } from '@/lib/types'
 import { Term } from '@/components/term'
-import { PCT_DV, PCT_OF_100G, convertToUnit, isPctUnit, withUnit } from '@/lib/units'
+import { PCT_DV, PCT_OF_100G, convertToUnit, isPctUnit, unitLabel, vitaminUnitOptions, withUnit } from '@/lib/units'
 
 const COMPARATOR_LABELS: Record<string, string> = {
   '>=': '≥ min',
@@ -24,11 +24,12 @@ const EMPTY_TARGET = (): ProjectTarget => ({
   basis: 'per_100g',
 })
 
-const UNIT_TIP = 'The nutrient’s own unit, % of 100g (a share of the product’s weight: 20% = 20 g in every 100 g), or % DV (a share of the FDA Daily Value).'
+const UNIT_TIP = 'The nutrient’s own unit, % of 100g (a share of the product’s weight: 20% = 20 g in every 100 g), or % DV (a share of the FDA Daily Value). Vitamins A, D and E can also be given in IU, and folate as folic acid; Benchtop converts them for that vitamin.'
 
 /**
- * Units a target can be given in: the nutrient's own, % of 100g for nutrients measured by weight,
- * and % DV for nutrients with a Daily Value. `ok: false` keeps a saved unit that no longer fits listed.
+ * Units a target can be given in: the nutrient's own, a vitamin's other forms (IU, folic acid…),
+ * % of 100g for nutrients measured by weight, and % DV for nutrients with a Daily Value.
+ * `ok: false` keeps a saved unit that no longer fits listed.
  */
 function targetUnitOptions(
   nutrient: Nutrient | undefined,
@@ -37,7 +38,11 @@ function targetUnitOptions(
   const base = nutrient?.unit ?? (isPctUnit(current) ? 'g' : current)
   const dv = nutrient?.dailyValueAmount != null ? parseFloat(nutrient.dailyValueAmount) : null
   const opts = [{ value: base, label: base, ok: true }]
-  if (current !== base && !isPctUnit(current)) opts.push({ value: current, label: current, ok: true })
+  const forms = vitaminUnitOptions(nutrient?.name).filter(f => f.value !== base)
+  opts.push(...forms.map(f => ({ ...f, ok: true })))
+  if (current !== base && !isPctUnit(current) && !forms.some(f => f.value === current)) {
+    opts.push({ value: current, label: unitLabel(current, nutrient?.name), ok: true })
+  }
   const byWeight = convertToUnit(1, base, 'g') != null
   if (byWeight || current === PCT_OF_100G) opts.push({ value: PCT_OF_100G, label: '% of 100g', ok: byWeight })
   const hasDv = !!dv && dv > 0
@@ -46,8 +51,8 @@ function targetUnitOptions(
 }
 
 function fmtTarget(t: ProjectTarget): string {
-  const v = withUnit(t.value, t.unit)
-  if (t.comparator === 'range') return `${t.value} – ${withUnit(t.valueMax ?? '?', t.unit)}`
+  const v = withUnit(t.value, t.unit, t.nutrient)
+  if (t.comparator === 'range') return `${t.value} – ${withUnit(t.valueMax ?? '?', t.unit, t.nutrient)}`
   if (t.comparator === '>=') return `≥ ${v}`
   if (t.comparator === '<=') return `≤ ${v}`
   return `= ${v}`

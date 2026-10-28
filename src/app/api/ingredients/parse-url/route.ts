@@ -4,6 +4,7 @@ import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { safeFetch, readTextCapped, UnsafeUrlError } from '@/lib/safe-fetch'
+import { VITAMIN_UNIT_RULES } from '@/lib/vitamin-units-prompt'
 
 const bodySchema = z.object({
   url: z.string().url(),
@@ -78,7 +79,9 @@ Return ONLY this JSON structure:
     {"name": "Protein", "amountPer100g": 25.3, "unit": "g"}
   ]
 }
-Allowed nutrient names: Energy, Protein, Total Fat, Saturated Fat, Trans Fat, Cholesterol, Total Carbohydrate, Dietary Fiber, Total Sugars, Added Sugars, Sodium, Calcium, Iron, Potassium, Vitamin A, Vitamin C, Vitamin D, Magnesium.
+Allowed nutrient names: Energy, Protein, Total Fat, Saturated Fat, Trans Fat, Cholesterol, Total Carbohydrate, Dietary Fiber, Total Sugars, Added Sugars, Sodium, Calcium, Iron, Potassium, Vitamin A, Vitamin C, Vitamin D, Vitamin E, Folate, Magnesium.
+Set "unit" to the unit your number is in.
+${VITAMIN_UNIT_RULES}
 If no nutrition data is found return: {"nutrients": [], "error": "No nutrition data found"}
 
 Page text:

@@ -142,6 +142,7 @@ export function AddIngredientDialog({
       setDocNutrients(found.map(n => ({ nutrientId: n.nutrientId, name: n.name, unit: n.unit, value: String(n.amountPer100g) })))
       setValue('sourceType', 'supplier')
       update({ status: 'read', message: null })
+      if (found.length > 0) warnUnconvertible(data.unconvertible)
     } catch {
       update({ status: 'read', message: 'Could not read the document. It will still be attached.' })
     }

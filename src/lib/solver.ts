@@ -19,7 +19,7 @@ import { PCT_OF_100G, targetValueInNutrientUnit } from '@/lib/units'
 /**
  * Ingredient amounts are in each nutrient's own unit, so targets must be too: a "Vitamin K ≥ 0.1 mg"
  * target becomes "≥ 100 mcg" when Vitamin K is stored in mcg. A target whose unit can't be converted
- * (e.g. IU) is returned in `unconvertible` and left out, rather than solved against the wrong scale.
+ * (e.g. IU of vitamin E without its form) is returned in `unconvertible` and left out, rather than solved against the wrong scale.
  */
 export function targetsInNutrientUnits<T extends { unit: string; value: number; valueMax?: number }>(
   targets: T[],
@@ -35,8 +35,8 @@ export function targetsInNutrientUnits<T extends { unit: string; value: number; 
     const unit = name ? unitByNutrient.get(name) : undefined
     if (!unit) { out.push(t); continue }   // unknown nutrient: the solver reports it as no-data
     const dv = dvByNutrient?.get(name!)
-    const value = targetValueInNutrientUnit(t.value, t.unit, unit, dv)
-    const valueMax = t.valueMax != null ? targetValueInNutrientUnit(t.valueMax, t.unit, unit, dv) : undefined
+    const value = targetValueInNutrientUnit(t.value, t.unit, unit, dv, name)
+    const valueMax = t.valueMax != null ? targetValueInNutrientUnit(t.valueMax, t.unit, unit, dv, name) : undefined
     if (value == null || valueMax === null) { unconvertible.push(t); continue }
     // A % of weight is grams per 100 g, whatever basis the target was given
     const basis = t.unit === PCT_OF_100G && 'basis' in t ? { basis: 'per_100g' } : {}

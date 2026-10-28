@@ -222,7 +222,7 @@ export const projects: HelpSection = {
     },
     {
       q: 'Why does a target show “—” instead of pass or fail?',
-      a: 'Benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as IU versus mcg, or a % DV target for a nutrient that has no Daily Value; (4) a “between” target has no maximum; (5) it’s a dry-basis target and an ingredient has no moisture %, so the Actual column says “add moisture %”.',
+      a: 'Benchtop can’t check it. Usually it’s one of these: (1) it’s a per-serving target and there’s no serving size, so the Actual column says “set serving size”; (2) none of the ingredients has data for that nutrient; (3) the units can’t be converted, such as vitamin E in IU with no form chosen, or a % DV target for a nutrient that has no Daily Value; (4) a “between” target has no maximum; (5) it’s a dry-basis target and an ingredient has no moisture %, so the Actual column says “add moisture %”.',
     },
     {
       q: 'Why can’t I save a target of 0 (for example, 0 g trans fat)?',

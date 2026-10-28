@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { db } from '@/lib/db'
 import { nutrients } from '@/lib/db/schema'
 import { convertToUnit } from '@/lib/units'
+import { VITAMIN_UNIT_RULES } from '@/lib/vitamin-units-prompt'
 
 // Reads nutrient values per 100 g from a spec sheet, nutrition facts panel or COA (PDF or image),
 // matched to the nutrient list and stored in each nutrient's own unit. SERVER ONLY.
@@ -25,7 +26,14 @@ export type DocNutrient = { nutrientId: string; name: string; unit: string; amou
 
 export class DocParseError extends Error {}
 
-export async function extractNutrientsFromDoc(bytes: Buffer, mediaType: DocMediaType): Promise<DocNutrient[]> {
+/**
+ * Nutrients read from the document, and `unconvertible`: values left out because their unit can't be
+ * converted to the nutrient's own (e.g. vitamin E in IU with no form stated), as "Vitamin E (IU → mg)".
+ */
+export async function extractNutrientsFromDoc(
+  bytes: Buffer,
+  mediaType: DocMediaType,
+): Promise<{ nutrients: DocNutrient[]; unconvertible: string[] }> {
   const base64 = bytes.toString('base64')
   const allNutrients = await db
     .select({ id: nutrients.id, name: nutrients.name, unit: nutrients.unit })
@@ -73,7 +81,9 @@ Rules:
 - Exclude nutrients that are absent, trace, or not stated
 - amountPer100g must be a non-negative finite number
 - Express amountPer100g in the Unit listed for that nutrient, converting if the document uses another (1 g = 1,000 mg = 1,000,000 mcg; 1 mg = 1,000 mcg). Set "unit" to the unit your number is in.
-- A percentage of the ingredient by weight is grams per 100 g (e.g. 0.2% vitamin K = 0.2 g = 200,000 mcg per 100 g)`,
+- A percentage of the ingredient by weight is grams per 100 g (e.g. 0.2% vitamin K = 0.2 g = 200,000 mcg per 100 g)
+- Potency per gram of powder (e.g. "100,000 IU/g") × 100 is the amount per 100 g
+${VITAMIN_UNIT_RULES}`,
           },
         ],
       },
@@ -91,7 +101,8 @@ Rules:
   }
 
   const byId = new Map(allNutrients.map(n => [n.id, n]))
-  return results
+  const unconvertible: string[] = []
+  const found = results
     .filter(
       r =>
         typeof r.nutrientId === 'string' &&
@@ -100,12 +111,14 @@ Rules:
         isFinite(r.amountPer100g) &&
         r.amountPer100g >= 0
     )
-    // Belt and braces: if the model reported a different unit than the nutrient's, convert it
+    // Into the nutrient's own unit: IU and vitamin forms by design, any other unit as a safeguard
     .flatMap(r => {
       const n = byId.get(r.nutrientId)!
       const amount = typeof r.unit === 'string' && r.unit.trim()
-        ? convertToUnit(r.amountPer100g, r.unit, n.unit)
+        ? convertToUnit(r.amountPer100g, r.unit, n.unit, n.name)
         : r.amountPer100g
+      if (amount == null) unconvertible.push(`${n.name} (${r.unit} → ${n.unit})`)
       return amount == null ? [] : [{ nutrientId: n.id, name: n.name, unit: n.unit, amountPer100g: amount }]
     })
+  return { nutrients: found, unconvertible }
 }

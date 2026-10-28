@@ -14,6 +14,7 @@ import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, Ingr
 import { readErrorMessage } from '@/lib/utils'
 import { uploadStaged } from '@/lib/upload-file'
 import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
+import { convertToUnit, vitaminUnitOptions } from '@/lib/units'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 import { IngredientCostPanel } from './ingredient-cost-panel'
 import { EditIngredientDialog, toEditable, type EditableIngredient } from './edit-ingredient-dialog'
@@ -71,6 +72,15 @@ type SupplierLinkForm = {
 type NutrientEdit = NutrientEditSource & {
   // amount '' = no value / delete if rowId exists
   rowId?: string    // existing ingredient_nutrient row id
+  // The unit `amount` was typed in when it isn't the nutrient's own (a vitamin in IU, say); converted on save
+  unit?: string
+}
+
+/** A typed nutrient amount in the nutrient's own unit; null when it can't be read or converted */
+function amountInOwnUnit(edit: NutrientEdit, n: Nutrient): number | null {
+  const amount = parseFloat(edit.amount)
+  if (isNaN(amount) || amount < 0) return null
+  return edit.unit ? convertToUnit(amount, edit.unit, n.unit, n.name) : amount
 }
 
 // canEdit: false for members with view-only library access (editing controls are hidden;
@@ -405,9 +415,11 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
       if (edit.amount === '') {
         if (edit.rowId) deleteIds.push(edit.rowId)
       } else {
-        const amount = parseFloat(edit.amount)
-        if (isNaN(amount) || amount < 0) continue
-        const sourceRef = nutrientSourceFor(edit, globalSource)
+        const nutrient = allNutrients?.find(n => n.id === nutrientId)
+        const amount = nutrient ? amountInOwnUnit(edit, nutrient) : null
+        if (amount == null) continue
+        // Compared with the stored amount in the nutrient's own unit, so a value typed in IU counts as changed
+        const sourceRef = nutrientSourceFor({ ...edit, amount: String(amount) }, globalSource)
         if (!sourceRef) {
           toast.error('Enter a source reference before saving')
           return
@@ -440,11 +452,13 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
             originalAmount: updated[p.nutrientId]?.originalAmount,
             fromParse: true,
             rowId: updated[p.nutrientId]?.rowId,
+            unit: undefined,
           }
         }
         return updated
       })
       toast.success(`Parsed ${result.count} nutrients from "${result.docLabel}"`)
+      if (result.unconvertible?.length) toast.warning(`Skipped — unit couldn't be converted: ${result.unconvertible.join(', ')}`)
     } finally {
       setIsParsing(false)
     }
@@ -993,13 +1007,38 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                               const edit = nutrientEdits[n.id] ?? { amount: '', sourceRef: '' }
                               const hasValue = edit.amount !== ''
                               const sourceDisplay = hasValue ? nutrientSourceFor(edit, globalSource) : ''
+                              const forms = vitaminUnitOptions(n.name)
+                              const converted = hasValue && edit.unit ? amountInOwnUnit(edit, n) : null
 
                               return (
                                 <tr key={n.id} className={hasValue ? '' : 'opacity-60'}>
                                   <td className="px-3 py-1.5 text-xs font-medium text-gray-700">
                                     {n.name}
                                   </td>
-                                  <td className="px-3 py-1.5 text-xs text-gray-400">{n.unit}</td>
+                                  <td className="px-3 py-1.5 text-xs text-gray-400">
+                                    {forms.length > 0 ? (
+                                      <select
+                                        value={edit.unit ?? n.unit}
+                                        onChange={e =>
+                                          setNutrientEdits(prev => ({
+                                            ...prev,
+                                            [n.id]: {
+                                              ...(prev[n.id] ?? { amount: '', sourceRef: '' }),
+                                              unit: e.target.value === n.unit ? undefined : e.target.value,
+                                              fromParse: false,
+                                            },
+                                          }))
+                                        }
+                                        aria-label={`Unit for ${n.name}`}
+                                        data-tip="Type the value in the unit your document uses. It’s converted to the nutrient’s own unit when you save."
+                                        className="max-w-36 px-1 py-0.5 text-xs border border-gray-200 rounded bg-white
+                                                   focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      >
+                                        <option value={n.unit}>{n.unit}</option>
+                                        {forms.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                                      </select>
+                                    ) : n.unit}
+                                  </td>
                                   <td className="px-3 py-1.5">
                                     <input
                                       type="number"
@@ -1019,10 +1058,15 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
                                         }))
                                       }
                                       placeholder="—"
-                                      aria-label={`${n.name} per 100 g (${n.unit})`}
+                                      aria-label={`${n.name} per 100 g (${edit.unit ?? n.unit})`}
                                       className="w-32 px-2 py-0.5 text-sm border border-gray-200 rounded
                                                  focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
                                     />
+                                    {converted != null && (
+                                      <div className="mt-0.5 text-[11px] text-gray-400 tabular-nums">
+                                        = {Number(converted.toPrecision(6)).toLocaleString()} {n.unit}
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="px-3 py-1.5 text-xs">
                                     {hasValue && (

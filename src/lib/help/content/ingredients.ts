@@ -174,7 +174,9 @@ export const ingredients: HelpSection = {
           items: [
             'If your document gives values **per serving**, convert to per 100 g: value ÷ serving size in grams × 100. Example: 5 g protein in a 30 g serving is 5 ÷ 30 × 100 = 16.7 g per 100 g.',
             '1 g = 1,000 mg = 1,000,000 mcg. Example: a powder with 125 mcg vitamin D in 50 mg of powder has 250,000 mcg per 100 g.',
-            '**IU can’t be entered.** Convert IU to the unit shown first (for example, vitamin D: 40 IU = 1 mcg).',
+            '**Vitamins in IU or another form:** for vitamins A, D and E and folate, pick the unit your document uses from the unit list next to the value, then type the value as printed. Benchtop shows the converted amount under it and saves that. Vitamin D: 40 IU = 1 mcg. Vitamin A: 1 IU retinol = 0.3 mcg RAE; 1 IU β-carotene = 0.3 mcg RAE from a supplement or 0.05 from food. Vitamin E: 1 IU natural (d-alpha) = 0.67 mg, 1 IU synthetic (dl-alpha) = 0.45 mg. Folate: 1 mcg folic acid = 1.7 mcg DFE.',
+            'Vitamin E in IU needs its form (natural or synthetic). If your document doesn’t say, ask the supplier.',
+            '**Parse with AI** converts these too: it reads the vitamin’s form from the document. A vitamin E value in IU with no form stated is skipped, and Benchtop tells you which values it skipped.',
           ],
         },
         {
@@ -504,7 +506,7 @@ export const ingredients: HelpSection = {
     },
     {
       q: 'My spec sheet gives vitamin D in IU. What do I enter?',
-      a: 'Benchtop doesn’t accept IU. Convert to the unit shown (for vitamin D, mcg: divide IU by 40).',
+      a: 'In Edit nutrients, choose IU in the vitamin’s unit list and type the value as printed. Benchtop converts it when you save (vitamin D: 40 IU = 1 mcg). The same works for vitamin A (retinol or β-carotene), vitamin E (natural or synthetic) and folic acid. Parse with AI and project targets convert IU too.',
     },
     {
       q: 'Why did Benchtop change the capitalization of my ingredient’s name?',

@@ -3,6 +3,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { nutrients } from '@/lib/db/schema'
 import { convertToUnit } from '@/lib/units'
+import { VITAMIN_UNIT_RULES } from '@/lib/vitamin-units-prompt'
 import Anthropic from '@anthropic-ai/sdk'
 
 type MediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
@@ -77,6 +78,7 @@ Rules:
 - moisturePct: numeric if stated on label (e.g. "moisture max 10%"), else null.
 - notes: any important quality notes from the label (e.g. "cold-processed", "non-denatured"), else null.
 - nutrients: match ONLY to the UUIDs in the list below. Convert per-serving values to per-100g using the stated serving size. Include only nutrients that are declared. Express amountPer100g in the unit listed for that nutrient, converting if the label uses another (1 g = 1,000 mg = 1,000,000 mcg); set "unit" to the unit your number is in.
+${VITAMIN_UNIT_RULES}
 - allergens: extract from "Contains:" statement or parenthetical callouts. Use: Milk, Eggs, Fish, Shellfish, Tree Nuts, Peanuts, Wheat, Soybeans, Sesame.
 - certs: use only: Organic, Non-GMO, Kosher, Halal, Vegan, Gluten-Free, Fair Trade, IP Non-GMO.
 - subIngredients: list each ingredient from the ingredient deck in order (position 1-N). Flatten parentheticals — list sub-ingredients as separate entries.
@@ -105,12 +107,12 @@ ${nutrientList}`
 
     // Validate nutrient IDs against the fetched list
     // Keep known nutrients, in each nutrient's own unit (converting if the model reported another)
-    const unitById = new Map(allNutrients.map(n => [n.id, n.unit]))
+    const byId = new Map(allNutrients.map(n => [n.id, n]))
     parsed.nutrients = ((parsed.nutrients ?? []) as Array<{ nutrientId: string; amountPer100g: number; unit?: string }>)
-      .filter(n => unitById.has(n.nutrientId) && typeof n.amountPer100g === 'number' && isFinite(n.amountPer100g))
+      .filter(n => byId.has(n.nutrientId) && typeof n.amountPer100g === 'number' && isFinite(n.amountPer100g))
       .flatMap(n => {
         const amount = typeof n.unit === 'string' && n.unit.trim()
-          ? convertToUnit(n.amountPer100g, n.unit, unitById.get(n.nutrientId)!)
+          ? convertToUnit(n.amountPer100g, n.unit, byId.get(n.nutrientId)!.unit, byId.get(n.nutrientId)!.name)
           : n.amountPer100g
         return amount == null ? [] : [{ nutrientId: n.nutrientId, amountPer100g: amount }]
       })

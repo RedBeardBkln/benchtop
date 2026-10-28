@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const wanted = canonicalNutrientName(n.name).toLowerCase()
     const match = allNutrients.find(dbN => dbN.name.toLowerCase() === wanted)
     if (match) {
-      const amount = n.unit.trim() ? convertToUnit(n.amountPer100g, n.unit, match.unit) : n.amountPer100g
+      const amount = n.unit.trim() ? convertToUnit(n.amountPer100g, n.unit, match.unit, match.name) : n.amountPer100g
       if (amount == null) {
         unconvertible.push(`${n.name} (${n.unit} → ${match.unit})`)
         continue
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ingredientId: row.id,
     ingredientName: row.name,
-    // Nutrients left out because their unit can't be converted to the stored one (e.g. IU → mcg)
+    // Nutrients left out because their unit can't be converted to the stored one (e.g. vitamin E in IU with no form)
     unconvertible,
     nutrients: resultNutrients.map(n => ({
       nutrientId: n.nutrientId,

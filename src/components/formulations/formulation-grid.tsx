@@ -2083,7 +2083,7 @@ export function FormulationGrid({ id }: { id: string }) {
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums text-gray-700">
                         {actual != null
-                          ? withUnit(formatAmt(actual, t.unit), t.unit)
+                          ? withUnit(formatAmt(actual, t.unit), t.unit, t.nutrient)
                           : t.dryBasis && noMoisture
                             ? <span className="text-amber-600 text-xs" data-tip={`Dry basis needs every ingredient’s moisture %. Click an ingredient’s name in the formula to add it: ${noMoisture}.`}>
                                 add moisture %

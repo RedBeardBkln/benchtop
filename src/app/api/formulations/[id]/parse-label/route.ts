@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import Anthropic from '@anthropic-ai/sdk'
 import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
+import { VITAMIN_UNIT_RULES } from '@/lib/vitamin-units-prompt'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -32,6 +33,7 @@ Rules:
 - productName: full product name as printed on the package.
 - servingSizeG: convert to grams (1 oz = 28.35 g, 1 fl oz ≈ 30 g, 1 cup ≈ 240 g). Return null if not determinable.
 - nutrients: include ALL declared nutrients, even those with value 0. Use standard names: Energy (kcal), Protein (g), Total Fat (g), Saturated Fat (g), Trans Fat (g), Cholesterol (mg), Sodium (mg), Total Carbohydrate (g), Dietary Fiber (g), Total Sugars (g), Added Sugars (g), Vitamin D (mcg), Calcium (mg), Iron (mg), Potassium (mg). Use the panel's unit if different.
+${VITAMIN_UNIT_RULES}
 - deckIngredients: list IN ORDER as declared. For parenthetical sub-ingredients like "Oat Fiber (Oat Hull Fiber, Oat Bran)", put "Oat Fiber" as name and ["Oat Hull Fiber","Oat Bran"] in subIngredients. Parenthetical-only items (e.g. "contains: soy") go as claims.
 - claims: any label claims, certifications, or statements (e.g. "Vegan","Non-GMO","Gluten Free","Palm Oil Free","Organic","Kosher","Made in a nut-free facility").
 - impliedConstraints: for each claim that restricts formulation, add an entry:

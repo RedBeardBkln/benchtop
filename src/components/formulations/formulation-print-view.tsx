@@ -363,7 +363,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                         </td>
                         <td className="py-1.5 px-2 text-right tabular-nums text-gray-800">
                           {actual != null
-                            ? withUnit(formatAmt(actual, t.unit), t.unit)
+                            ? withUnit(formatAmt(actual, t.unit), t.unit, t.nutrient)
                             : <span className="text-gray-500 text-xs">
                                 {t.dryBasis ? 'needs moisture %' : t.basis === 'per_serving' && !servingSizeG ? 'set serving size' : '—'}
                               </span>

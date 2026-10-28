@@ -59,7 +59,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (err instanceof DocParseError) return NextResponse.json({ error: err.message }, { status: 500 })
     throw err
   }
-  const filtered = found.map(n => ({ nutrientId: n.nutrientId, amountPer100g: n.amountPer100g }))
+  const filtered = found.nutrients.map(n => ({ nutrientId: n.nutrientId, amountPer100g: n.amountPer100g }))
 
-  return NextResponse.json({ parsed: filtered, docLabel: doc.label, count: filtered.length })
+  return NextResponse.json({
+    parsed: filtered, docLabel: doc.label, count: filtered.length, unconvertible: found.unconvertible,
+  })
 }

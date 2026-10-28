@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import type { Nutrient } from '@/lib/types'
 import type { SolverResult } from '@/lib/solver'
-import { convertToUnit } from '@/lib/units'
+import { convertToUnit, unitLabel } from '@/lib/units'
 import { categoryPath } from '@/lib/ingredient-categories'
 import { UsdaSearchDialog } from '@/components/ingredients/usda-search-dialog'
 import { MANUAL_NUTRIENTS, NewLibraryIngredientPanel } from '@/components/formulations/new-library-ingredient-panel'
@@ -2125,7 +2125,7 @@ export function ReverseWizard({
                       placeholder="0"
                       className="w-20 px-2 py-1 text-sm border border-gray-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-violet-500 tabular-nums"
                     />
-                    <span className="text-xs text-gray-400 w-10">{t.unit}</span>
+                    <span className="text-xs text-gray-400 min-w-10">{unitLabel(t.unit, t.nutrientName)}</span>
                     <button onClick={() => setTargets(prev => prev.filter(x => x.id !== t.id))}
                       aria-label="Remove nutrient" data-tip="Removes this nutrient from the targets."
                       className="text-gray-200 hover:text-red-400"><Trash2 size={12} /></button>
@@ -2843,7 +2843,7 @@ export function ReverseWizard({
                                   const targetRow = activeTargets.find(t => t.nutrientName === entry.label)
                                   // …in the audit's unit (the nutrient's own), which the label may not use
                                   const labelVal = targetRow
-                                    ? convertToUnit(parseFloat(targetRow.value), targetRow.unit, entry.unit)
+                                    ? convertToUnit(parseFloat(targetRow.value), targetRow.unit, entry.unit, entry.label)
                                     : null
 
                                   // Convert achieved (per 100 g) to per serving

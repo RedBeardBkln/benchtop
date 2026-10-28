@@ -37,7 +37,7 @@ function resolveActual(
   // Without this, a target specified in g would silently never match a value
   // stored in mg (or vice-versa). Handles the common FDA mass/energy conversions,
   // % of weight and % DV; anything else returns null ('no-data') to surface the mismatch.
-  const converted = amountInTargetUnit(per100g, r.unit, t.unit, r.dailyValueAmount)
+  const converted = amountInTargetUnit(per100g, r.unit, t.unit, r.dailyValueAmount, r.name)
   if (converted == null) return null
 
   return perServing
@@ -73,11 +73,11 @@ export function validateTarget(
 }
 
 export function fmtRequirement(t: ProjectTarget): string {
-  const v = withUnit(t.value, t.unit)
+  const v = withUnit(t.value, t.unit, t.nutrient)
   if (t.comparator === '>=') return `≥ ${v}`
   if (t.comparator === '<=') return `≤ ${v}`
   if (t.comparator === '=') return `= ${v}`
-  if (t.comparator === 'range') return `${t.value} – ${withUnit(t.valueMax ?? '?', t.unit)}`
+  if (t.comparator === 'range') return `${t.value} – ${withUnit(t.valueMax ?? '?', t.unit, t.nutrient)}`
   return v
 }
 

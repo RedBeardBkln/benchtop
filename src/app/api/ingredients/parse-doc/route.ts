@@ -47,11 +47,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const nutrients = await extractNutrientsFromDoc(file.bytes, mediaType)
+    const { nutrients, unconvertible } = await extractNutrientsFromDoc(file.bytes, mediaType)
     if (nutrients.length === 0) {
-      return NextResponse.json({ error: 'No nutrition data found in document' }, { status: 422 })
+      const error = unconvertible.length > 0
+        ? `No nutrient could be read in a usable unit: ${unconvertible.join(', ')}`
+        : 'No nutrition data found in document'
+      return NextResponse.json({ error }, { status: 422 })
     }
-    return NextResponse.json({ nutrients })
+    return NextResponse.json({ nutrients, unconvertible })
   } catch (err) {
     if (err instanceof DocParseError) return NextResponse.json({ error: err.message }, { status: 500 })
     throw err
