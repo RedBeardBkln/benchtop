@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ArrowUp, BookOpen, ChefHat, Loader2, MessageSquare, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react'
@@ -42,8 +42,11 @@ export function SousChefWorkspace({ initialConversationId, focus }: {
   focus: SousChefFocus | null
 }) {
   const qc = useQueryClient()
-  const router = useRouter()
   const pathname = usePathname()
+  // Updates the address without a navigation. router.replace would re-render the page on the server
+  // and, coming from a formulation (?formulation=…), remount this chat mid-reply and lose the reply.
+  const setUrl = (conversation: string | null) =>
+    window.history.replaceState(null, '', conversation ? `${pathname}?c=${conversation}` : pathname)
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loadingConversation, setLoadingConversation] = useState(!!initialConversationId)
@@ -92,7 +95,7 @@ export function SousChefWorkspace({ initialConversationId, focus }: {
     setMessages([])
     setConversationId(id)
     if (!id) setActiveFocus(null)
-    router.replace(id ? `${pathname}?c=${id}` : pathname, { scroll: false })
+    setUrl(id)
     if (!id) inputRef.current?.focus()
   }
 
@@ -130,7 +133,7 @@ export function SousChefWorkspace({ initialConversationId, focus }: {
         switch (e.type) {
           case 'conversation':
             setConversationId(e.id)
-            router.replace(`${pathname}?c=${e.id}`, { scroll: false })
+            setUrl(e.id)
             qc.invalidateQueries({ queryKey: LIST_KEY })
             break
           case 'text':
@@ -159,7 +162,11 @@ export function SousChefWorkspace({ initialConversationId, focus }: {
         buffer = lines.pop() ?? ''
         for (const line of lines) if (line.trim()) handle(JSON.parse(line) as SousChefEvent)
       }
-      patchLast(m => ({ ...m, pending: false }))
+      // Never leave an empty reply looking like silence
+      patchLast(m => ({
+        ...m, pending: false,
+        error: m.content || m.error ? m.error : 'No reply came back. Try sending your message again.',
+      }))
       qc.invalidateQueries({ queryKey: LIST_KEY })
     } catch (e) {
       patchLast(m => ({ ...m, pending: false, error: (e as Error).message }))
