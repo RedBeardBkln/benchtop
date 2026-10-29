@@ -2438,6 +2438,7 @@ export function FormulationGrid({ id }: { id: string }) {
       {showNfpDialog && calcResult && (
         <NfpDialog
           formulationId={id}
+          projectName={data.project?.name ?? null}
           formName={data.name}
           version={data.version}
           clientName={data.project?.client ?? null}

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { X, Download, Printer, ChevronDown, ChevronUp, Save, Trash2, Eye, Scale } from 'lucide-react'
+import { X, Download, Printer, ChevronDown, ChevronUp, Save, Trash2, Eye, Scale, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { format as formatDate } from 'date-fns'
 import { NfpPanel } from './nfp-panel'
@@ -12,7 +12,7 @@ import {
   type ExtraNutrientInput, type NfpLayout, type NfpModel, type NfpOptions,
 } from '@/lib/nfp-model'
 import { declareDvPct, isDvTiered, ruleReferences } from '@/lib/fda-rounding'
-import { nfpFileName } from '@/lib/download-name'
+import { nfpFileName, savedNameFileName } from '@/lib/download-name'
 import {
   allergenStatement, buildStatementItems, renderStatement,
   type LabelInfo, type StatementItem, type StatementLine,
@@ -91,8 +91,14 @@ type SavedPanel = {
   createdAt: string
 }
 
+/** The printed values of a panel, to tell whether a saved panel's numbers still match current data */
+function valuesKey(m: NfpModel): string {
+  return JSON.stringify([m.servingSizeText, m.servingsText, m.calories, m.rows.map(r => [r.key, r.amount, r.dvPct])])
+}
+
 type Props = {
   formulationId: string
+  projectName: string | null
   formName: string
   version: number
   clientName: string | null
@@ -106,6 +112,7 @@ type Props = {
 
 export function NfpDialog({
   formulationId,
+  projectName,
   formName,
   version,
   clientName,
@@ -118,7 +125,11 @@ export function NfpDialog({
   const queryClient = useQueryClient()
   const panelsKey = ['nfp-panels', formulationId]
   const [viewing, setViewing] = useState<SavedPanel | null>(null)
-  const [saveName, setSaveName] = useState('')
+  // A saved panel loaded into the builder to be corrected and saved over
+  const [editing, setEditing] = useState<SavedPanel | null>(null)
+  // "NFP_<project>_<formulation>_<version>_<client>_<date>", filled in so a save is one click
+  const defaultName = nfpFileName({ projectName, formulationName: formName, iteration: version, clientName }).slice(0, 120)
+  const [saveName, setSaveName] = useState(defaultName)
   const [rulesOpen, setRulesOpen] = useState(false)
   const [format, setFormat] = useState<Format>('png')
   const [layout, setLayout] = useState<NfpLayout>('standard')
@@ -245,7 +256,7 @@ export function NfpDialog({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const name = saveName.trim() || `${formName} v${version} — ${formatDate(new Date(), 'MMM d, yyyy h:mm a')}`
+      const name = saveName.trim() || defaultName
       const r = await fetch(`/api/formulations/${formulationId}/nfp-panels`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,12 +267,51 @@ export function NfpDialog({
       return body.panel as SavedPanel
     },
     onSuccess: () => {
-      setSaveName('')
+      setSaveName(defaultName)
+      setEditing(null)
       queryClient.invalidateQueries({ queryKey: panelsKey })
       toast.success(`Panel saved to v${version}`)
     },
     onError: (e: Error) => toast.error(e.message),
   })
+
+  // Saves the builder's panel over the one being edited
+  const updateMutation = useMutation({
+    mutationFn: async (panel: SavedPanel) => {
+      const name = saveName.trim() || panel.name
+      const r = await fetch(`/api/formulations/${formulationId}/nfp-panels/${panel.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, servingSizeG: servingSizeG ?? null, options: currentOptions(), model: liveModel }),
+      })
+      const body = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(body.error ?? 'Could not save changes')
+      return body.panel as SavedPanel
+    },
+    onSuccess: panel => {
+      setEditing(null)
+      setSaveName(defaultName)
+      queryClient.invalidateQueries({ queryKey: panelsKey })
+      toast.success(`Saved changes to “${panel.name}”`)
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
+  /** Load a saved panel's settings into the builder to correct it, then save over it */
+  function startEditing(p: SavedPanel) {
+    restoreOptions(p.options)
+    setViewing(null)
+    setEditing(p)
+    setSaveName(p.name)
+  }
+
+  function stopEditing() {
+    setEditing(null)
+    setSaveName(defaultName)
+  }
+
+  // The formulation, ingredient data or serving size changed since the panel being edited was saved
+  const editValuesChanged = !!editing && valuesKey(editing.model) !== valuesKey(liveModel)
 
   const deleteMutation = useMutation({
     mutationFn: async (panelId: string) => {
@@ -271,6 +321,7 @@ export function NfpDialog({
     },
     onSuccess: panelId => {
       if (viewing?.id === panelId) setViewing(null)
+      if (editing?.id === panelId) stopEditing()
       queryClient.invalidateQueries({ queryKey: panelsKey })
       toast.success('Saved panel deleted')
     },
@@ -294,14 +345,14 @@ export function NfpDialog({
     })
   }
 
-  async function handleDownload() {
+  // A saved panel downloads under its own name; the live panel as "NFP_<project>_<formulation>_<version>_<client>_<date>"
+  const activeFileName = viewing ? savedNameFileName(viewing.name) : defaultName
+
+  async function handleDownload(model: NfpModel = activeModel, fileName: string = activeFileName) {
     setDownloading(true)
     try {
       const { drawNfpToCanvas } = await import('./nfp-canvas')
-      const canvas = drawNfpToCanvas({ model: activeModel })
-
-      // "NFP_<formulation name>_<iteration>_<client name>_<date>"
-      const fileName = nfpFileName({ formulationName: formName, iteration: version, clientName })
+      const canvas = drawNfpToCanvas({ model })
 
       if (format === 'pdf') {
         const { jsPDF } = await import('jspdf')
@@ -613,7 +664,7 @@ export function NfpDialog({
             {/* Download / Print */}
             <div className="flex items-center gap-2">
               <button
-                onClick={handleDownload}
+                onClick={() => handleDownload()}
                 disabled={downloading}
                 data-tip={`Saves the panel shown in the preview as a ${format.toUpperCase()} file.`}
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
@@ -625,7 +676,7 @@ export function NfpDialog({
                 onClick={() => {
                   // "Save as PDF" in the print dialog proposes the page title as the file name
                   const prevTitle = document.title
-                  document.title = nfpFileName({ formulationName: formName, iteration: version, clientName })
+                  document.title = activeFileName
                   window.addEventListener('afterprint', () => { document.title = prevTitle }, { once: true })
                   window.print()
                 }}
@@ -663,6 +714,13 @@ export function NfpDialog({
                         Back to live panel
                       </button>
                       <button
+                        onClick={() => startEditing(viewing)}
+                        data-tip="Loads this panel’s settings into the builder so you can fix it, then save over it."
+                        className="text-xs font-medium text-blue-700 hover:underline"
+                      >
+                        Edit this panel
+                      </button>
+                      <button
                         onClick={() => { restoreOptions(viewing.options); setViewing(null) }}
                         data-tip="Copies this saved panel’s settings (layout, extras, statements) onto the live panel, with current data."
                         className="text-xs font-medium text-blue-700 hover:underline"
@@ -672,6 +730,57 @@ export function NfpDialog({
                     </div>
                   </div>
                 </div>
+              ) : editing ? (
+                <div className="space-y-2 px-3 py-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <Pencil size={14} className="text-amber-700 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-800">
+                      Editing <span className="font-semibold">{editing.name}</span>. Change any setting above, check
+                      the preview, then save over it.
+                    </p>
+                  </div>
+                  {editValuesChanged && (
+                    <p className="text-xs text-amber-800">
+                      Some values differ from the saved panel because the formulation, its ingredient data or the
+                      serving size changed since it was saved. Saving changes updates them to what the preview shows.
+                    </p>
+                  )}
+                  <input
+                    value={saveName}
+                    onChange={e => setSaveName(e.target.value)}
+                    maxLength={120}
+                    aria-label="Saved panel name"
+                    data-tip="The saved panel’s name. Leave blank to keep its current name."
+                    placeholder={editing.name}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => updateMutation.mutate(editing)}
+                      disabled={updateMutation.isPending}
+                      data-tip="Replaces the saved panel with the one in the preview."
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    >
+                      <Save size={14} />
+                      {updateMutation.isPending ? 'Saving…' : 'Save changes'}
+                    </button>
+                    <button
+                      onClick={() => saveMutation.mutate()}
+                      disabled={saveMutation.isPending}
+                      data-tip="Keeps the original and saves the preview as a new panel."
+                      className="px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                      Save as new
+                    </button>
+                    <button
+                      onClick={stopEditing}
+                      data-tip="Stops editing. The saved panel stays as it was."
+                      className="px-3 py-2 text-sm text-gray-600 hover:underline"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex gap-2">
                   <input
@@ -679,8 +788,8 @@ export function NfpDialog({
                     onChange={e => setSaveName(e.target.value)}
                     maxLength={120}
                     aria-label="Saved panel name"
-                    data-tip="A name for the saved panel. Leave blank to name it after the formulation, version and time."
-                    placeholder={`Name (optional) — e.g. Retail label ${formatDate(new Date(), 'MMM yyyy')}`}
+                    data-tip="A name for the saved panel. It starts as NFP_project_formulation_version_client_date; change it if you like."
+                    placeholder={defaultName}
                     className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
@@ -704,7 +813,9 @@ export function NfpDialog({
                   {savedPanels.map(p => (
                     <li
                       key={p.id}
-                      className={`flex items-center gap-2 px-3 py-2 ${viewing?.id === p.id ? 'bg-blue-50' : 'bg-white'}`}
+                      className={`flex items-center gap-1 px-3 py-2 ${
+                        editing?.id === p.id ? 'bg-amber-50' : viewing?.id === p.id ? 'bg-blue-50' : 'bg-white'
+                      }`}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-800 truncate">{p.name}</p>
@@ -720,6 +831,23 @@ export function NfpDialog({
                         className="p-1.5 text-gray-400 hover:text-blue-600 rounded transition-colors"
                       >
                         <Eye size={15} />
+                      </button>
+                      <button
+                        onClick={() => startEditing(p)}
+                        aria-label="Edit this saved panel"
+                        data-tip="Loads this panel into the builder to fix it, then save over it."
+                        className="p-1.5 text-gray-400 hover:text-amber-600 rounded transition-colors"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(p.model, savedNameFileName(p.name))}
+                        disabled={downloading}
+                        aria-label="Download this saved panel"
+                        data-tip={`Downloads this saved panel as a ${format.toUpperCase()} file. Change the format under Download format.`}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 rounded transition-colors disabled:opacity-50"
+                      >
+                        <Download size={15} />
                       </button>
                       <button
                         onClick={() => {
@@ -772,7 +900,7 @@ export function NfpDialog({
           {/* Right: live preview */}
           <div className="shrink-0 print:mx-auto">
             <p className="text-xs text-gray-400 mb-3 print:hidden">
-              {viewing ? `Saved panel — ${viewing.name}` : 'Preview'}
+              {viewing ? `Saved panel — ${viewing.name}` : editing ? `Editing — ${editing.name}` : 'Preview'}
             </p>
             <div>
               <NfpPanel model={activeModel} />

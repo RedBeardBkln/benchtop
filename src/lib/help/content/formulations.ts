@@ -440,7 +440,11 @@ export const formulations: HelpSection = {
         { type: 'h', text: 'Saving an approved panel' },
         {
           type: 'p',
-          text: 'Under **Saved to v…**, give the panel a name (such as “Retail label Oct 2026”) and click `Save`. Saved panels are frozen exactly as shown, so they never change even if ingredient data is updated later. Click the eye icon to view one again (Download and Print then use that saved version), or the trash can to delete it. Each version can hold up to 50 saved panels.',
+          text: 'Under **Saved to v…**, the name is filled in as NFP_project_formulation_version_client_date; change it if you like, then click `Save`. Saved panels are frozen exactly as shown, so they never change even if ingredient data is updated later. Next to each saved panel: the eye icon views it (Download and Print then use that saved version), the pencil edits it, the download icon downloads it in the chosen format, and the trash can deletes it. Each version can hold up to 50 saved panels.',
+        },
+        {
+          type: 'p',
+          text: 'To fix a small mistake in a saved panel (a typo in the allergen or ingredient statement, the wrong layout, a missing extra nutrient), click its pencil. Its settings load into the builder; make the change, check the preview, and click `Save changes`. `Save as new` keeps the original instead. The edited panel is rebuilt from the formulation’s current data, and Benchtop warns you if any value differs from the saved one.',
         },
         {
           type: 'warning',
@@ -765,7 +769,7 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Will a saved Nutrition Facts panel change if I edit an ingredient later?',
-      a: 'No. Saved panels are frozen exactly as they were. Only the live panel updates.',
+      a: 'No. Saved panels are frozen exactly as they were. Only the live panel updates. To bring a saved panel up to date, click its pencil and then `Save changes`.',
     },
     {
       q: 'Where does the allergen statement come from?',

@@ -1,34 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { count, desc, eq } from 'drizzle-orm'
-import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { formulationNfpPanels } from '@/lib/db/schema'
 import { getOwnedFormulation, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
-import { nfpModelSchema, nfpOptionsSchema } from '@/lib/nfp-model'
+import { createSchema, panelColumns } from '@/lib/nfp-panel-api'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 // Panels are saved against one iteration (formulations row). Cap per iteration so a runaway client
 // can't grow a row set without bound.
 const MAX_PANELS_PER_FORMULATION = 50
-
-const createSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(120),
-  servingSizeG: z.number().positive().max(1_000_000).nullish(),
-  options: nfpOptionsSchema,
-  model: nfpModelSchema,
-})
-
-const panelColumns = {
-  id: formulationNfpPanels.id,
-  name: formulationNfpPanels.name,
-  rulesVersion: formulationNfpPanels.rulesVersion,
-  servingSizeG: formulationNfpPanels.servingSizeG,
-  options: formulationNfpPanels.options,
-  model: formulationNfpPanels.model,
-  createdAt: formulationNfpPanels.createdAt,
-}
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const auth = await requireApi()

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   describeIdentity, duplicateCounts, findDuplicateGroups, identityKey, normalizePart, sameIdentity,
 } from './ingredient-identity'
-import { formulationFileName, nfpFileName } from './download-name'
+import { formulationFileName, nfpFileName, savedNameFileName } from './download-name'
 
 describe('ingredient identity', () => {
   it('normalizes case, whitespace and accents', () => {
@@ -57,9 +57,18 @@ describe('download file names', () => {
     expect(formulationFileName({ formulationName: 'Oat Bar', iteration: 2, clientName: 'Acme Foods', date: d }))
       .toBe('Oat Bar_2_Acme Foods_2026-10-08')
   })
-  it('prefixes NFP downloads', () => {
+  it('prefixes NFP downloads and puts the project first', () => {
     expect(nfpFileName({ formulationName: 'Oat Bar', iteration: 2, clientName: 'Acme Foods', date: d }))
       .toBe('NFP_Oat Bar_2_Acme Foods_2026-10-08')
+    expect(nfpFileName({ projectName: 'Snack Line', formulationName: 'Oat Bar', iteration: 2, clientName: 'Acme Foods', date: d }))
+      .toBe('NFP_Snack Line_Oat Bar_2_Acme Foods_2026-10-08')
+    // Formulation downloads never include the project
+    expect(formulationFileName({ projectName: 'Snack Line', formulationName: 'Oat Bar', iteration: 2, date: d }))
+      .toBe('Oat Bar_2_2026-10-08')
+  })
+  it('turns a saved panel name into a file name', () => {
+    expect(savedNameFileName('Retail label: Oct/2026.')).toBe('Retail label Oct 2026')
+    expect(savedNameFileName('  ')).toBe('NFP')
   })
   it('omits the client segment when there is none', () => {
     expect(formulationFileName({ formulationName: 'Oat Bar', iteration: 1, clientName: '  ', date: d })).toBe('Oat Bar_1_2026-10-08')
