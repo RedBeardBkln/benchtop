@@ -30,7 +30,7 @@ export default async function HelpSectionPage({ params }: Props) {
       <OpenFaqFromHash />
       <header>
         <div className="flex items-center gap-2">
-          <Icon size={22} className="text-ink-600" />
+          <Icon size={22} className="text-gray-500" />
           <h2 className="text-xl font-semibold text-gray-900">{sec.title}</h2>
         </div>
         <p className="mt-2 text-[15px] text-gray-700 leading-relaxed"><HelpText text={sec.intro} /></p>

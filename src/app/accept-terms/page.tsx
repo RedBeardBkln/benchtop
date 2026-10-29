@@ -15,7 +15,7 @@ export default async function AcceptTermsPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="w-full max-w-lg bg-white rounded-lg shadow-sm border border-gray-200 p-8 space-y-4">
-        <Logo variant="wordmark" height={13} className="text-ink-700" />
+        <Logo variant="wordmark" height={13} className="text-gray-600" />
         <h1 className="text-2xl font-semibold text-gray-900">
           {firstTime ? 'Before you continue' : 'We have updated our Terms and Privacy Policy'}
         </h1>

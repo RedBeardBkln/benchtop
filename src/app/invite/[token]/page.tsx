@@ -28,7 +28,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="w-full max-w-md bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         <div className="mb-6">
-          <Logo variant="wordmark" height={13} className="mb-5 text-ink-700" />
+          <Logo variant="wordmark" height={13} className="mb-5 text-gray-600" />
           <h1 className="text-2xl font-semibold text-gray-900">Join Benchtop</h1>
           <p className="text-sm text-gray-500 mt-1">
             {teamName ? `You have been invited to join the ${teamName} team.` : 'You have been invited to create an account.'}

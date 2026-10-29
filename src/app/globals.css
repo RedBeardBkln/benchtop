@@ -201,6 +201,145 @@ input[type='radio'] {
   accent-color: var(--color-ink-900);
 }
 
+/* Dark appearance (Settings → Preferences; src/lib/theme.ts sets data-theme on <html>). Rather than
+   dark: variants on every class, the color tokens themselves are swapped: neutrals and the stock
+   families run in reverse (50 is the darkest, 950 the lightest), so a pale tinted box with dark text
+   becomes a dark tinted box with light text. Ink stays dark (the menu bar is ink in both), lime stays
+   lit, and primary actions turn lime with ink text. Screen only, so printing is always light. */
+@media screen {
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --background: #0F1509;
+    --foreground: #EEF1E8;
+
+    --color-white: #182211;
+    --color-black: #050803;
+
+    --color-gray-50: #131B0D;
+    --color-gray-100: #1F2A16;
+    --color-gray-200: #2A371F;
+    --color-gray-300: #3B4A2F;
+    --color-gray-400: #5C6D4D;
+    --color-gray-500: #93A483;
+    --color-gray-600: #B2BFA5;
+    --color-gray-700: #C9D3BE;
+    --color-gray-800: #DCE3D3;
+    --color-gray-900: #EEF1E8;
+    --color-gray-950: #F6F8F2;
+
+    --color-blue-50: #1A240B;
+    --color-blue-100: #222F0D;
+    --color-blue-200: #2E3F10;
+    --color-blue-300: #456016;
+    --color-blue-400: #9CC22A;
+    --color-blue-500: #BDE03A;
+    --color-blue-600: #D6F55A;
+    --color-blue-700: #E6FA84;
+    --color-blue-800: #F1FFB3;
+    --color-blue-900: #FAFFE0;
+    --color-blue-950: #FDFFF0;
+
+    --color-violet-50: #2A1406;
+    --color-violet-100: #3D1905;
+    --color-violet-200: #5A2508;
+    --color-violet-300: #8F3B0E;
+    --color-violet-400: #C9561A;
+    --color-violet-500: #FF8A3D;
+    --color-violet-600: #FF9F5E;
+    --color-violet-700: #FFB877;
+    --color-violet-800: #FFD0A8;
+    --color-violet-900: #FFE6D1;
+    --color-violet-950: #FFF5EB;
+
+    /* Lime tints are backgrounds, so they darken; the deep olive is text, so it lightens */
+    --color-lcd-50: #1A240B;
+    --color-lcd-100: #222F0D;
+    --color-lcd-200: #2E3F10;
+    --color-lcd-600: #BDE03A;
+
+    --color-paper-50: #182211;
+    --color-paper-100: #0F1509;
+    --color-paper-200: #1F2A16;
+    --color-paper-300: #2A371F;
+
+    /* red */
+    --color-red-50: oklch(21% 0.051 26.042); --color-red-100: oklch(25% 0.078 25.723); --color-red-200: oklch(30% 0.106 26.899); --color-red-300: oklch(39% 0.149 27.518); --color-red-400: oklch(57.7% 0.245 27.325); --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-red-600: oklch(70.4% 0.191 22.216); --color-red-700: oklch(80.8% 0.114 19.571); --color-red-800: oklch(88.5% 0.062 18.334); --color-red-900: oklch(93.6% 0.032 17.717); --color-red-950: oklch(97.1% 0.013 17.38);
+    /* orange */
+    --color-orange-50: oklch(21% 0.043 36.259); --color-orange-100: oklch(25% 0.068 38.172); --color-orange-200: oklch(30% 0.094 37.304); --color-orange-300: oklch(39% 0.136 38.402); --color-orange-400: oklch(64.6% 0.222 41.116); --color-orange-500: oklch(70.5% 0.213 47.604);
+    --color-orange-600: oklch(75.0% 0.183 55.934); --color-orange-700: oklch(83.7% 0.128 66.29); --color-orange-800: oklch(90.1% 0.076 70.697); --color-orange-900: oklch(95.4% 0.038 75.164); --color-orange-950: oklch(98.0% 0.016 73.684);
+    /* amber */
+    --color-amber-50: oklch(21% 0.042 45.635); --color-amber-100: oklch(25% 0.062 45.904); --color-amber-200: oklch(30% 0.082 46.201); --color-amber-300: oklch(39% 0.114 48.998); --color-amber-400: oklch(66.6% 0.179 58.318); --color-amber-500: oklch(76.9% 0.188 70.08);
+    --color-amber-600: oklch(82.8% 0.189 84.429); --color-amber-700: oklch(87.9% 0.169 91.605); --color-amber-800: oklch(92.4% 0.12 95.746); --color-amber-900: oklch(96.2% 0.059 95.617); --color-amber-950: oklch(98.7% 0.022 95.277);
+    /* yellow */
+    --color-yellow-50: oklch(21% 0.036 53.813); --color-yellow-100: oklch(25% 0.052 57.708); --color-yellow-200: oklch(30% 0.068 61.907); --color-yellow-300: oklch(39% 0.095 66.442); --color-yellow-400: oklch(68.1% 0.162 75.834); --color-yellow-500: oklch(79.5% 0.184 86.047);
+    --color-yellow-600: oklch(85.2% 0.199 91.936); --color-yellow-700: oklch(90.5% 0.182 98.111); --color-yellow-800: oklch(94.5% 0.129 101.54); --color-yellow-900: oklch(97.3% 0.071 103.193); --color-yellow-950: oklch(98.7% 0.026 102.212);
+    /* green */
+    --color-green-50: oklch(21% 0.036 152.934); --color-green-100: oklch(25% 0.052 152.535); --color-green-200: oklch(30% 0.071 151.328); --color-green-300: oklch(39% 0.108 150.069); --color-green-400: oklch(62.7% 0.194 149.214); --color-green-500: oklch(72.3% 0.219 149.579);
+    --color-green-600: oklch(79.2% 0.209 151.711); --color-green-700: oklch(87.1% 0.15 154.449); --color-green-800: oklch(92.5% 0.084 155.995); --color-green-900: oklch(96.2% 0.044 156.743); --color-green-950: oklch(98.2% 0.018 155.826);
+    /* emerald */
+    --color-emerald-50: oklch(21% 0.028 172.552); --color-emerald-100: oklch(25% 0.042 168.94); --color-emerald-200: oklch(30% 0.057 166.913); --color-emerald-300: oklch(39% 0.083 165.612); --color-emerald-400: oklch(59.6% 0.145 163.225); --color-emerald-500: oklch(69.6% 0.17 162.48);
+    --color-emerald-600: oklch(76.5% 0.177 163.223); --color-emerald-700: oklch(84.5% 0.143 164.978); --color-emerald-800: oklch(90.5% 0.093 164.15); --color-emerald-900: oklch(95.0% 0.052 163.051); --color-emerald-950: oklch(97.9% 0.021 166.113);
+    /* teal */
+    --color-teal-50: oklch(21% 0.025 192.524); --color-teal-100: oklch(25% 0.035 188.416); --color-teal-200: oklch(30% 0.047 188.216); --color-teal-300: oklch(39% 0.067 186.391); --color-teal-400: oklch(60.0% 0.118 184.704); --color-teal-500: oklch(70.4% 0.14 182.503);
+    --color-teal-600: oklch(77.7% 0.152 181.912); --color-teal-700: oklch(85.5% 0.138 181.071); --color-teal-800: oklch(91.0% 0.096 180.426); --color-teal-900: oklch(95.3% 0.051 180.801); --color-teal-950: oklch(98.4% 0.014 180.72);
+    /* purple */
+    --color-purple-50: oklch(21% 0.082 302.717); --color-purple-100: oklch(25% 0.097 304.987); --color-purple-200: oklch(30% 0.131 303.724); --color-purple-300: oklch(39% 0.185 301.924); --color-purple-400: oklch(55.8% 0.288 302.321); --color-purple-500: oklch(62.7% 0.265 303.9);
+    --color-purple-600: oklch(71.4% 0.203 305.504); --color-purple-700: oklch(82.7% 0.119 306.383); --color-purple-800: oklch(90.2% 0.063 306.703); --color-purple-900: oklch(94.6% 0.033 307.174); --color-purple-950: oklch(97.7% 0.014 308.299);
+  }
+
+  :root[data-theme='dark'] .bg-blue-600 {
+    color: var(--color-ink-900);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-blue-700'] {
+    border-color: var(--color-lcd-600);
+    box-shadow: 3px 3px 0 var(--color-lcd-600);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-blue-700']:hover {
+    background-color: var(--color-lcd-200);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-violet-700'] {
+    border-color: var(--color-tang-700);
+    box-shadow: 3px 3px 0 var(--color-tang-700);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-blue-700']:hover:not(:disabled) {
+    box-shadow: 4px 4px 0 var(--color-lcd-600);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-violet-700']:hover:not(:disabled) {
+    box-shadow: 4px 4px 0 var(--color-tang-700);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-blue-700']:active:not(:disabled) {
+    box-shadow: 1px 1px 0 var(--color-lcd-600);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-violet-700']:active:not(:disabled) {
+    box-shadow: 1px 1px 0 var(--color-tang-700);
+  }
+
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-blue-700']:disabled,
+  :root[data-theme='dark'] :is(button, a)[class*='hover:bg-violet-700']:disabled {
+    box-shadow: none;
+  }
+
+  :root[data-theme='dark'] :is(input:not([type='file']):not([type='checkbox']):not([type='radio']), textarea, select) {
+    color: var(--color-gray-900);
+  }
+
+  :root[data-theme='dark'] :is(input, textarea)::placeholder {
+    color: var(--color-gray-500);
+  }
+
+  :root[data-theme='dark'] input:is([type='checkbox'], [type='radio']) {
+    accent-color: var(--color-lcd-300);
+  }
+}
+
 @media print {
   @page {
     margin: 1.2cm;

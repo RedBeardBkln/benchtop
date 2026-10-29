@@ -28,7 +28,7 @@ export default async function HelpHome() {
               className="group rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-400 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Icon size={18} className="text-ink-600" />
+                <Icon size={18} className="text-gray-500" />
                 <h2 className="font-semibold text-gray-900">{s.title}</h2>
                 <ChevronRight size={16} className="ml-auto text-gray-300 group-hover:text-gray-500" />
               </div>

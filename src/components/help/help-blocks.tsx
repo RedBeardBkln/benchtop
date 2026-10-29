@@ -41,7 +41,7 @@ export function HelpText({ text }: { text: string }) {
 }
 
 const CALLOUT = {
-  tip: { icon: Lightbulb, label: 'Tip', cls: 'bg-lcd-50 border-lcd-400 text-ink-900', iconCls: 'text-lcd-600' },
+  tip: { icon: Lightbulb, label: 'Tip', cls: 'bg-lcd-50 border-lcd-400 text-gray-900', iconCls: 'text-lcd-600' },
   note: { icon: Info, label: 'Good to know', cls: 'bg-blue-50 border-blue-200 text-blue-950', iconCls: 'text-blue-600' },
   warning: { icon: AlertTriangle, label: 'Careful', cls: 'bg-amber-50 border-amber-300 text-amber-950', iconCls: 'text-amber-600' },
 } as const

@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, DM_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { Providers } from '@/lib/providers'
 import { TooltipLayer } from '@/components/tooltip-layer'
+import { THEME_INIT_SCRIPT } from '@/lib/theme'
 import './globals.css'
 
 const bricolage = Bricolage_Grotesque({
@@ -35,7 +36,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    // data-theme is set by the init script before React hydrates, so the server's markup won't match it
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className={`${bricolage.variable} ${dmMono.variable} antialiased`}>
         <Providers>
           {children}

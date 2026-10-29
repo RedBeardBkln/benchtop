@@ -368,7 +368,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
 
       {/* Save bar */}
       {dirty && (
-        <div className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-lg bg-ink-900 text-white px-4 py-2.5 shadow-lg">
+        <div className="fixed bottom-16 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-lg bg-ink-900 text-ink-50 px-4 py-2.5 shadow-lg">
           <span className="text-sm">Unsaved changes</span>
           <button type="button" onClick={() => setForm(initial)} data-tip="Undo every unsaved change on this page" className="text-sm text-gray-300 hover:text-white">
             Discard
