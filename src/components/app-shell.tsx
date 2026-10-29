@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, Clock, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, Menu, MessageSquare, Settings, Truck } from 'lucide-react'
+import { Building2, ChefHat, Clock, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, Menu, MessageSquare, Settings, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
@@ -15,6 +15,7 @@ const NAV = [
   { href: '/projects', label: 'Projects', icon: FolderOpen, tip: 'Your product ideas, each with its formulations and nutrition targets' },
   { href: '/ingredients', label: 'Ingredients', icon: FlaskConical, tip: 'Your ingredient library: nutrition, allergens, suppliers, costs and stock' },
   { href: '/suppliers', label: 'Suppliers', icon: Truck, tip: 'The companies you buy ingredients from, with contacts and terms' },
+  { href: '/sous-chef', label: 'Sous Chef', icon: ChefHat, tip: 'Your AI product-development sidekick: food science answers, ingredient swaps and the team’s lab notebook' },
   { href: '/settings', label: 'Settings', icon: Settings, tip: 'Your profile, password, preferences, team and billing' },
   { href: '/help', label: 'Help', icon: HelpCircle, tip: 'Step-by-step guides and answers for every part of Benchtop' },
 ]

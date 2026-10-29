@@ -34,4 +34,4 @@ export type HelpSection = {
 }
 
 export type HelpIcon =
-  | 'rocket' | 'folder' | 'flask' | 'beaker' | 'truck' | 'building' | 'users' | 'settings' | 'card' | 'clock' | 'help'
+  | 'rocket' | 'folder' | 'flask' | 'beaker' | 'truck' | 'building' | 'users' | 'settings' | 'card' | 'clock' | 'chef' | 'help'

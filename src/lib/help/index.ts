@@ -7,6 +7,7 @@ import { projects } from './content/projects'
 import { settings } from './content/settings'
 import { suppliers } from './content/suppliers'
 import { team } from './content/team'
+import { sousChef } from './content/sous-chef'
 import { time } from './content/time'
 import type { HelpSection } from './types'
 
@@ -17,6 +18,7 @@ export const HELP_SECTIONS: HelpSection[] = [
   formulations,
   ingredients,
   suppliers,
+  sousChef,
   clients,
   time,
   team,

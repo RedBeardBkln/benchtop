@@ -18,6 +18,7 @@ export * from './audit'
 export * from './feedback'
 export * from './imports'
 export * from './time'
+export * from './sous-chef'
 
 // ---- Import tables for relations ----
 import { nutrients } from './nutrients'

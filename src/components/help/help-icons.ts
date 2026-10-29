@@ -1,5 +1,5 @@
 import {
-  Building2, Clock, CreditCard, FlaskConical, FolderOpen, HelpCircle, Rocket, Settings, TestTube2, Truck, Users,
+  Building2, ChefHat, Clock, CreditCard, FlaskConical, FolderOpen, HelpCircle, Rocket, Settings, TestTube2, Truck, Users,
 } from 'lucide-react'
 import type { HelpIcon } from '@/lib/help/types'
 
@@ -15,5 +15,6 @@ export const HELP_ICONS: Record<HelpIcon, React.ComponentType<{ size?: number; c
   settings: Settings,
   card: CreditCard,
   clock: Clock,
+  chef: ChefHat,
   help: HelpCircle,
 }
