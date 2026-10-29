@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   duplicateIngredients, lineGrams, linesToSave, matchByName, matchIngredient, missingInfo, nameScore,
-  type ImportDraft, type ImportLine,
+  type ImportDraft, type ImportLine, type LibraryIngredient,
 } from './formulation-import'
 
 const ID = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`
@@ -56,6 +56,50 @@ describe('matchIngredient', () => {
   })
   it('suggests nothing for an unknown ingredient', () => {
     expect(matchIngredient({ name: 'Saffron' }, library)).toEqual({ ingredient: null, candidates: [] })
+  })
+})
+
+describe('matchIngredient: same name written differently', () => {
+  const library: LibraryIngredient[] = [
+    { id: ID(1), name: 'Sugar, Granulated' },
+    { id: ID(2), name: 'Whey Protein Isolate', itemCode: 'WPI-90' },
+    { id: ID(3), name: 'Rolled Oats' },
+  ]
+  const linked = (name: string, lib = library) => matchIngredient({ name }, lib).ingredient?.id
+
+  it('links an exact name', () => {
+    expect(linked('Sugar, Granulated')).toBe(ID(1))
+  })
+  it('links case, punctuation and whitespace variants', () => {
+    for (const name of ['sugar granulated', 'SUGAR,  GRANULATED', 'Sugar, Granulated ', 'Sugar, Granulated', 'Sugar (Granulated)']) {
+      expect(linked(name), name).toBe(ID(1))
+    }
+  })
+  it('links a different word order when it is the only exact-score match', () => {
+    expect(linked('Granulated Sugar')).toBe(ID(1))
+  })
+  // USDA rows are plural ("Sugars, Granulated"); a sheet usually says "Sugar, Granulated"
+  it('links a singular sheet name to a plural library name', () => {
+    const lib = [{ id: ID(1), name: 'Sugars, Granulated' }, { id: ID(4), name: 'Sugar, Invert', labelName: 'Sugar' }, ...library.slice(1)]
+    expect(linked('Sugar, Granulated', lib)).toBe(ID(1))
+    expect(linked('Strawberry', [{ id: ID(1), name: 'Strawberries' }])).toBe(ID(1))
+  })
+  it('does not auto-link two ingredients with the same name, but suggests both', () => {
+    const r = matchIngredient({ name: 'Sugar, Granulated' }, [...library, { id: ID(5), name: 'sugar granulated', supplierName: 'Domino' }])
+    expect(r.ingredient).toBeNull()
+    expect(r.candidates.map(c => c.id).slice(0, 2).sort()).toEqual([ID(1), ID(5)].sort())
+  })
+  it('treats a label name like a name, so a matching label name also makes it ambiguous', () => {
+    const r = matchIngredient({ name: 'Sugar, Granulated' }, [...library, { id: ID(5), name: 'Cane Sugar EC', labelName: 'Sugar, Granulated' }])
+    expect(r.ingredient).toBeNull()
+    expect(r.candidates.map(c => c.id)).toEqual(expect.arrayContaining([ID(1), ID(5)]))
+  })
+  it('falls back to the name when the item code matches nothing', () => {
+    expect(matchIngredient({ name: 'Sugar, Granulated', itemCode: 'SUG-001' }, library).ingredient?.id).toBe(ID(1))
+  })
+  it('falls back to the name when a shared item code has no matching supplier', () => {
+    const lib = [...library, { id: ID(5), name: 'Dextrose', itemCode: 'WPI-90', supplierName: 'Beta' }]
+    expect(matchIngredient({ name: 'Sugar, Granulated', itemCode: 'WPI-90', supplier: 'Gamma' }, lib).ingredient?.id).toBe(ID(1))
   })
 })
 

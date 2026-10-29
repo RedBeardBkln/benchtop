@@ -84,7 +84,15 @@ export function normalizeName(s: string): string {
     .trim()
 }
 
-const tokens = (s: string) => new Set(normalizeName(s).split(' ').filter(t => t.length > 1))
+// USDA names are plural ("Sugars, Granulated", "Strawberries, raw") where a sheet is usually singular
+function singular(w: string): string {
+  if (w.length <= 3 || /\d/.test(w)) return w
+  if (w.endsWith('ies')) return w.slice(0, -3) + 'y'
+  if (/(ss|us|is)$/.test(w)) return w
+  return w.endsWith('s') ? w.slice(0, -1) : w
+}
+
+const tokens = (s: string) => new Set(normalizeName(s).split(' ').filter(t => t.length > 1).map(singular))
 
 /** 1 for the same name, otherwise how many words the two share (0–1) */
 export function nameScore(a: string, b: string): number {
