@@ -1,10 +1,11 @@
-export type PrintSection = 'formulation' | 'process' | 'nutrients' | 'validation'
+export type PrintSection = 'formulation' | 'process' | 'nutrients' | 'contributions' | 'validation'
 
 /** Fixed print order, regardless of the order tokens appear in the URL. */
 export const PRINT_SECTION_ORDER: readonly PrintSection[] = [
   'formulation',
   'process',
   'nutrients',
+  'contributions',
   'validation',
 ]
 

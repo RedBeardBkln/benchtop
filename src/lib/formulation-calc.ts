@@ -159,6 +159,35 @@ export function calcNutrientContributions<L extends CalcLine>(
     .sort((a, b) => b.inBatch - a.inBatch)
 }
 
+export type ContributionReportRow<L> = NutrientContribution<L> & {
+  /** This line's part of the nutrient's per-serving value, when a serving size is set */
+  perServing?: number
+}
+
+export type ContributionReportNutrient<L> = {
+  nutrient: NutrientResult
+  contributions: ContributionReportRow<L>[]
+  /** Lines that put none of this nutrient in (no value, zero, or no weight) */
+  noneCount: number
+}
+
+/**
+ * Every nutrient in the profile, each broken out by contributing line, in the profile's order.
+ * The per-100 g and per-serving parts add up to the nutrient's totals in `result`.
+ */
+export function buildContributionReport<L extends CalcLine>(
+  lines: L[],
+  result: CalcResult,
+  servingSizeG?: number,
+): ContributionReportNutrient<L>[] {
+  const perServing = servingSizeG != null && servingSizeG > 0
+  return result.results.map(nutrient => {
+    const contributions = calcNutrientContributions(lines, nutrient.nutrientId, result.concentrationWeightG)
+      .map(c => ({ ...c, perServing: perServing ? (c.perFinished100g * servingSizeG) / 100 : undefined }))
+    return { nutrient, contributions, noneCount: lines.length - contributions.length }
+  })
+}
+
 export function formatAmt(amount: number, unit: string): string {
   if (unit === 'kcal') return Math.round(amount).toString()
   if (amount === 0) return '0'

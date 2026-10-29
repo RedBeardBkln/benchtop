@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Printer, ArrowLeft } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
-import { calcNutrientProfile, dryBasisFactor, formatAmt } from '@/lib/formulation-calc'
+import { buildContributionReport, calcNutrientProfile, dryBasisFactor, formatAmt } from '@/lib/formulation-calc'
 import { withUnit } from '@/lib/units'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
@@ -39,8 +39,9 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const showFormulation = sections.includes('formulation')
   const showProcess = sections.includes('process')
   const showNutrients = sections.includes('nutrients')
+  const showContributions = sections.includes('contributions')
   const showValidation = sections.includes('validation')
-  const needsNutrients = showNutrients || showValidation
+  const needsNutrients = showNutrients || showContributions || showValidation
 
   // Same % precision as chosen in the editor
   const [pctDecimals, setPctDecimals] = useState(PCT_DECIMALS_MIN)
@@ -98,17 +99,20 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const processYield = computeProcessYield(totalWeightG, lossSteps)
 
   // Same inputs as the editor's calcResult, built from the saved formulation
+  const calcLines = sortedLines.map(l => ({
+    key: l.id,
+    ingredientName: l.ingredientName,
+    ingredientId: l.ingredientId,
+    weightG: parseFloat(l.weightG),
+    nutrients: l.nutrients.map(n => ({
+      nutrientId: n.nutrientId,
+      amountPer100g: parseFloat(n.amountPer100g),
+    })),
+    moisturePct: l.ingredientMoisturePct != null ? parseFloat(l.ingredientMoisturePct) : null,
+  }))
   const calcResult = needsNutrients && allNutrients && sortedLines.length > 0
     ? calcNutrientProfile({
-        lines: sortedLines.map(l => ({
-          ingredientId: l.ingredientId,
-          weightG: parseFloat(l.weightG),
-          nutrients: l.nutrients.map(n => ({
-            nutrientId: n.nutrientId,
-            amountPer100g: parseFloat(n.amountPer100g),
-          })),
-          moisturePct: l.ingredientMoisturePct != null ? parseFloat(l.ingredientMoisturePct) : null,
-        })),
+        lines: calcLines,
         allNutrients: allNutrients.map(n => ({
           id: n.id,
           name: n.name,
@@ -123,6 +127,9 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const projectTargets = (data.project?.targets ?? []) as ProjectTarget[]
   const validations = calcResult ? evaluateTargets(projectTargets, calcResult.results, servingSizeG, dryBasisFactor(calcResult)) : []
   const showPerServing = !!servingSizeG && servingSizeG > 0
+  const contributionReport = showContributions && calcResult
+    ? buildContributionReport(calcLines, calcResult, servingSizeG)
+    : []
 
   return (
     <div className="print-page min-h-screen bg-white">
@@ -321,6 +328,101 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                   )
                 })}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Each nutrient split by the ingredients that supply it */}
+        {showContributions && (
+          <div className="mb-6">
+            <h2 className={SECTION_HEADING}>Nutrient contributions by ingredient</h2>
+            {nutrientsLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : nutrientsError ? (
+              <p className="text-sm text-gray-500">Could not load nutrient data.</p>
+            ) : contributionReport.length === 0 ? (
+              <p className="text-sm text-gray-500">No nutrient data available.</p>
+            ) : (
+              <>
+                <p className="mb-3 text-xs text-gray-600">
+                  How much of each nutrient every ingredient supplies, largest first. Per 100 g and per serving
+                  are for the finished product{processYield.concentrationYieldPct < 100 ? ', after moisture loss' : ''};
+                  the parts add up to the totals.
+                </p>
+                <div className="space-y-5">
+                  {CATEGORY_ORDER.map(cat => {
+                    const items = contributionReport.filter(r => r.nutrient.category === cat)
+                    if (items.length === 0) return null
+                    return (
+                      <div key={cat}>
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 print:break-after-avoid">{cat}</h3>
+                        <div className="space-y-4">
+                          {items.map(({ nutrient: n, contributions, noneCount }) => (
+                            <table key={n.nutrientId} className="w-full text-sm border-collapse print:break-inside-avoid">
+                              <thead>
+                                <tr className="border-b-2 border-gray-800 text-gray-900">
+                                  <th className="text-left font-semibold py-1.5 pr-2">
+                                    {n.name} <span className="font-normal text-gray-500">({n.unit})</span>
+                                  </th>
+                                  <th className="text-right font-medium text-xs text-gray-600 uppercase tracking-wide whitespace-nowrap py-1.5 px-2 w-24">In batch</th>
+                                  <th className="text-right font-medium text-xs text-gray-600 uppercase tracking-wide whitespace-nowrap py-1.5 px-2 w-24">Per 100 g</th>
+                                  {showPerServing && (
+                                    <th className="text-right font-medium text-xs text-gray-600 uppercase tracking-wide whitespace-nowrap py-1.5 px-2 w-24">Per serving</th>
+                                  )}
+                                  <th className="text-right font-medium text-xs text-gray-600 uppercase tracking-wide whitespace-nowrap py-1.5 pl-2 w-20">Share</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {contributions.length === 0 ? (
+                                  <tr className="border-b border-gray-200">
+                                    <td colSpan={showPerServing ? 5 : 4} className="py-1.5 text-gray-500">
+                                      No ingredient contributes this nutrient.
+                                    </td>
+                                  </tr>
+                                ) : contributions.map(c => (
+                                  <tr key={c.line.key} className="border-b border-gray-200">
+                                    <td className="py-1 pr-2 text-gray-900">{c.line.ingredientName}</td>
+                                    <td className="py-1 px-2 text-right tabular-nums text-gray-800">{formatAmt(c.inBatch, n.unit)}</td>
+                                    <td className="py-1 px-2 text-right tabular-nums text-gray-800">{formatAmt(c.perFinished100g, n.unit)}</td>
+                                    {showPerServing && (
+                                      <td className="py-1 px-2 text-right tabular-nums text-gray-800">
+                                        {c.perServing != null ? formatAmt(c.perServing, n.unit) : '—'}
+                                      </td>
+                                    )}
+                                    <td className="py-1 pl-2 text-right tabular-nums text-gray-800">{c.sharePct.toFixed(1)}%</td>
+                                  </tr>
+                                ))}
+                                {contributions.length > 0 && (
+                                  <tr className="font-medium text-gray-900">
+                                    <td className="py-1.5 pr-2">
+                                      Total
+                                      {noneCount > 0 && (
+                                        <span className="ml-2 text-xs font-normal text-gray-500">
+                                          ({noneCount} other ingredient{noneCount === 1 ? '' : 's'}: none or no value)
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="py-1.5 px-2 text-right tabular-nums">
+                                      {formatAmt(contributions.reduce((s, c) => s + c.inBatch, 0), n.unit)}
+                                    </td>
+                                    <td className="py-1.5 px-2 text-right tabular-nums">{formatAmt(n.perFinished100g, n.unit)}</td>
+                                    {showPerServing && (
+                                      <td className="py-1.5 px-2 text-right tabular-nums">
+                                        {n.perServing != null ? formatAmt(n.perServing, n.unit) : '—'}
+                                      </td>
+                                    )}
+                                    <td className="py-1.5 pl-2 text-right tabular-nums">100%</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

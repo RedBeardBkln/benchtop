@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcNutrientContributions, calcNutrientProfile } from './formulation-calc'
+import { buildContributionReport, calcNutrientContributions, calcNutrientProfile } from './formulation-calc'
 
 const PROTEIN = 'protein'
 const lines = [
@@ -33,5 +33,41 @@ describe('calcNutrientContributions', () => {
   it('ignores lines with no weight', () => {
     const out = calcNutrientContributions([{ ...lines[0], weightG: 0 }], PROTEIN, 100)
     expect(out).toEqual([])
+  })
+})
+
+describe('buildContributionReport', () => {
+  const VIT_K = 'vit-k'
+  const nutrients = [
+    { id: PROTEIN, name: 'Protein', unit: 'g', category: 'macros' },
+    { id: VIT_K, name: 'Vitamin K', unit: 'mcg', category: 'vitamins' },
+  ]
+  const withK = [
+    ...lines,
+    { ingredientId: 'd', weightG: 10, nutrients: [{ nutrientId: VIT_K, amountPer100g: 100 }] }, // 10 mcg
+  ]
+
+  it('covers every nutrient in the profile, in the profile order', () => {
+    const profile = calcNutrientProfile({ lines: withK, allNutrients: nutrients })
+    const report = buildContributionReport(withK, profile)
+    expect(report.map(r => r.nutrient.nutrientId)).toEqual([PROTEIN, VIT_K])
+    expect(report[0].contributions.map(c => c.line.ingredientId)).toEqual(['b', 'a'])
+    expect(report[0].noneCount).toBe(2)
+    expect(report[1].contributions.map(c => c.line.ingredientId)).toEqual(['d'])
+    expect(report[1].noneCount).toBe(3)
+  })
+
+  it('splits per-serving values so they add up to the profile, after moisture loss', () => {
+    const steps = [{ lossType: 'moisture', lossAmount: 20, lossUnit: 'g' }]
+    const profile = calcNutrientProfile({ lines: withK, allNutrients: nutrients, servingSizeG: 40, steps })
+    for (const { nutrient, contributions } of buildContributionReport(withK, profile, 40)) {
+      expect(contributions.reduce((s, c) => s + c.perFinished100g, 0)).toBeCloseTo(nutrient.perFinished100g)
+      expect(contributions.reduce((s, c) => s + (c.perServing ?? 0), 0)).toBeCloseTo(nutrient.perServing!)
+    }
+  })
+
+  it('leaves per-serving out without a serving size', () => {
+    const profile = calcNutrientProfile({ lines, allNutrients: nutrients })
+    expect(buildContributionReport(lines, profile)[0].contributions.every(c => c.perServing === undefined)).toBe(true)
   })
 })

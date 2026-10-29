@@ -29,6 +29,7 @@ export function PrintOptionsDialog({
     formulation: true,
     process: hasSteps,
     nutrients: false,
+    contributions: false,
     validation: false,
   })
 
@@ -48,6 +49,12 @@ export function PrintOptionsDialog({
       key: 'nutrients',
       label: 'Full nutrient profile',
       hint: 'All nutrients per 100 g and per serving',
+      disabledHint: hasLines ? undefined : 'Add ingredients first',
+    },
+    {
+      key: 'contributions',
+      label: 'Nutrient contributions by ingredient',
+      hint: 'Every macro, vitamin and mineral, split by the ingredients that supply it',
       disabledHint: hasLines ? undefined : 'Add ingredients first',
     },
     {

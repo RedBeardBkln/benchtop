@@ -1943,6 +1943,13 @@ export function FormulationGrid({ id }: { id: string }) {
                 ({calcResult.results.length} nutrients)
               </span>
             </button>
+            <button
+              onClick={() => handlePrintConfirm(['contributions'])}
+              title="Every nutrient split by the ingredients that supply it, on its own page you can print"
+              className="flex items-center gap-1 text-xs text-blue-600 hover:underline print:hidden"
+            >
+              <FileText size={12} /> Contribution report
+            </button>
             {showProfile && (
               <>
                 <span className="text-xs text-gray-400">Click a nutrient to see each ingredient&apos;s contribution</span>

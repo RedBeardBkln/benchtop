@@ -244,6 +244,10 @@ export const formulations: HelpSection = {
           type: 'p',
           text: 'Below the process steps, click **Full nutrient profile** to see every nutrient per 100 g and per serving. Click any nutrient to see which ingredients it comes from and their share. For example, click Sodium to find your saltiest ingredient.',
         },
+        {
+          type: 'p',
+          text: 'To see this for every nutrient at once, click **Contribution report** next to **Full nutrient profile**. It opens a page listing each macro, vitamin and mineral with the ingredients that supply it: the amount in the batch, per 100 g and per serving, and each one’s share. Click `Print` on that page to print it or save it as a PDF. Like other printouts, it uses the last saved version.',
+        },
         { type: 'h', text: 'Looking up an ingredient without leaving the page' },
         {
           type: 'p',
@@ -492,7 +496,7 @@ export const formulations: HelpSection = {
           items: [
             'Click `Save` first. Printing uses the last saved version.',
             'Click `Print`.',
-            'Choose what to include: **Formulation** (ingredients and settings), **Process steps**, **Full nutrient profile**, and **Validation vs project targets**.',
+            'Choose what to include: **Formulation** (ingredients and settings), **Process steps**, **Full nutrient profile**, **Nutrient contributions by ingredient** (each nutrient split by the ingredients that supply it), and **Validation vs project targets**.',
             'Click `Print`. A print-friendly page opens in a new tab. (If nothing opens, allow pop-ups for Benchtop in your browser.)',
             'Click `Print` on that page, or choose “Save as PDF” in your browser’s print window.',
           ],
