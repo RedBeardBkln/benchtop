@@ -7,6 +7,7 @@ import { Printer, ArrowLeft } from 'lucide-react'
 import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { buildContributionReport, calcNutrientProfile, dryBasisFactor, formatAmt } from '@/lib/formulation-calc'
 import { withUnit } from '@/lib/units'
+import { formatNoteDate, noteWasEdited, useFormulationNotes } from '@/components/formulations/formulation-notes'
 import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
 import { formatWeightG } from '@/lib/weight'
@@ -41,6 +42,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const showNutrients = sections.includes('nutrients')
   const showContributions = sections.includes('contributions')
   const showValidation = sections.includes('validation')
+  const showNotes = sections.includes('notes')
   const needsNutrients = showNutrients || showContributions || showValidation
 
   // Same % precision as chosen in the editor
@@ -55,6 +57,8 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
         return r.json()
       }),
   })
+
+  const { data: noteLog = [], isLoading: notesLoading, error: notesError } = useFormulationNotes(id, showNotes)
 
   const { data: allNutrients, isLoading: nutrientsLoading, error: nutrientsError } = useQuery<Nutrient[]>({
     queryKey: ['nutrients-all'],
@@ -479,6 +483,33 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                   </tbody>
                 </table>
               </>
+            )}
+          </div>
+        )}
+
+        {/* Dated notes on this iteration, oldest first so they read as a log */}
+        {showNotes && (
+          <div className="mb-6">
+            <h2 className={SECTION_HEADING}>Notes and findings</h2>
+            {notesLoading ? (
+              <p className="text-sm text-gray-400">Loading…</p>
+            ) : notesError ? (
+              <p className="text-sm text-gray-500">Could not load notes.</p>
+            ) : noteLog.length === 0 ? (
+              <p className="text-sm text-gray-500">No notes on this iteration.</p>
+            ) : (
+              <div className="space-y-3">
+                {[...noteLog].reverse().map(n => (
+                  <div key={n.id} className="print:break-inside-avoid">
+                    <p className="text-xs text-gray-500">
+                      {formatNoteDate(n.createdAt)}
+                      {n.authorEmail && <> · {n.authorEmail}</>}
+                      {noteWasEdited(n) && <> · edited {formatNoteDate(n.updatedAt)}</>}
+                    </p>
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{n.body}</p>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

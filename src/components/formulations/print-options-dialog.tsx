@@ -16,12 +16,14 @@ export function PrintOptionsDialog({
   hasSteps,
   hasTargets,
   hasLines,
+  hasNotes,
   onClose,
   onConfirm,
 }: {
   hasSteps: boolean
   hasTargets: boolean
   hasLines: boolean
+  hasNotes: boolean
   onClose: () => void
   onConfirm: (sections: PrintSection[]) => void
 }) {
@@ -31,6 +33,7 @@ export function PrintOptionsDialog({
     nutrients: false,
     contributions: false,
     validation: false,
+    notes: false,
   })
 
   const options: Option[] = [
@@ -62,6 +65,12 @@ export function PrintOptionsDialog({
       label: 'Validation vs project targets',
       hint: 'Pass / warn / fail for each project target',
       disabledHint: !hasTargets ? 'Project has no targets' : !hasLines ? 'Add ingredients first' : undefined,
+    },
+    {
+      key: 'notes',
+      label: 'Notes and findings',
+      hint: 'The dated notes recorded on this iteration',
+      disabledHint: hasNotes ? undefined : 'No notes on this iteration',
     },
   ]
 

@@ -32,6 +32,7 @@ import type { SolverResult } from '@/lib/solver'
 import { IngredientSidePanel } from '@/components/ingredients/ingredient-side-panel'
 import { ProcessStepsPanel } from '@/components/formulations/process-steps-panel'
 import { IterationNote } from '@/components/formulations/iteration-note'
+import { FormulationNotes, useFormulationNotes } from '@/components/formulations/formulation-notes'
 import { GridColumnPicker } from '@/components/formulations/grid-column-picker'
 import { readErrorMessage } from '@/lib/utils'
 import { useUnsavedChangesWarning } from '@/lib/use-unsaved-changes-warning'
@@ -442,6 +443,9 @@ export function FormulationGrid({ id }: { id: string }) {
     queryFn: () => fetch('/api/ingredients').then(r => r.json()),
   })
   const libraryById = useMemo(() => new Map(library.map(i => [i.id, i])), [library])
+
+  // Shared with the Notes panel; the print dialog only offers the notes section when there are some
+  const { data: notes } = useFormulationNotes(id)
 
   const { data: allNutrients } = useQuery<Nutrient[]>({
     queryKey: ['nutrients-all'],
@@ -2112,6 +2116,9 @@ export function FormulationGrid({ id }: { id: string }) {
         )
       })()}
 
+      {/* Dated findings and conclusions on this iteration */}
+      <FormulationNotes key={id} formulationId={id} version={data.version} readOnly={readOnly} />
+
       {/* Solver panel */}
       {showSolverPanel && solverResult && (
         <div className="mt-6 border border-violet-200 rounded-lg overflow-hidden">
@@ -2482,6 +2489,7 @@ export function FormulationGrid({ id }: { id: string }) {
           hasSteps={(data.processSteps?.length ?? 0) > 0}
           hasTargets={(data.project?.targets?.length ?? 0) > 0}
           hasLines={data.lines.length > 0}
+          hasNotes={(notes?.length ?? 0) > 0}
           onClose={() => setShowPrintDialog(false)}
           onConfirm={handlePrintConfirm}
         />

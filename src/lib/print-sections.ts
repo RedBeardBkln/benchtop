@@ -1,4 +1,4 @@
-export type PrintSection = 'formulation' | 'process' | 'nutrients' | 'contributions' | 'validation'
+export type PrintSection = 'formulation' | 'process' | 'nutrients' | 'contributions' | 'validation' | 'notes'
 
 /** Fixed print order, regardless of the order tokens appear in the URL. */
 export const PRINT_SECTION_ORDER: readonly PrintSection[] = [
@@ -7,6 +7,7 @@ export const PRINT_SECTION_ORDER: readonly PrintSection[] = [
   'nutrients',
   'contributions',
   'validation',
+  'notes',
 ]
 
 /** What prints when no (or no valid) selection is given. */

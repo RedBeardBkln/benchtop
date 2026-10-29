@@ -248,6 +248,20 @@ export const formulations: HelpSection = {
           type: 'p',
           text: 'To see this for every nutrient at once, click **Contribution report** next to **Full nutrient profile**. It opens a page listing each macro, vitamin and mineral with the ingredients that supply it: the amount in the batch, per 100 g and per serving, and each one’s share. Click `Print` on that page to print it or save it as a PDF. Like other printouts, it uses the last saved version.',
         },
+        { type: 'h', text: 'Recording notes and findings' },
+        {
+          type: 'p',
+          text: 'Use **Notes** at the bottom of the formulation to keep a dated log of what you tried, what you measured and what you concluded. Type a note and click `Add note` (or press Ctrl+Enter). Each note shows when it was written and by whom, newest first. It saves straight away, without the `Save` button.',
+        },
+        {
+          type: 'list',
+          items: [
+            'Notes belong to the version you write them on. A new version starts with an empty log, and switching versions shows that version’s notes.',
+            'You can add notes to a locked version, since notes don’t change the formulation.',
+            'Hover over one of your own notes to edit or delete it. You can’t change other people’s notes.',
+            'To print them, tick **Notes and findings** in the Print dialog.',
+          ],
+        },
         { type: 'h', text: 'Looking up an ingredient without leaving the page' },
         {
           type: 'p',
@@ -496,7 +510,7 @@ export const formulations: HelpSection = {
           items: [
             'Click `Save` first. Printing uses the last saved version.',
             'Click `Print`.',
-            'Choose what to include: **Formulation** (ingredients and settings), **Process steps**, **Full nutrient profile**, **Nutrient contributions by ingredient** (each nutrient split by the ingredients that supply it), and **Validation vs project targets**.',
+            'Choose what to include: **Formulation** (ingredients and settings), **Process steps**, **Full nutrient profile**, **Nutrient contributions by ingredient** (each nutrient split by the ingredients that supply it), **Validation vs project targets**, and **Notes and findings** (the dated notes on this version).',
             'Click `Print`. A print-friendly page opens in a new tab. (If nothing opens, allow pop-ups for Benchtop in your browser.)',
             'Click `Print` on that page, or choose “Save as PDF” in your browser’s print window.',
           ],

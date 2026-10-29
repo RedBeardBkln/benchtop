@@ -138,6 +138,23 @@ export const formulationNfpPanels = pgTable('formulation_nfp_panels', {
   index('formulation_nfp_panels_formulation_idx').on(t.formulationId),
 ])
 
+// Dated notes on one iteration: findings and conclusions recorded along the way. Per-iteration and never
+// copied, so a new iteration starts with an empty log. Not formulation data, so they stay editable when locked.
+// Tenant scope comes from the parent formulation (cascade-deleted with it).
+export const formulationNotes = pgTable('formulation_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),
+  // Supabase auth UID of the author; only they can edit or delete the note
+  userId: uuid('user_id').notNull(),
+  // Shown as the byline
+  authorEmail: text('author_email'),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('formulation_notes_formulation_idx').on(t.formulationId),
+])
+
 export const formulationTargets = pgTable('formulation_targets', {
   id: uuid('id').primaryKey().defaultRandom(),
   formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),

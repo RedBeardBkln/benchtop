@@ -11,6 +11,7 @@ import type {
   formulations,
   formulationLines,
   processSteps,
+  formulationNotes,
   equipment,
   suppliers,
   ingredientSuppliers,
@@ -66,6 +67,9 @@ export type FormulationLine = InferSelectModel<typeof formulationLines>
 export type ProcessStep = InferSelectModel<typeof processSteps>
 export type Equipment = InferSelectModel<typeof equipment>
 export type ProcessStepDetail = ProcessStep & { equipmentName: string | null }
+
+/** A note as the notes API returns it; `mine` = written by the signed-in user, who alone can edit it */
+export type FormulationNote = InferSelectModel<typeof formulationNotes> & { mine: boolean }
 
 export type ProjectSummary = Project & { formulationCount: number }
 

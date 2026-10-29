@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import {
-  accountMembers, batchRuns, feedback, formulationImports, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulations, formulationTargets,
+  accountMembers, batchRuns, feedback, formulationImports, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulationNotes, formulations, formulationTargets,
   ingredientAllergens, ingredientCerts, ingredientDocs, ingredientNutrients, ingredientSuppliers,
   ingredients, intakeItems, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
   subIngredients, supplierContacts, suppliers, timeEntries,
@@ -45,7 +45,7 @@ export async function GET() {
 
   const [
     lineRows, stepRows, targetRows, runRows, reverseTargetRows, reverseCandidateRows,
-    nutrientRows, allergenRows, certRows, subIngredientRows, docRows, supplierLinkRows, nfpPanelRows,
+    nutrientRows, allergenRows, certRows, subIngredientRows, docRows, supplierLinkRows, nfpPanelRows, noteRows,
   ] = await Promise.all([
     db.select({ r: formulationLines }).from(formulationLines)
       .innerJoin(formulations, eq(formulationLines.formulationId, formulations.id))
@@ -88,6 +88,9 @@ export async function GET() {
       .where(eq(ingredients.accountId, accountId)),
     db.select({ r: formulationNfpPanels }).from(formulationNfpPanels)
       .innerJoin(formulations, eq(formulationNfpPanels.formulationId, formulations.id))
+      .where(eq(formulations.accountId, accountId)),
+    db.select({ r: formulationNotes }).from(formulationNotes)
+      .innerJoin(formulations, eq(formulationNotes.formulationId, formulations.id))
       .where(eq(formulations.accountId, accountId)),
   ])
 
@@ -139,6 +142,7 @@ export async function GET() {
     formulationTargets: targetRows.map(x => x.r),
     batchRuns: runRows.map(x => x.r),
     formulationNfpPanels: nfpPanelRows.map(x => x.r),
+    formulationNotes: noteRows.map(x => x.r),
     reverseTargets: reverseTargetRows.map(x => x.r),
     reverseCandidates: reverseCandidateRows.map(x => x.r),
     ingredients: ingredientRows,
