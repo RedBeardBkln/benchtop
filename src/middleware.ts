@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { METHOD_HEADER, PATH_HEADER } from '@/lib/activity'
 
 // Routes that never need a session and must not be redirected/401'd: the public invite page,
 // legal pages, the invite-redemption API and the Stripe webhook (which authenticates by signature).
@@ -9,6 +10,11 @@ function isOpenRoute(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  // Tell route handlers which call they're serving, for the activity log (see lib/activity.ts).
+  // Always overwritten, so a browser can't supply its own.
+  request.headers.set(METHOD_HEADER, request.method)
+  request.headers.set(PATH_HEADER, request.nextUrl.pathname)
+
   // Skip the Supabase session round-trip entirely for open routes
   if (isOpenRoute(request.nextUrl.pathname)) return NextResponse.next({ request })
 

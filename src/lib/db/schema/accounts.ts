@@ -28,6 +28,9 @@ export const accounts = pgTable('accounts', {
   // Team logo an owner or admin applied to everyone's documents (Storage path, see lib/logo.ts);
   // when set it's used instead of each member's own logo
   logoPath: text('logo_path'),
+  // Set by a platform admin: nobody in the account can use the app until it's cleared
+  suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+  suspendedReason: text('suspended_reason'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (t) => [
@@ -63,6 +66,10 @@ export const profiles = pgTable('profiles', {
   // Per-user display preferences (see UserPreferences)
   preferences: jsonb('preferences').$type<UserPreferences>().notNull().default({}),
   isPlatformAdmin: boolean('is_platform_admin').notNull().default(false),
+  // Set by a platform admin: this person can't use the app until it's cleared
+  suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+  // Last time they used the app (updated at most every few minutes, see lib/activity.ts)
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   termsVersion: text('terms_version'),
   termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
   privacyVersion: text('privacy_version'),

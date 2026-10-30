@@ -10,6 +10,7 @@ export default async function NoAccountPage() {
   if (!result.ok && result.reason === 'unauthenticated') redirect('/login')
   // Users who do have an account have no business here
   if (result.ok || result.reason === 'not_entitled') redirect('/projects')
+  if (result.reason === 'suspended') redirect('/suspended')
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">

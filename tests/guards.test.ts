@@ -61,6 +61,7 @@ describe('every app page is gated', () => {
     'src/app/legal/terms/page.tsx',
     'src/app/legal/privacy/page.tsx',
     'src/app/no-account/page.tsx', // uses getContext() itself; shown only to account-less users
+    'src/app/suspended/page.tsx', // uses getContext() itself; shown only to suspended users
     'src/app/settings/page.tsx', // redirect-only; the settings layout is gated
   ])
   const pages = walk(path.join(ROOT, 'src/app'), f => f.endsWith('page.tsx')).map(rel)

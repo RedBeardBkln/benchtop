@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { eq } from 'drizzle-orm'
 import { createClient } from '@/lib/supabase/server'
@@ -7,6 +8,8 @@ import { accountMembers, accounts, profiles, subscriptions } from '@/lib/db/sche
 import { isDevBypassActive, isEntitled } from '@/lib/billing/entitlement'
 import { asAccountPlan, hasFreeAccess, userCap, type AccountPlan } from '@/lib/billing/plans'
 import { needsLegalAcceptance } from '@/lib/legal'
+import { METHOD_HEADER, PATH_HEADER } from '@/lib/activity'
+import { recordActivity, touchLastSeen } from '@/lib/activity-server'
 import {
   accessForRole, canEditLibrary, DEFAULT_MEMBER_ACCESS, isTeamAdmin, memberAccessSchema,
   type MemberAccess, type MemberRole,
@@ -41,11 +44,11 @@ export type AuthContext = {
   isPlatformAdmin: boolean
 }
 
-export type ContextFailure = 'unauthenticated' | 'no_account' | 'not_entitled'
+export type ContextFailure = 'unauthenticated' | 'no_account' | 'suspended' | 'not_entitled'
 
 export type ContextResult =
   | { ok: true; ctx: AuthContext }
-  // `ctx` is present for not_entitled so settings/billing code can still use it
+  // `ctx` is present for suspended and not_entitled so settings/billing code can still use it
   | { ok: false; reason: ContextFailure; ctx?: AuthContext }
 
 // Resolves who is calling and which account they belong to. Deny by default: a signed-in user
@@ -104,7 +107,28 @@ export async function getContext(): Promise<ContextResult> {
     isPlatformAdmin: profile?.isPlatformAdmin ?? false,
   }
 
+  // A platform admin suspends an account or a person; platform admins themselves never are
+  if (!ctx.isPlatformAdmin && (row.account.suspendedAt || profile?.suspendedAt)) {
+    return { ok: false, reason: 'suspended', ctx }
+  }
   return entitled ? { ok: true, ctx } : { ok: false, reason: 'not_entitled', ctx }
+}
+
+// After the response: the activity log entry for this call (changes only) and the last-seen time
+async function trackUse(ctx: AuthContext, api: boolean) {
+  let method: string | null = null
+  let path: string | null = null
+  if (api) {
+    const h = await headers()
+    method = h.get(METHOD_HEADER)
+    path = h.get(PATH_HEADER)
+  }
+  after(async () => {
+    await Promise.all([
+      api ? recordActivity({ accountId: ctx.account.id, userId: ctx.user.id, method, path }) : null,
+      touchLastSeen(ctx.user.id),
+    ])
+  })
 }
 
 export type RequireOptions = {
@@ -140,6 +164,13 @@ export async function requireApi(opts: RequireOptions = {}): Promise<ApiAuth> {
     }
   }
 
+  if (!result.ok && result.reason === 'suspended') {
+    return {
+      ok: false,
+      res: NextResponse.json({ error: 'This account has been suspended', code: 'account_suspended' }, { status: 403 }),
+    }
+  }
+
   const ctx = result.ctx!
   if (!opts.allowWithoutTerms && needsLegalAcceptance(ctx.profile)) {
     return {
@@ -168,6 +199,7 @@ export async function requireApi(opts: RequireOptions = {}): Promise<ApiAuth> {
   if (opts.platformAdmin && !ctx.isPlatformAdmin) {
     return { ok: false, res: NextResponse.json({ error: 'Forbidden', code: 'forbidden' }, { status: 403 }) }
   }
+  await trackUse(ctx, true)
   return { ok: true, ctx }
 }
 
@@ -177,6 +209,7 @@ export async function requirePage(opts: RequireOptions = {}): Promise<AuthContex
 
   if (!result.ok && result.reason === 'unauthenticated') redirect('/login')
   if (!result.ok && result.reason === 'no_account') redirect('/no-account')
+  if (!result.ok && result.reason === 'suspended') redirect('/suspended')
 
   const ctx = result.ctx!
   if (!opts.allowWithoutTerms && needsLegalAcceptance(ctx.profile)) redirect('/accept-terms')
@@ -184,5 +217,6 @@ export async function requirePage(opts: RequireOptions = {}): Promise<AuthContex
   if (opts.role === 'owner' && ctx.role !== 'owner') notFound()
   if (opts.teamAdmin && !isTeamAdmin(ctx.role)) notFound()
   if (opts.platformAdmin && !ctx.isPlatformAdmin) notFound()
+  await trackUse(ctx, false)
   return ctx
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Building2, ChefHat, Clock, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, Menu, MessageSquare, Settings, Truck } from 'lucide-react'
+import { Building2, ChefHat, Clock, FolderOpen, FlaskConical, HelpCircle, LogOut, MailPlus, Menu, MessageSquare, Settings, ShieldCheck, Truck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
@@ -31,7 +31,8 @@ const TIME_NAV = { href: '/time', label: 'Time', icon: Clock, tip: 'Billable tim
 
 // Only shown to platform admins
 const ADMIN_NAV = [
-  { href: '/admin/invitations', label: 'Invitations & accounts', icon: MailPlus, tip: 'Platform admin: invite new customers and manage every account’s plan' },
+  { href: '/admin/accounts', label: 'Accounts', icon: ShieldCheck, tip: 'Platform admin: every account and person, their plans, usage and activity' },
+  { href: '/admin/invitations', label: 'Invitations', icon: MailPlus, tip: 'Platform admin: invite new customers' },
   { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare, tip: 'Platform admin: bug reports and feature requests from users' },
 ]
 

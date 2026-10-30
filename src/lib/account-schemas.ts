@@ -106,3 +106,20 @@ export const accountPlanUpdateSchema = z.object({
     }
   }
 })
+
+// Platform admin: suspend or restore an account or a person
+export const adminSuspendSchema = z.object({
+  suspended: z.boolean(),
+  reason: z.string().trim().max(500).optional(),
+})
+
+// Platform admin: delete an account; the account's name must be typed to confirm
+export const adminDeleteAccountSchema = z.object({
+  confirmName: z.string().trim().min(1).max(200),
+})
+
+// Platform admin: change an account's Stripe subscription
+export const ADMIN_SUBSCRIPTION_ACTIONS = ['cancel_at_period_end', 'resume', 'cancel_now'] as const
+export const adminSubscriptionSchema = z.object({
+  action: z.enum(ADMIN_SUBSCRIPTION_ACTIONS),
+})

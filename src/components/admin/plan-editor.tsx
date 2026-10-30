@@ -1,23 +1,22 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
 import { btnPrimary, btnSecondary, Card, Field, formatDate, inputCls, Notice } from '@/components/settings/ui'
 import { ACCOUNT_PLANS, MAX_USER_CAP, PLAN_LABELS, type AccountPlan } from '@/lib/billing/plans'
 
-type Account = {
+// Changes an account's plan, free period or user cap (platform admin).
+
+export type PlanAccount = {
   id: string
   name: string
-  ownerEmail: string | null
   billingExempt: boolean
   plan: AccountPlan
   freeUntil: string | null
   freeAccess: boolean
   maxUsers: number | null
   additionalUsers: number
-  subscriptionStatus: string | null
-  createdAt: string
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -29,19 +28,19 @@ const PLAN_TIPS: Record<AccountPlan, string> = {
 }
 
 // <input type="date"> value (local date) <-> ISO timestamp at the end of that day
-function toDateInput(iso: string | null): string {
+export function toDateInput(iso: string | null): string {
   if (!iso) return ''
   const d = new Date(iso)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-function fromDateInput(value: string): string | null {
+export function fromDateInput(value: string): string | null {
   return value ? new Date(`${value}T23:59:59`).toISOString() : null
 }
-function daysFromToday(days: number): string {
+export function daysFromToday(days: number): string {
   return toDateInput(new Date(Date.now() + days * DAY_MS).toISOString())
 }
 
-function planSummary(a: Account): string {
+export function planSummary(a: PlanAccount): string {
   if (a.billingExempt) return 'Internal (billing exempt)'
   if (a.plan === 'free_lifetime') return a.maxUsers == null ? 'Free for life' : `Free for life, up to ${a.maxUsers} users`
   if (a.plan === 'free_period') {
@@ -51,7 +50,7 @@ function planSummary(a: Account): string {
   return 'Paid'
 }
 
-function EditPlan({ account, onDone }: { account: Account; onDone: () => void }) {
+export function EditPlan({ account, onDone }: { account: PlanAccount; onDone: () => void }) {
   const [plan, setPlan] = useState<AccountPlan>(account.plan)
   const [until, setUntil] = useState(toDateInput(account.freeUntil))
   const [cap, setCap] = useState(account.maxUsers == null ? '' : String(account.maxUsers))
@@ -164,69 +163,5 @@ function EditPlan({ account, onDone }: { account: Account; onDone: () => void })
         <button type="button" onClick={onDone} className={btnSecondary}>Cancel</button>
       </div>
     </form>
-  )
-}
-
-export function AccountsAdmin() {
-  const [accounts, setAccounts] = useState<Account[] | null>(null)
-  const [editing, setEditing] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    const res = await fetch('/api/admin/accounts')
-    if (!res.ok) return toast.error(await readErrorMessage(res, 'Could not load accounts'))
-    setAccounts(await res.json())
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  return (
-    <Card title="Accounts" description="Change an account's type after signup.">
-      {accounts === null ? (
-        <p className="text-sm text-gray-500">Loading…</p>
-      ) : accounts.length === 0 ? (
-        <p className="text-sm text-gray-500">No accounts yet.</p>
-      ) : (
-        <ul className="divide-y divide-gray-100">
-          {accounts.map(a => (
-            <li key={a.id} className="py-3 space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900">{a.name}</div>
-                  <div className="text-xs text-gray-500">
-                    {a.ownerEmail ?? 'No owner email'} · joined {formatDate(a.createdAt)}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="text-right">
-                    <div className="text-gray-900">{planSummary(a)}</div>
-                    <div className="text-xs text-gray-500">
-                      {a.additionalUsers} additional user{a.additionalUsers === 1 ? '' : 's'}
-                      {a.subscriptionStatus ? ` · Stripe: ${a.subscriptionStatus}` : ''}
-                    </div>
-                  </div>
-                  {!a.billingExempt && editing !== a.id && (
-                    <button onClick={() => setEditing(a.id)} className="text-xs text-blue-600 hover:underline"
-                      data-tip="Change this account’s type, free period or user limit">
-                      Change
-                    </button>
-                  )}
-                </div>
-              </div>
-              {editing === a.id && (
-                <EditPlan
-                  account={a}
-                  onDone={() => {
-                    setEditing(null)
-                    load()
-                  }}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
   )
 }
