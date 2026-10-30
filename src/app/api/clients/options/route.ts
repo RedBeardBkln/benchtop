@@ -3,7 +3,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { clients } from '@/lib/db/schema'
 import { and, asc, eq, isNull, sql } from 'drizzle-orm'
-import { canCreateProject, isTeamAdmin } from '@/lib/team-access'
+import { canAddClients, canCreateProject } from '@/lib/team-access'
 
 // Client names for the project dropdown (archived clients left out): every client for owners and admins; for members, only the
 // clients they can create or move projects under. No accounting or shipping details here.
@@ -20,7 +20,8 @@ export async function GET() {
 
   return NextResponse.json({
     clients: rows.filter(c => canCreateProject(ctx.access, c.name)),
-    canManage: isTeamAdmin(ctx.role),
+    // Whether "+ New client…" is offered
+    canAdd: canAddClients(ctx.access),
     // Whether a project may be left without a client
     canChooseNone: canCreateProject(ctx.access, null),
   })

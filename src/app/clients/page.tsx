@@ -2,12 +2,12 @@ import { requirePage } from '@/lib/auth/context'
 import { AppShell } from '@/components/app-shell'
 import { ClientList } from '@/components/clients/client-list'
 
-// Owners and admins only: client records hold accounting and shipping details
+// Everyone sees client records; what members may change is set on Settings › Team
 export default async function ClientsPage() {
-  const ctx = await requirePage({ teamAdmin: true })
+  const ctx = await requirePage()
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <ClientList />
     </AppShell>
   )

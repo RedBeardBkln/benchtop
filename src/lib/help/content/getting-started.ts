@@ -25,7 +25,7 @@ export const gettingStarted: HelpSection = {
             { term: 'Suppliers', text: 'The companies you buy ingredients from, with their contacts and prices. See [Suppliers](/help/suppliers).' },
             { term: 'Projects', text: 'A folder for one product idea, such as “High-protein granola bar”. A project holds that product’s formulations and its nutrition targets. See [Projects](/help/projects).' },
             { term: 'Formulations', text: 'The actual recipes inside a project. Each one lists ingredients and amounts, and Benchtop works out the totals, nutrition and label text. See [Formulations](/help/formulations).' },
-            { term: 'Clients', text: 'If you develop products for other companies, a client record holds that customer’s details and links to their projects. Only owners and admins see Clients. See [Clients](/help/clients).' },
+            { term: 'Clients', text: 'If you develop products for other companies, a client record holds that customer’s details and links to their projects. See [Clients](/help/clients).' },
           ],
         },
         {
@@ -121,7 +121,7 @@ export const gettingStarted: HelpSection = {
           type: 'terms',
           items: [
             { term: '[Projects](/projects)', text: 'All your product projects. This is the home page after you sign in.' },
-            { term: '[Clients](/clients)', text: 'Customer records. Only shown to owners and admins.' },
+            { term: '[Clients](/clients)', text: 'Customer records: contacts, accounting and shipping.' },
             { term: '[Ingredients](/ingredients)', text: 'Your ingredient library.' },
             { term: '[Suppliers](/suppliers)', text: 'The companies you buy from.' },
             { term: '[Settings](/settings)', text: 'Your profile, preferences, account, team, billing and privacy.' },

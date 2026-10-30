@@ -5,7 +5,7 @@ export const clients: HelpSection = {
   title: 'Clients',
   icon: 'building',
   intro:
-    'If you develop products for other companies, a client record keeps that customer’s contacts, billing and shipping details in one place and links to their projects. Clients are only available to owners and admins.',
+    'If you develop products for other companies, a client record keeps that customer’s contacts, billing and shipping details in one place and links to their projects. Everyone on the account can view clients. Owners and admins can add and edit them, and choose whether each member can too.',
   articles: [
     {
       slug: 'clients-list',
@@ -177,8 +177,8 @@ export const clients: HelpSection = {
   ],
   faqs: [
     {
-      q: 'Why can’t I see Clients in the menu?',
-      a: 'Clients are only for owners and admins, because the records hold billing and shipping details. Ask your account owner if you need access.',
+      q: 'Why can’t I add or change a client?',
+      a: 'Your **Client records** access is `Can view`, or `Can add` (which lets you change only the clients you added). Archiving and deleting need `Can add and edit`. An owner or admin can change it under [Settings → Team](/settings/team). See [Choosing what a member can see](/help/team#member-access).',
     },
     {
       q: 'Why can’t I delete a client?',

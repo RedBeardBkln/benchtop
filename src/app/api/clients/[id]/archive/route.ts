@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireApi } from '@/lib/auth/context'
-import { getOwnedClient } from '@/lib/clients-server'
+import { loadClientForChange } from '@/lib/clients-server'
 import { archiveClient, loadArchivePlan } from '@/lib/client-archive'
-import { notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 // GET: what archiving would touch, and which ingredients and suppliers may go with it
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const { id } = await params
-  const client = await getOwnedClient(ctx.account.id, id)
-  if (!client) return notFoundResponse()
+  const loaded = await loadClientForChange(ctx, id, 'manage')
+  if (!loaded.ok) return loaded.res
   return NextResponse.json(await loadArchivePlan(ctx.account.id, id))
 }
 
@@ -25,13 +24,14 @@ const archiveSchema = z.object({
 })
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const { id } = await params
-  const client = await getOwnedClient(ctx.account.id, id)
-  if (!client) return notFoundResponse()
+  const loaded = await loadClientForChange(ctx, id, 'manage')
+  if (!loaded.ok) return loaded.res
+  const client = loaded.client
   if (client.archivedAt) return NextResponse.json({ error: 'This client is already archived' }, { status: 409 })
 
   const parsed = archiveSchema.safeParse(await req.json().catch(() => ({})))

@@ -10,7 +10,7 @@ import {
 import type { Project, Formulation, ProjectTarget } from '@/lib/types'
 import { ProjectTargets } from './project-targets'
 import Link from 'next/link'
-import { ClientSelect, useClientOptions } from '@/components/clients/client-select'
+import { ClientSelect } from '@/components/clients/client-select'
 import { readErrorMessage } from '@/lib/utils'
 import { Term } from '@/components/term'
 import { useImportDrafts } from '@/components/formulations/import/use-import-drafts'
@@ -127,7 +127,6 @@ export function ProjectDetail({ id }: { id: string }) {
   const [clientEdit, setClientEdit] = useState<string | null>(null)
   const [editingObjective, setEditingObjective] = useState(false)
   const [objectiveEdit, setObjectiveEdit] = useState('')
-  const { data: clientOptions } = useClientOptions()
   // Your own unfinished spreadsheet imports that are filed under this project
   const { data: importDrafts = [] } = useImportDrafts()
   const projectImports = importDrafts.filter(d => d.projectId === id)
@@ -314,7 +313,7 @@ export function ProjectDetail({ id }: { id: string }) {
             )}
             <div className="flex items-center gap-2 mt-1.5 group/client">
               {data.client && !editingClient && (
-                clientOptions?.canManage && data.clientId
+                data.clientId
                   ? <Link href={`/clients/${data.clientId}`} className="text-sm text-gray-500 hover:text-blue-700 hover:underline">{data.client}</Link>
                   : <span className="text-sm text-gray-500">{data.client}</span>
               )}

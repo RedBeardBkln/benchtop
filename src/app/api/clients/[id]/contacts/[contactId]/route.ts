@@ -4,19 +4,20 @@ import { db } from '@/lib/db'
 import { clientContacts } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { contactPatchSchema } from '@/lib/client-schemas'
-import { getOwnedClient } from '@/lib/clients-server'
+import { loadClientForChange } from '@/lib/clients-server'
 import { isUuid, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string; contactId: string }> }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const { id, contactId } = await params
-  const client = await getOwnedClient(ctx.account.id, id)
-  if (!client || !isUuid(contactId)) return notFoundResponse()
+  const loaded = await loadClientForChange(ctx, id, 'edit')
+  if (!loaded.ok) return loaded.res
+  if (!isUuid(contactId)) return notFoundResponse()
 
   const parsed = contactPatchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
@@ -44,13 +45,14 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const { id, contactId } = await params
-  const client = await getOwnedClient(ctx.account.id, id)
-  if (!client || !isUuid(contactId)) return notFoundResponse()
+  const loaded = await loadClientForChange(ctx, id, 'edit')
+  if (!loaded.ok) return loaded.res
+  if (!isUuid(contactId)) return notFoundResponse()
 
   await db.delete(clientContacts).where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, id)))
   return new NextResponse(null, { status: 204 })

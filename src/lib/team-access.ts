@@ -8,25 +8,30 @@ import { z } from 'zod'
 //   - allProjects: a baseline level for every project in the account
 //   - clients: a level for every project whose `client` matches (case-insensitive)
 //   - projects: a level for one specific project
+//   - clientRecords: the client records themselves (contacts, accounting, shipping): view them, also
+//     add new ones (and edit the ones they added), or add and edit every client
 // The effective level for a project is the highest of whatever applies.
 
 export type MemberRole = 'owner' | 'admin' | 'member'
 export type AccessLevel = 'none' | 'view' | 'edit'
 export type GrantLevel = 'view' | 'edit'
+export type ClientRecordsLevel = 'view' | 'add' | 'edit'
 
 export type MemberAccess = {
   library: GrantLevel
   allProjects: AccessLevel
   clients: Array<{ client: string; level: GrantLevel }>
   projects: Array<{ projectId: string; level: GrantLevel }>
+  clientRecords: ClientRecordsLevel
 }
 
-// What a new member gets unless the inviter changes it: the library read-only, no projects
+// What a new member gets unless the inviter changes it: the library and clients read-only, no projects
 export const DEFAULT_MEMBER_ACCESS: MemberAccess = {
   library: 'view',
   allProjects: 'none',
   clients: [],
   projects: [],
+  clientRecords: 'view',
 }
 
 export const MAX_GRANTS = 500
@@ -40,6 +45,8 @@ export const memberAccessSchema = z.object({
     .array(z.object({ client: z.string().trim().min(1).max(255), level: grantLevel }))
     .max(MAX_GRANTS),
   projects: z.array(z.object({ projectId: z.string().uuid(), level: grantLevel })).max(MAX_GRANTS),
+  // Absent on access stored before this setting existed
+  clientRecords: z.enum(['view', 'add', 'edit']).default('view'),
 })
 
 const RANK: Record<AccessLevel, number> = { none: 0, view: 1, edit: 2 }
@@ -95,7 +102,37 @@ export function canEditLibrary(access: MemberAccess | null | undefined): boolean
   return !access || access.library === 'edit'
 }
 
-// One-line summary for the team list, e.g. "All projects: view · 2 clients · 1 project · Library: edit"
+// May add new client records
+export function canAddClients(access: MemberAccess | null | undefined): boolean {
+  return !access || access.clientRecords !== 'view'
+}
+
+// May change this client's details and contacts: 'add' covers only the clients this user added
+export function canEditClient(
+  access: MemberAccess | null | undefined,
+  client: { createdBy: string | null },
+  userId: string,
+): boolean {
+  if (!access || access.clientRecords === 'edit') return true
+  return access.clientRecords === 'add' && client.createdBy === userId
+}
+
+// May archive, unarchive or delete clients (archiving reaches into projects and the library)
+export function canManageClients(access: MemberAccess | null | undefined): boolean {
+  return !access || access.clientRecords === 'edit'
+}
+
+// A member who adds a client gets edit on its projects when nothing else gives it, so they can
+// create projects for it. null when no grant is needed.
+export function grantForNewClient(access: MemberAccess | null | undefined, client: string): MemberAccess | null {
+  if (!access || canCreateProject(access, client) || access.clients.length >= MAX_GRANTS) return null
+  return {
+    ...access,
+    clients: [...access.clients.filter(c => normalizeClient(c.client) !== normalizeClient(client)), { client, level: 'edit' }],
+  }
+}
+
+// One-line summary for the team list, e.g. "All projects: view · 2 clients · 1 project · Library: edit · Clients: add"
 export function summarizeAccess(access: MemberAccess): string {
   const parts: string[] = []
   if (access.allProjects !== 'none') parts.push(`All projects: ${access.allProjects}`)
@@ -103,6 +140,7 @@ export function summarizeAccess(access: MemberAccess): string {
   if (access.projects.length) parts.push(`${access.projects.length} project${access.projects.length === 1 ? '' : 's'}`)
   if (parts.length === 0) parts.push('No projects')
   parts.push(`Library: ${access.library}`)
+  if (access.clientRecords !== 'view') parts.push(`Clients: ${access.clientRecords}`)
   return parts.join(' · ')
 }
 

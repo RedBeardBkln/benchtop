@@ -34,7 +34,12 @@ type ClientDetailData = {
   shippingNotes: string | null
   archivedAt: string | null
   contacts: Contact[]
+  // Only the projects the viewer can see
   projects: Array<{ id: string; name: string; status: string }>
+  hasProjects: boolean
+  // Details and contacts; archive and delete
+  canEdit: boolean
+  canManage: boolean
 }
 
 // Every editable field as the form holds it (strings, never null)
@@ -95,6 +100,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
   const dirty = JSON.stringify(form) !== JSON.stringify(initial)
+  const readOnly = !client.canEdit
 
   const text = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -140,6 +146,13 @@ function ClientForm({ client }: { client: ClientDetailData }) {
   return (
     // Not a <form>: the contact editor inside is one, and forms can't nest
     <div className="space-y-5 pb-20">
+      {readOnly && (
+        <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          You can view this client. Ask an account admin if you need to change it.
+        </p>
+      )}
+      {/* A disabled fieldset makes every field and button inside it read-only */}
+      <fieldset disabled={readOnly} className="min-w-0">
       <Section title="Details">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Client name (DBA) *" htmlFor="client-name"
@@ -162,8 +175,10 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           </Field>
         </div>
       </Section>
+      </fieldset>
 
       <Contacts
+        readOnly={readOnly}
         endpoint={`/api/clients/${client.id}/contacts`}
         contacts={client.contacts}
         description="Who you work with at this client."
@@ -173,6 +188,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
         }}
       />
 
+      <fieldset disabled={readOnly} className="min-w-0 space-y-5">
       <Section title="Accounting" description="How this client is billed.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Tax ID / EIN" htmlFor="client-tax" tip="The client’s tax number (in the US, their Employer Identification Number), for invoices and records.">
@@ -285,10 +301,15 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           </Field>
         </div>
       </Section>
+      </fieldset>
 
       <Section title="Projects">
         {client.projects.length === 0 ? (
-          <p className="text-sm text-gray-400">No projects for this client yet. Pick this client when you create or edit a project.</p>
+          <p className="text-sm text-gray-400">
+            {client.hasProjects
+              ? 'This client’s projects aren’t shared with you.'
+              : 'No projects for this client yet. Pick this client when you create or edit a project.'}
+          </p>
         ) : (
           <ul className="divide-y divide-gray-100">
             {client.projects.map(p => (
@@ -307,8 +328,9 @@ function ClientForm({ client }: { client: ClientDetailData }) {
         )}
       </Section>
 
+      {client.canManage && <>
       <Section title="Delete client">
-        {client.projects.length > 0 ? (
+        {client.hasProjects ? (
           <p className="text-sm text-gray-500">
             A client with projects can&apos;t be deleted. Move its projects to another client first.
           </p>
@@ -361,6 +383,8 @@ function ClientForm({ client }: { client: ClientDetailData }) {
           </>
         )}
       </Section>
+
+      </>}
 
       {archiveOpen && (client.archivedAt
         ? <UnarchiveClientDialog client={client} onClose={() => setArchiveOpen(false)} />
@@ -423,7 +447,7 @@ export function ClientDetail({ id }: { id: string }) {
           {data.archivedAt && (
             <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               Archived on {new Date(data.archivedAt).toLocaleDateString()}. It’s hidden from your client list and the
-              project dropdown. Use <b>Unarchive client</b> at the bottom of the page to bring it back.
+              project dropdown.{data.canManage && <> Use <b>Unarchive client</b> at the bottom of the page to bring it back.</>}
             </div>
           )}
           {/* Keyed on the saved record, so the form resets after a save that changes it */}

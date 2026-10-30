@@ -42,7 +42,7 @@ export const projects: HelpSection = {
           items: [
             'Go to [Projects](/projects) and click `New project` in the top-right corner.',
             'Type a **Project name**, for example “Plant Protein Shake v3”. This is the only required field.',
-            'Optionally pick a **Client** from the list. Owners and admins can choose **+ New client…** to add a new client on the spot.',
+            'Optionally pick a **Client** from the list. If you’re allowed to add clients, choose **+ New client…** to add one on the spot.',
             'Optionally write an **Objective**, the goal for the product, such as “30 g protein per serving, clean label, nut-free”.',
             'Click `Create project`. The new project opens straight away.',
           ],

@@ -4,13 +4,16 @@ import { db } from '@/lib/db'
 import { clientContacts, clients, projects, timeEntries } from '@/lib/db/schema'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import { clientPatchSchema, normalizeClientFields } from '@/lib/client-schemas'
-import { clientNameTakenResponse, getOwnedClient, isDuplicateNameError, propagateClientRename } from '@/lib/clients-server'
-import { notFoundResponse } from '@/lib/tenancy'
+import {
+  clientNameTakenResponse, getOwnedClient, isDuplicateNameError, loadClientForChange, propagateClientRename,
+} from '@/lib/clients-server'
+import { canEditClient, canManageClients } from '@/lib/team-access'
+import { notFoundResponse, visibleProjects } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
@@ -21,23 +24,33 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const [contacts, linked] = await Promise.all([
     db.select().from(clientContacts).where(eq(clientContacts.clientId, id))
       .orderBy(asc(clientContacts.position), asc(clientContacts.createdAt)),
-    db.select({ id: projects.id, name: projects.name, status: projects.status, updatedAt: projects.updatedAt })
+    db.select({ id: projects.id, name: projects.name, client: projects.client, status: projects.status, updatedAt: projects.updatedAt })
       .from(projects)
       .where(and(eq(projects.accountId, ctx.account.id), eq(projects.clientId, id)))
       .orderBy(desc(projects.updatedAt)),
   ])
 
-  return NextResponse.json({ ...client, contacts, projects: linked })
+  return NextResponse.json({
+    ...client,
+    contacts,
+    // Members see only the projects they have access to
+    projects: visibleProjects(ctx, linked).map(({ client: _client, ...p }) => p),
+    // Whether any project is linked, seen or not: a client with projects can't be deleted
+    hasProjects: linked.length > 0,
+    canEdit: canEditClient(ctx.access, client, ctx.user.id),
+    canManage: canManageClients(ctx.access),
+  })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const { id } = await params
-  const existing = await getOwnedClient(ctx.account.id, id)
-  if (!existing) return notFoundResponse()
+  const loaded = await loadClientForChange(ctx, id, 'edit')
+  if (!loaded.ok) return loaded.res
+  const existing = loaded.client
 
   const parsed = clientPatchSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
@@ -67,13 +80,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const { id } = await params
-  const client = await getOwnedClient(ctx.account.id, id)
-  if (!client) return notFoundResponse()
+  const loaded = await loadClientForChange(ctx, id, 'manage')
+  if (!loaded.ok) return loaded.res
 
   // Unlinking would silently change which team members can see those projects, so it's refused
   const [linked] = await db

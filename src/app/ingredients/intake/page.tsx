@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { requirePage } from '@/lib/auth/context'
-import { canEditLibrary, isTeamAdmin } from '@/lib/team-access'
+import { canEditLibrary } from '@/lib/team-access'
 import { AppShell } from '@/components/app-shell'
 import { LabIntake } from '@/components/ingredients/lab-intake'
 
@@ -12,7 +12,7 @@ export default async function LabIntakePage() {
   if (!canEditLibrary(ctx.access)) redirect('/ingredients')
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <div className="px-4 py-5 sm:px-8 sm:py-8">
         <Link href="/ingredients" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-3">
           <ArrowLeft size={14} /> Ingredient Directory

@@ -3,7 +3,6 @@ import { requirePage } from '@/lib/auth/context'
 import { getOwnedFormulation, getOwnedProject } from '@/lib/tenancy'
 import { AppShell } from '@/components/app-shell'
 import { FormulationGrid } from '@/components/formulations/formulation-grid'
-import { isTeamAdmin } from '@/lib/team-access'
 import { SousChefPageContext } from '@/components/sous-chef/sous-chef-session'
 
 export default async function FormulationPage({
@@ -20,7 +19,7 @@ export default async function FormulationPage({
   const project = await getOwnedProject(ctx, f.projectId)
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <FormulationGrid key={id} id={id} />
       {project && (
         <SousChefPageContext

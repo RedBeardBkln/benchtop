@@ -91,7 +91,7 @@ export function ClientList() {
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
 
-  const { data, isLoading, isError } = useQuery<{ clients: ClientRow[] }>({
+  const { data, isLoading, isError } = useQuery<{ clients: ClientRow[]; canAdd: boolean }>({
     queryKey: ['clients'],
     queryFn: async () => {
       const r = await fetch('/api/clients')
@@ -114,13 +114,15 @@ export function ClientList() {
           <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
           <p className="text-sm text-gray-500 mt-0.5">Contacts, accounting and shipping details for the people you formulate for.</p>
         </div>
-        <button
-          onClick={() => setDialogOpen(true)}
-          data-tip="Add a customer you formulate for. Link projects to them from each project’s page."
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shrink-0"
-        >
-          <Plus size={14} /> New client
-        </button>
+        {data?.canAdd && (
+          <button
+            onClick={() => setDialogOpen(true)}
+            data-tip="Add a customer you formulate for. Link projects to them from each project’s page."
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shrink-0"
+          >
+            <Plus size={14} /> New client
+          </button>
+        )}
       </div>
 
       {(data?.clients.length ?? 0) > 5 && (
@@ -145,9 +147,11 @@ export function ClientList() {
         <div className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">
           <Building2 size={28} className="mx-auto text-gray-300 mb-2" />
           <p className="text-sm text-gray-500">No clients yet.</p>
-          <button onClick={() => setDialogOpen(true)} className="mt-2 text-sm text-blue-600 hover:underline">
-            Add your first client →
-          </button>
+          {data?.canAdd && (
+            <button onClick={() => setDialogOpen(true)} className="mt-2 text-sm text-blue-600 hover:underline">
+              Add your first client →
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">

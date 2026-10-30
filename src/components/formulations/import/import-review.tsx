@@ -317,7 +317,7 @@ export function ImportReview({ initial, importId: initialImportId, canEditLibrar
                 {draft.client.rawName && !newProject.clientId && !draft.client.skipped && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-gray-600">
                     The file names the client “{draft.client.rawName}”.
-                    {clientOptions?.canManage && (
+                    {clientOptions?.canAdd && (
                       <button type="button" className="text-blue-600 hover:underline" disabled={createClient.isPending}
                         data-tip="Adds this client to your account now and files the new project under it."
                         onClick={() => createClient.mutate(draft.client.rawName!)}>

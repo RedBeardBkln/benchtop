@@ -1,7 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
-import type { AccessLevel, GrantLevel, MemberAccess } from '@/lib/team-access'
+import type { AccessLevel, ClientRecordsLevel, GrantLevel, MemberAccess } from '@/lib/team-access'
 
 // Edits what a team 'member' can see and change. Admins don't use this (they have full access).
 
@@ -34,6 +34,11 @@ function LevelSelect<T extends string>({
 
 const GRANT_OPTIONS: Array<[GrantLevel, string]> = [['view', 'Can view'], ['edit', 'Can edit']]
 const ALL_OPTIONS: Array<[AccessLevel, string]> = [['none', 'No access'], ['view', 'Can view'], ['edit', 'Can edit']]
+const CLIENT_RECORD_OPTIONS: Array<[ClientRecordsLevel, string]> = [
+  ['view', 'Can view'],
+  ['add', 'Can add'],
+  ['edit', 'Can add and edit'],
+]
 
 export function AccessEditor({
   value,
@@ -74,6 +79,16 @@ export function AccessEditor({
             value={value.library}
             onChange={library => onChange({ ...value, library })}
             options={GRANT_OPTIONS}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="font-medium text-gray-700">Client records</span>
+          <LevelSelect
+            label="Client records access"
+            tip="Contacts, accounting and shipping details on the Clients page. Can view: read them and pick existing clients for projects. Can add: also add new clients and edit the ones they added. Can add and edit: add, edit, archive and delete any client."
+            value={value.clientRecords}
+            onChange={clientRecords => onChange({ ...value, clientRecords })}
+            options={CLIENT_RECORD_OPTIONS}
           />
         </label>
       </div>

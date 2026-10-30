@@ -4,19 +4,18 @@ import { db } from '@/lib/db'
 import { clientContacts } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
 import { contactSchema } from '@/lib/client-schemas'
-import { getOwnedClient } from '@/lib/clients-server'
-import { notFoundResponse } from '@/lib/tenancy'
+import { loadClientForChange } from '@/lib/clients-server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
   const { id } = await params
-  const client = await getOwnedClient(ctx.account.id, id)
-  if (!client) return notFoundResponse()
+  const loaded = await loadClientForChange(ctx, id, 'edit')
+  if (!loaded.ok) return loaded.res
 
   const parsed = contactSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {

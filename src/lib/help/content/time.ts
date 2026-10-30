@@ -53,7 +53,7 @@ export const time: HelpSection = {
         {
           type: 'terms',
           items: [
-            { term: 'Client', text: 'Required. You can log time for the clients you have access to. Owners and admins add clients under [Clients](/clients).' },
+            { term: 'Client', text: 'Required. You can log time for the clients you have access to. Clients are added under [Clients](/clients).' },
             { term: 'Project', text: 'Optional. Only the client’s active projects are listed. Leave it empty for general work for the client.' },
             { term: 'Duration', text: 'Shown as hours and minutes (1:30). Reports show decimal hours (1.50).' },
           ],

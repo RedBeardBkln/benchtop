@@ -21,7 +21,7 @@ export const team: HelpSection = {
           items: [
             { term: 'Owner', text: 'The person who created the account, or who it was handed to. There is exactly one. They can do everything, and they are the only one who can rename the account, subscribe or change billing, download all the data, and delete the account.' },
             { term: 'Admin', text: 'Can see and edit everything: every project, the ingredient library, suppliers, clients and the Team page. Cannot rename the account, handle billing, export data or delete the account.' },
-            { term: 'Member', text: 'Sees only the projects and clients they’ve been given, and can either view or edit the ingredient library and suppliers. Members don’t see the Clients page or the Team page.' },
+            { term: 'Member', text: 'Sees only the projects and clients they’ve been given, and can either view or edit the ingredient library and suppliers. They can view the Clients page, and add or edit clients if you allow it. Members don’t see the Team page.' },
           ],
         },
         { type: 'h', text: 'Side-by-side' },
@@ -30,7 +30,7 @@ export const team: HelpSection = {
           items: [
             { term: 'See and edit all projects', text: 'Owner ✓ · Admin ✓ · Member only what they’re given' },
             { term: 'Ingredient library and suppliers', text: 'Owner edit · Admin edit · Member view, or edit if given' },
-            { term: 'Clients page', text: 'Owner ✓ · Admin ✓ · Member ✗' },
+            { term: 'Clients page', text: 'Owner edit · Admin edit · Member view, or add or edit if given' },
             { term: 'Invite, change or remove people', text: 'Owner ✓ · Admin ✓ · Member ✗' },
             { term: 'Rename the account', text: 'Owner only' },
             { term: 'Subscribe, change card, cancel', text: 'Owner only' },
@@ -107,6 +107,7 @@ export const team: HelpSection = {
           items: [
             { term: 'All projects', text: 'A starting level for every project in the account, including new ones. `No access` hides them all, `Can view` lets them open everything, and `Can edit` lets them change everything.' },
             { term: 'Ingredient library & suppliers', text: '`Can view` or `Can edit`. This covers ingredients, suppliers, equipment and lab intake. Everyone can at least view, because formulations need their ingredients.' },
+            { term: 'Client records', text: 'What they can do on the [Clients](/clients) page. `Can view`: read client details and pick existing clients for projects. `Can add`: also add new clients, and edit the clients they added. `Can add and edit`: add, edit, archive and delete any client.' },
             { term: 'Clients', text: 'Click **+ Add a client…** to give access to every project for that client, including future ones.' },
             { term: 'Specific projects', text: 'Click **+ Add a project…** to give access to a single project. Remove a line with the **X**.' },
           ],
@@ -127,6 +128,7 @@ export const team: HelpSection = {
             '**Can view:** they can open it and see everything, with a “view only” badge, but the editing buttons are hidden.',
             '**Can edit:** they can work on it like an admin would.',
             '**Creating projects:** a member can create a new project only for a client they can edit, or (with no client) only if “All projects” is `Can edit`. Otherwise the **New project** button is hidden.',
+            '**Adding a client:** a member who adds a client automatically gets `Can edit` on that client’s projects (unless they already have it), so they can create projects for it.',
             '**View-only library:** they see a note saying they have view-only access to the ingredient library and suppliers, and can’t add or change ingredients.',
           ],
         },
@@ -232,8 +234,8 @@ export const team: HelpSection = {
       a: 'It stays in the account. Only their login is removed.',
     },
     {
-      q: 'Why can’t I see the Team tab or Clients?',
-      a: 'Those are only for owners and admins. If you need access, ask your account owner.',
+      q: 'Why can’t I see the Team tab, or add or change clients?',
+      a: 'The Team tab is only for owners and admins. Everyone can view clients, but adding or editing them depends on the **Client records** setting an owner or admin gave you. Ask them if you need more.',
     },
   ],
 }

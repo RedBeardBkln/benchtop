@@ -1,35 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { clientContacts, clients, projects } from '@/lib/db/schema'
+import { accountMembers, clientContacts, clients, projects } from '@/lib/db/schema'
 import { asc, eq, sql } from 'drizzle-orm'
 import { clientFieldsSchema, normalizeClientFields } from '@/lib/client-schemas'
-import { clientNameTakenResponse, isDuplicateNameError } from '@/lib/clients-server'
+import { clientNameTakenResponse, forbiddenClientsResponse, isDuplicateNameError } from '@/lib/clients-server'
+import { canAddClients, grantForNewClient } from '@/lib/team-access'
+import { visibleProjectIds } from '@/lib/tenancy'
 
-// Client records hold accounting and shipping details, so only owners and admins manage them.
-// Everyone else picks from /api/clients/options.
+// Everyone on the account can see client records. What members may change is set per member by
+// an admin (MemberAccess.clientRecords); owners and admins manage them all.
 
 export async function GET() {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
-  const [rows, counts, primaries] = await Promise.all([
+  const [rows, counts, primaries, visible] = await Promise.all([
     db.select().from(clients).where(eq(clients.accountId, ctx.account.id)).orderBy(asc(sql`lower(${clients.name})`)),
     db
-      .select({ clientId: projects.clientId, count: sql<number>`count(*)::int` })
+      .select({ id: projects.id, clientId: projects.clientId })
       .from(projects)
-      .where(eq(projects.accountId, ctx.account.id))
-      .groupBy(projects.clientId),
+      .where(eq(projects.accountId, ctx.account.id)),
     db
       .select({ clientId: clientContacts.clientId, name: clientContacts.name, email: clientContacts.email, isPrimary: clientContacts.isPrimary })
       .from(clientContacts)
       .innerJoin(clients, eq(clientContacts.clientId, clients.id))
       .where(eq(clients.accountId, ctx.account.id))
       .orderBy(asc(clientContacts.position), asc(clientContacts.createdAt)),
+    visibleProjectIds(ctx),
   ])
 
-  const countBy = new Map(counts.map(c => [c.clientId, c.count]))
+  // Members count only the projects they can see
+  const countBy = new Map<string | null, number>()
+  for (const p of counts) {
+    if (!visible || visible.has(p.id)) countBy.set(p.clientId, (countBy.get(p.clientId) ?? 0) + 1)
+  }
   // The primary contact, or the first one listed
   const contactBy = new Map<string, { name: string; email: string | null }>()
   for (const c of primaries) {
@@ -45,13 +51,15 @@ export async function GET() {
       projectCount: countBy.get(r.id) ?? 0,
       primaryContact: contactBy.get(r.id) ?? null,
     })),
+    canAdd: canAddClients(ctx.access),
   })
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireApi({ teamAdmin: true })
+  const auth = await requireApi()
   if (!auth.ok) return auth.res
   const { ctx } = auth
+  if (!canAddClients(ctx.access)) return forbiddenClientsResponse('You can’t add clients. Ask an account admin.')
 
   const parsed = clientFieldsSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
@@ -59,10 +67,16 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const [row] = await db
-      .insert(clients)
-      .values({ ...normalizeClientFields(parsed.data), accountId: ctx.account.id })
-      .returning()
+    const row = await db.transaction(async tx => {
+      const [created] = await tx
+        .insert(clients)
+        .values({ ...normalizeClientFields(parsed.data), accountId: ctx.account.id, createdBy: ctx.user.id })
+        .returning()
+      // So the member who added it can put projects under it
+      const access = grantForNewClient(ctx.access, created.name)
+      if (access) await tx.update(accountMembers).set({ access }).where(eq(accountMembers.userId, ctx.user.id))
+      return created
+    })
     return NextResponse.json(row, { status: 201 })
   } catch (err) {
     if (isDuplicateNameError(err)) {

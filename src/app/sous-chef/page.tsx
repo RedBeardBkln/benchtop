@@ -3,7 +3,6 @@ import { AppShell } from '@/components/app-shell'
 import type { ConversationLink } from '@/lib/sous-chef'
 import { SousChefWorkspace } from '@/components/sous-chef/sous-chef-workspace'
 import { getOwnedFormulation, getOwnedProject, isUuid } from '@/lib/tenancy'
-import { isTeamAdmin } from '@/lib/team-access'
 
 // /sous-chef?c=<conversation> opens a conversation; ?formulation=<iteration id> or ?project=<id> starts a new
 // one about that iteration or project. With neither, the conversation you were in carries on.
@@ -25,7 +24,7 @@ export default async function SousChefPage({
   }
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <SousChefWorkspace
         initialConversationId={!link && isUuid(sp.c) ? sp.c : null}
         initialLink={link}

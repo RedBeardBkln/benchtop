@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  accessForRole, canCreateAnyProject, canCreateProject, canEditLibrary, DEFAULT_MEMBER_ACCESS,
+  accessForRole, canAddClients, canCreateAnyProject, canCreateProject, canEditClient, canEditLibrary, canManageClients,
+  DEFAULT_MEMBER_ACCESS, grantForNewClient,
   memberAccessSchema, projectAccess, renameClientGrants, summarizeAccess, type MemberAccess,
 } from './team-access'
 
@@ -74,6 +75,40 @@ describe('library access', () => {
   })
 })
 
+describe('client records', () => {
+  const U1 = 'user-1'
+  it('members view by default; admins do everything', () => {
+    expect(canAddClients(DEFAULT_MEMBER_ACCESS)).toBe(false)
+    expect(canEditClient(DEFAULT_MEMBER_ACCESS, { createdBy: U1 }, U1)).toBe(false)
+    expect(canManageClients(DEFAULT_MEMBER_ACCESS)).toBe(false)
+    expect(canAddClients(null)).toBe(true)
+    expect(canEditClient(null, { createdBy: null }, U1)).toBe(true)
+    expect(canManageClients(null)).toBe(true)
+  })
+
+  it('add covers only the clients the member added', () => {
+    const a = access({ clientRecords: 'add' })
+    expect(canAddClients(a)).toBe(true)
+    expect(canEditClient(a, { createdBy: U1 }, U1)).toBe(true)
+    expect(canEditClient(a, { createdBy: 'someone-else' }, U1)).toBe(false)
+    expect(canEditClient(a, { createdBy: null }, U1)).toBe(false)
+    expect(canManageClients(a)).toBe(false)
+  })
+
+  it('edit covers every client, archiving and deleting', () => {
+    const a = access({ clientRecords: 'edit' })
+    expect(canEditClient(a, { createdBy: null }, U1)).toBe(true)
+    expect(canManageClients(a)).toBe(true)
+  })
+
+  it('grants edit on a new client only when nothing else gives it', () => {
+    expect(grantForNewClient(null, 'Acme')).toBeNull()
+    expect(grantForNewClient(access({ allProjects: 'edit' }), 'Acme')).toBeNull()
+    expect(grantForNewClient(access({ clients: [{ client: 'acme', level: 'view' }] }), 'Acme')?.clients)
+      .toEqual([{ client: 'Acme', level: 'edit' }])
+  })
+})
+
 describe('accessForRole', () => {
   it('stores nothing for admins and the default for members without access', () => {
     expect(accessForRole('admin', access({ allProjects: 'edit' }))).toBeNull()
@@ -89,6 +124,12 @@ describe('memberAccessSchema', () => {
     expect(memberAccessSchema.safeParse(null).success).toBe(false)
     expect(memberAccessSchema.safeParse(DEFAULT_MEMBER_ACCESS).success).toBe(true)
   })
+
+  it('reads access stored before client records existed as view', () => {
+    const { clientRecords: _omit, ...old } = DEFAULT_MEMBER_ACCESS
+    expect(memberAccessSchema.parse({ ...old, allProjects: 'edit' })).toEqual({ ...DEFAULT_MEMBER_ACCESS, allProjects: 'edit' })
+    expect(memberAccessSchema.safeParse({ ...DEFAULT_MEMBER_ACCESS, clientRecords: 'none' }).success).toBe(false)
+  })
 })
 
 describe('summarizeAccess', () => {
@@ -102,6 +143,7 @@ describe('summarizeAccess', () => {
         projects: [{ projectId: P1, level: 'edit' }],
       })),
     ).toBe('All projects: view · 2 clients · 1 project · Library: edit')
+    expect(summarizeAccess(access({ clientRecords: 'add' }))).toBe('No projects · Library: view · Clients: add')
   })
 })
 

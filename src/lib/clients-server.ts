@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { accountMembers, clients, invitations, projects } from '@/lib/db/schema'
-import { isUuid } from '@/lib/tenancy'
-import { memberAccessSchema, renameClientGrants } from '@/lib/team-access'
+import { isUuid, notFoundResponse } from '@/lib/tenancy'
+import { canEditClient, canManageClients, memberAccessSchema, renameClientGrants, type MemberAccess } from '@/lib/team-access'
 
 // Server helpers for client records (DB access). Validation lives in client-schemas.ts.
 
@@ -15,6 +15,35 @@ export async function getOwnedClient(accountId: string, id: string) {
     .where(and(eq(clients.id, id), eq(clients.accountId, accountId)))
     .limit(1)
   return row ?? null
+}
+
+export function forbiddenClientsResponse(error: string) {
+  return NextResponse.json({ error, code: 'forbidden' }, { status: 403 })
+}
+
+type ClientScope = { account: { id: string }; user: { id: string }; access: MemberAccess | null }
+
+/**
+ * For handlers that change a client: 404 when it isn't the account's, 403 without permission.
+ * 'edit' = details and contacts; 'manage' = archive, unarchive and delete.
+ */
+export async function loadClientForChange(
+  ctx: ClientScope,
+  id: string,
+  need: 'edit' | 'manage',
+): Promise<{ ok: true; client: typeof clients.$inferSelect } | { ok: false; res: NextResponse }> {
+  const client = await getOwnedClient(ctx.account.id, id)
+  if (!client) return { ok: false, res: notFoundResponse() }
+  const allowed = need === 'manage' ? canManageClients(ctx.access) : canEditClient(ctx.access, client, ctx.user.id)
+  if (!allowed) {
+    return {
+      ok: false,
+      res: forbiddenClientsResponse(need === 'manage'
+        ? 'Only people who can edit every client can archive or delete one'
+        : 'You have view-only access to this client'),
+    }
+  }
+  return { ok: true, client }
 }
 
 /** Postgres unique violation on the per-account client name. */

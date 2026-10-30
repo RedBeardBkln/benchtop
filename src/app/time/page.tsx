@@ -10,7 +10,7 @@ export default async function TimePage() {
   const on = resolvePreferences(ctx.profile?.preferences).timeTracking
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       {on ? (
         <TimeTracker isTeamAdmin={isTeamAdmin(ctx.role)} />
       ) : (

@@ -3,7 +3,6 @@ import { requirePage } from '@/lib/auth/context'
 import { getOwnedProject } from '@/lib/tenancy'
 import { AppShell } from '@/components/app-shell'
 import { ProjectDetail } from '@/components/projects/project-detail'
-import { isTeamAdmin } from '@/lib/team-access'
 import { SousChefPageContext } from '@/components/sous-chef/sous-chef-session'
 
 export default async function ProjectDetailPage({
@@ -18,7 +17,7 @@ export default async function ProjectDetailPage({
   if (!project) notFound()
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <ProjectDetail id={id} />
       <SousChefPageContext project={{ id, name: project.name }} />
     </AppShell>

@@ -15,6 +15,7 @@ import { useSousChef } from '@/components/sous-chef/sous-chef-session'
 // `tip` is the short description shown when you hover or focus the link
 const NAV = [
   { href: '/projects', label: 'Projects', icon: FolderOpen, tip: 'Your product ideas, each with its formulations and nutrition targets' },
+  { href: '/clients', label: 'Clients', icon: Building2, tip: 'The customers you formulate for: contacts, billing, shipping and their projects' },
   { href: '/ingredients', label: 'Ingredients', icon: FlaskConical, tip: 'Your ingredient library: nutrition, allergens, suppliers, costs and stock' },
   { href: '/suppliers', label: 'Suppliers', icon: Truck, tip: 'The companies you buy ingredients from, with contacts and terms' },
   { href: '/sous-chef', label: 'Sous Chef', icon: ChefHat, tip: 'Your AI product-development sidekick: food science answers, ingredient swaps and the team’s lab notebook' },
@@ -23,11 +24,7 @@ const NAV = [
 ]
 
 // The phone's bottom bar shows the first four of these the user has; the rest of the menu sits under More.
-// Settings only makes the bar for people who can't see Clients.
 const MOBILE_PRIMARY = ['/projects', '/clients', '/ingredients', '/suppliers', '/settings']
-
-// Only shown to account owners and admins (client records hold accounting and shipping details)
-const CLIENTS_NAV = { href: '/clients', label: 'Clients', icon: Building2, tip: 'The customers you formulate for: contacts, billing, shipping and their projects' }
 
 // Only shown to people who turned on time tracking in Settings › Preferences; it sits before Settings
 const TIME_NAV = { href: '/time', label: 'Time', icon: Clock, tip: 'Billable time you’ve logged for clients, and time reports to send them' }
@@ -42,21 +39,18 @@ export function AppShell({
   children,
   userEmail,
   isPlatformAdmin = false,
-  showClients = false,
 }: {
   children: React.ReactNode
   userEmail?: string
   isPlatformAdmin?: boolean
-  showClients?: boolean
 }) {
   const pathname = usePathname()
   const router = useRouter()
   const { prefs } = usePreferences()
-  const withClients = showClients ? [NAV[0], CLIENTS_NAV, ...NAV.slice(1)] : NAV
-  const settingsAt = withClients.findIndex(n => n.href === '/settings')
+  const settingsAt = NAV.findIndex(n => n.href === '/settings')
   const base = prefs.timeTracking
-    ? [...withClients.slice(0, settingsAt), TIME_NAV, ...withClients.slice(settingsAt)]
-    : withClients
+    ? [...NAV.slice(0, settingsAt), TIME_NAV, ...NAV.slice(settingsAt)]
+    : NAV
   const nav = isPlatformAdmin ? [...base, ...ADMIN_NAV] : base
   const unreadFeedback = useUnreadFeedback(isPlatformAdmin)
   const badge = (href: string) => (href === '/admin/feedback' && unreadFeedback > 0 ? unreadFeedback : 0)

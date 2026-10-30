@@ -1,7 +1,7 @@
 import { requirePage } from '@/lib/auth/context'
 import { AppShell } from '@/components/app-shell'
 import { FormulationImport } from '@/components/formulations/import/formulation-import'
-import { canCreateAnyProject, canEditLibrary, isTeamAdmin } from '@/lib/team-access'
+import { canCreateAnyProject, canEditLibrary } from '@/lib/team-access'
 import { isUuid } from '@/lib/tenancy'
 
 export default async function ImportFormulationPage({
@@ -13,7 +13,7 @@ export default async function ImportFormulationPage({
   const sp = await searchParams
 
   return (
-    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
+    <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
       <FormulationImport
         key={sp.draft ?? 'new'}
         projectId={isUuid(sp.project) ? sp.project : null}

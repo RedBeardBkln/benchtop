@@ -5,12 +5,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
 
-// Picks a project's client from the account's client records. Owners and admins can also add a
-// client on the spot; everyone else sees only the clients they may put projects under.
+// Picks a project's client from the account's client records. Anyone allowed to add clients can
+// add one on the spot; members see only the clients they may put projects under.
 
 export type ClientOptions = {
   clients: Array<{ id: string; name: string }>
-  canManage: boolean
+  canAdd: boolean
   canChooseNone: boolean
 }
 
@@ -121,7 +121,7 @@ export function ClientSelect({
       data-tip={[
         'The customer this project is for. Members can be given access to projects by client.',
         data?.canChooseNone === false ? 'Your access covers only certain clients, so you must pick one.' : '',
-        data?.canManage ? 'Choose “+ New client…” to add one.' : '',
+        data?.canAdd ? 'Choose “+ New client…” to add one.' : '',
       ].filter(Boolean).join(' ')}
       className={fieldCls}
     >
@@ -131,7 +131,7 @@ export function ClientSelect({
       {options.map(c => (
         <option key={c.id} value={c.id}>{c.name}</option>
       ))}
-      {data?.canManage && <option value={NEW}>+ New client…</option>}
+      {data?.canAdd && <option value={NEW}>+ New client…</option>}
     </select>
   )
 }
