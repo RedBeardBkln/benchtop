@@ -11,8 +11,12 @@ export const sousChefConversations = pgTable('sous_chef_conversations', {
   accountId: uuid('account_id').notNull().references(() => accounts.id),
   userId: uuid('user_id').notNull(), // Supabase auth UID
   title: text('title').notNull(),
-  // What the conversation was opened from; the assistant can still look at anything else in the account
+  // What the conversation is about, filled in down to the level it's linked at: a project; a whole
+  // formulation (project + family); or one iteration (all three). See linkScope in lib/sous-chef.ts.
+  // The assistant can still look at anything else in the account.
   projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  // formulations.family_id; no foreign key because it isn't a key (it equals the v1 row's id, which can be deleted)
+  formulationFamilyId: uuid('formulation_family_id'),
   formulationId: uuid('formulation_id').references(() => formulations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

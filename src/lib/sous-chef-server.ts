@@ -10,7 +10,10 @@ import { calcNutrientProfile } from '@/lib/formulation-calc'
 import { categoryPath } from '@/lib/ingredient-categories'
 import { getIngredientCosts } from '@/lib/costing-server'
 import { getOwnedFormulation, getOwnedProject, visibleProjectIds, visibleProjects, type TenantScope } from '@/lib/tenancy'
-import { NOTE_KIND_KEYS, NOTE_MAX_CHARS, NOTES_IN_PROMPT, type PromptNote, type SousChefNoteKind } from '@/lib/sous-chef'
+import {
+  linkScope, NOTE_KIND_KEYS, NOTE_MAX_CHARS, NOTES_IN_PROMPT,
+  type ConversationLink, type LinkInput, type PromptNote, type SousChefNoteKind,
+} from '@/lib/sous-chef'
 
 export type SousChefScope = TenantScope & { user: { id: string } }
 
@@ -77,6 +80,115 @@ export async function resolveNoteLinks(scope: TenantScope, links: { projectId?: 
     return null
   }
   return { projectId, formulationId }
+}
+
+// ── Conversation links ────────────────────────────────────────────────────────
+
+type LinkIds = { projectId: string | null; formulationFamilyId: string | null; formulationId: string | null }
+
+/**
+ * The ids a conversation stores for a link (none for null). Returns null when the linked item doesn't
+ * exist or the caller can't see it.
+ */
+export async function resolveConversationLink(scope: TenantScope, link: LinkInput | null | undefined): Promise<LinkIds | null> {
+  if (!link) return { projectId: null, formulationFamilyId: null, formulationId: null }
+  if (link.scope === 'project') {
+    const p = await getOwnedProject(scope, link.id)
+    return p ? { projectId: p.id, formulationFamilyId: null, formulationId: null } : null
+  }
+  let id = link.id
+  if (link.scope === 'formulation') {
+    // Any iteration of the family stands for it
+    const [any] = await db.select({ id: formulations.id }).from(formulations)
+      .where(and(eq(formulations.familyId, link.id), eq(formulations.accountId, scope.account.id))).limit(1)
+    if (!any) return null
+    id = any.id
+  }
+  const f = await getOwnedFormulation(scope, id)
+  if (!f) return null
+  return { projectId: f.projectId, formulationFamilyId: f.familyId, formulationId: link.scope === 'iteration' ? f.id : null }
+}
+
+// The newest live iteration of a family: what a whole-formulation link is named after and opens
+const latestIteration = (column: 'id' | 'name' | 'version') => sql.raw(
+  `(select f.${column} from formulations f where f.family_id = sous_chef_conversations.formulation_family_id
+     order by (f.archived_at is null and f.iteration_archived_at is null) desc, f.version desc limit 1)`,
+)
+
+/**
+ * Your conversations in this account, most recent first, each with what it's linked to. A link to a
+ * project you can no longer see is left off.
+ */
+export async function loadConversations(scope: SousChefScope, opts: { id?: string } = {}) {
+  const [rows, visible] = await Promise.all([
+    db
+      .select({
+        id: sousChefConversations.id,
+        title: sousChefConversations.title,
+        projectId: sousChefConversations.projectId,
+        formulationFamilyId: sousChefConversations.formulationFamilyId,
+        formulationId: sousChefConversations.formulationId,
+        createdAt: sousChefConversations.createdAt,
+        updatedAt: sousChefConversations.updatedAt,
+        projectName: projects.name,
+        iterationName: formulations.name,
+        iterationVersion: formulations.version,
+        familyIterationId: sql<string | null>`${latestIteration('id')}`,
+        familyName: sql<string | null>`${latestIteration('name')}`,
+      })
+      .from(sousChefConversations)
+      .leftJoin(projects, eq(sousChefConversations.projectId, projects.id))
+      .leftJoin(formulations, eq(sousChefConversations.formulationId, formulations.id))
+      .where(and(
+        eq(sousChefConversations.accountId, scope.account.id),
+        eq(sousChefConversations.userId, scope.user.id),
+        opts.id ? eq(sousChefConversations.id, opts.id) : undefined,
+      ))
+      .orderBy(desc(sousChefConversations.updatedAt))
+      .limit(200),
+    visibleProjectIds(scope),
+  ])
+  return rows.map(({ projectName, iterationName, iterationVersion, familyIterationId, familyName, ...c }) => {
+    const scopeOf = linkScope(c)
+    const seen = !c.projectId || !visible || visible.has(c.projectId)
+    let link: ConversationLink | null = null
+    if (!seen) {
+      // Linked to a project you can no longer see
+    } else if (scopeOf === 'iteration' && iterationName)
+      link = { scope: scopeOf, id: c.formulationId!, name: `${iterationName} v${iterationVersion}`, href: `/formulations/${c.formulationId}` }
+    else if (scopeOf === 'formulation' && familyName && familyIterationId)
+      link = { scope: scopeOf, id: c.formulationFamilyId!, name: familyName, href: `/formulations/${familyIterationId}` }
+    else if (scopeOf === 'project' && projectName)
+      link = { scope: scopeOf, id: c.projectId!, name: projectName, href: `/projects/${c.projectId}` }
+    return { ...c, link }
+  })
+}
+
+/** What the conversation is about, for the system prompt; null when it isn't linked (or the item is gone or hidden) */
+export async function describeLinkForPrompt(scope: TenantScope, c: LinkIds): Promise<string | null> {
+  const level = linkScope(c)
+  if (!level) return null
+  const project = c.projectId ? await getOwnedProject(scope, c.projectId) : null
+  if (!project) return null
+  const inProject = ` in the project “${project.name}” (id ${project.id})`
+  if (level === 'project') return `the project “${project.name}” (id ${project.id})`
+  const iterations = await db
+    .select({ id: formulations.id, name: formulations.name, version: formulations.version })
+    .from(formulations)
+    .where(and(
+      eq(formulations.familyId, c.formulationFamilyId!),
+      eq(formulations.accountId, scope.account.id),
+      isNull(formulations.archivedAt),
+    ))
+    .orderBy(formulations.version)
+  if (iterations.length === 0) return null
+  const list = iterations.map(f => `v${f.version} (id ${f.id})`).join(', ')
+  const name = iterations[iterations.length - 1].name
+  if (level === 'iteration') {
+    const it = iterations.find(f => f.id === c.formulationId)
+    if (it) return `iteration v${it.version} of the formulation “${it.name}” (id ${it.id})${inProject}. Its iterations are ${list}`
+  }
+  return `the formulation “${name}” as a whole, across its iterations ${list}${inProject}`
 }
 
 // ── Tools ─────────────────────────────────────────────────────────────────────
@@ -150,13 +262,18 @@ const TOOLS = [
   }),
   tool({
     name: 'get_formulation',
-    description: 'One formulation in detail: each ingredient line (grams, % of batch, cost), process steps with losses, nutrition targets, and the calculated nutrient profile per 100 g finished product and per serving.',
+    description: 'One formulation iteration in detail: its other iterations (ids and what changed), each ingredient line (grams, % of batch, cost), process steps with losses, nutrition targets, and the calculated nutrient profile per 100 g finished product and per serving.',
     input: z.object({ formulationId: uuid }),
     label: () => 'Read a formulation',
     run: async ({ formulationId }, { scope }) => {
       const f = await getOwnedFormulation(scope, formulationId)
       if (!f) return { error: 'No formulation with that id' }
       const [project] = await db.select({ name: projects.name, targets: projects.targets }).from(projects).where(eq(projects.id, f.projectId))
+      const iterations = await db
+        .select({ id: formulations.id, version: formulations.version, status: formulations.status, iterationNote: formulations.iterationNote })
+        .from(formulations)
+        .where(and(eq(formulations.familyId, f.familyId), eq(formulations.accountId, scope.account.id), ne(formulations.id, f.id), isNull(formulations.iterationArchivedAt)))
+        .orderBy(formulations.version)
       const lines = await db
         .select({
           ingredientId: formulationLines.ingredientId, name: ingredients.name, onHand: ingredients.onHand,
@@ -195,7 +312,8 @@ const TOOLS = [
         steps: steps.map(s => ({ lossType: s.lossType, lossAmount: num(s.lossAmount), lossUnit: s.lossUnit })),
       })
       return {
-        id: f.id, name: f.name, version: f.version, status: f.status, project: project?.name,
+        id: f.id, name: f.name, version: f.version, status: f.status, projectId: f.projectId, project: project?.name,
+        otherIterations: iterations,
         servingSizeG: servingSizeG ?? null, batchSizeG: num(f.batchSizeG), notes: f.notes, iterationNote: f.iterationNote,
         lines: lines.map(l => ({
           ingredientId: l.ingredientId, ingredient: l.name, onHand: l.onHand,

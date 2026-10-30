@@ -9,6 +9,8 @@ import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
 import { UnreadFeedbackBanner, useUnreadFeedback } from '@/components/admin/unread-feedback'
 import { usePreferences } from '@/lib/use-preferences'
+import { AskSousChefButton, SousChefDock } from '@/components/sous-chef/sous-chef-dock'
+import { useSousChef } from '@/components/sous-chef/sous-chef-session'
 
 // `tip` is the short description shown when you hover or focus the link
 const NAV = [
@@ -68,8 +70,13 @@ export function AppShell({
   // The page More was opened on; it counts as open only while we're still on that page
   const [moreOpenOn, setMoreOpenOn] = useState<string | null>(null)
   const moreOpen = moreOpenOn === pathname
+  const sousChef = useSousChef()
+  // Sous Chef rides beside project and formulation pages, and anywhere once a conversation is going.
+  // Not on its own page, which shows the same chat full size.
+  const sousChefAside = pathname !== '/sous-chef' && (sousChef.page || sousChef.conversationId || sousChef.dockOpen)
 
   async function signOut() {
+    sousChef.reset()
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
@@ -136,6 +143,8 @@ export function AppShell({
         <div className="flex-1 min-w-0">{children}</div>
         <FeedbackLink />
       </main>
+
+      {sousChefAside && (sousChef.dockOpen ? <SousChefDock /> : <AskSousChefButton />)}
 
       {/* Bottom nav — mobile only. Four main sections plus More, which holds the rest. */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-ink-900 border-t border-ink-700 flex pb-[env(safe-area-inset-bottom)] print:hidden">

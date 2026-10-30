@@ -35,12 +35,32 @@ export const MESSAGE_MAX_CHARS = 20000
 // Earlier turns resent with each request; older ones are dropped from what the model sees (they stay saved)
 export const HISTORY_TURNS = 40
 
+// What a conversation is about: one iteration, a whole formulation (every iteration; the id is its
+// family id) or a project. Stored as the project, family and iteration ids filled in down to that level.
+export const LINK_SCOPES = ['iteration', 'formulation', 'project'] as const
+export type LinkScope = (typeof LINK_SCOPES)[number]
+
+export const linkInputSchema = z.object({ scope: z.enum(LINK_SCOPES), id: z.string().uuid() })
+export type LinkInput = z.infer<typeof linkInputSchema>
+
+/** A linked item as the browser shows it */
+export type ConversationLink = LinkInput & { name: string; href: string }
+
+/** The level a conversation is linked at, from its stored ids */
+export function linkScope(c: { projectId: string | null; formulationFamilyId: string | null; formulationId: string | null }): LinkScope | null {
+  return c.formulationId ? 'iteration' : c.formulationFamilyId ? 'formulation' : c.projectId ? 'project' : null
+}
+
 export const chatInputSchema = z.object({
   conversationId: z.string().uuid().nullable().optional(),
   message: z.string().trim().min(1).max(MESSAGE_MAX_CHARS),
-  // Only read when starting a conversation: what it was opened from
-  projectId: z.string().uuid().nullable().optional(),
-  formulationId: z.string().uuid().nullable().optional(),
+  // Only read when starting a conversation: what it is about
+  link: linkInputSchema.nullable().optional(),
+})
+
+export const conversationPatchSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  link: linkInputSchema.nullable().optional(),
 })
 
 export function titleFromMessage(message: string): string {
@@ -71,6 +91,8 @@ How you help:
 
 The lab notebook: the team keeps notes (decisions, preferences, learnings, constraints) that carry across every project and conversation. The current notes are listed below. Apply them without being asked, and mention it when one shapes your answer. Record a note with record_note when the user makes or confirms a decision, states a lasting preference or constraint, or reports a result worth remembering (for example "the 0.3% gellan set too firm; 0.2% was right"). Record the fact and the reason in one or two sentences, attach the project or formulation it came from, and tell the user what you recorded. Don't record passing ideas, your own unconfirmed suggestions, or anything already in the notebook. When a note is superseded or wrong, retire it with retire_note and record the replacement.
 
+Linking: whenever you mention one of the team's projects, formulations or iterations by name, make the name a Markdown link so the user can jump straight to it: [Name v2](/formulations/<iteration id>) for an iteration and [Project name](/projects/<project id>) for a project. Use only ids you got from your tools or from this conversation's context; never guess one.
+
 You can read the user's data but not change it; when a change is needed, tell the user what to change and where in Benchtop. Formulation amounts are grams with % of the batch; nutrient amounts are per 100 g in each nutrient's own unit.
 
 Write in US English. Be conversational and concise; use short headings, lists or a small table when they make an answer easier to use at the bench.`
@@ -99,7 +121,7 @@ export function buildContextPrompt(opts: {
       }).join('\n')
   return [
     `Team: ${opts.accountName}. Today is ${opts.today}.`,
-    opts.focus ? `This conversation was opened from ${opts.focus}. Look at it with your tools before answering questions about it.` : null,
+    opts.focus ? `This conversation is about ${opts.focus}. Look at it with your tools before answering questions about it.` : null,
     `<lab_notebook>\n${notes}\n</lab_notebook>`,
   ].filter(Boolean).join('\n\n')
 }

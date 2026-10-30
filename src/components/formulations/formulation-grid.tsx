@@ -73,6 +73,7 @@ import { SolverBoundsDialog } from '@/components/formulations/solver-bounds-dial
 import { CompareVersionsDialog } from '@/components/formulations/compare-versions-dialog'
 import { BatchHistoryPanel, batchRunsKey } from '@/components/formulations/batch-history-panel'
 import { usePreferences } from '@/lib/use-preferences'
+import { useSousChefUnsavedGuard } from '@/components/sous-chef/sous-chef-session'
 
 // Nutrient columns the grid shows until the formulation picks its own
 const DEFAULT_GRID_NUTRIENT_NAMES = ['Energy', 'Protein', 'Total Fat', 'Total Carbohydrate', 'Dietary Fiber']
@@ -374,6 +375,8 @@ export function FormulationGrid({ id }: { id: string }) {
   useEffect(() => { setPctDecimals(readPctDecimals()) }, [])
   const [servingSizeG, setServingSizeG] = useState<string>('')
   const [isDirty, setIsDirty] = useState(false)
+  // A link followed from Sous Chef's side panel asks before dropping unsaved edits
+  useSousChefUnsavedGuard(isDirty)
   const [showAddRow, setShowAddRow] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   // Profile rows expanded to show each ingredient's contribution

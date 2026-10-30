@@ -10,7 +10,7 @@ export const sousChef: HelpSection = {
     {
       slug: 'asking',
       title: 'Asking Sous Chef',
-      summary: 'Start a conversation from the menu, or from any project or formulation.',
+      summary: 'Start a conversation from the menu, or beside any project or formulation.',
       blocks: [
         {
           type: 'p',
@@ -19,8 +19,8 @@ export const sousChef: HelpSection = {
         {
           type: 'steps',
           items: [
-            'Open [Sous Chef](/sous-chef) from the menu (on a phone, under **More**), or click **Ask Sous Chef** at the bottom right of a project or formulation.',
-            'Type a question and press Enter (Shift+Enter starts a new line). Opened from a formulation, Sous Chef reads it first, with its lines, targets and nutrient profile.',
+            'Open [Sous Chef](/sous-chef) from the menu (on a phone, under **More**), or click **Ask Sous Chef** at the bottom right of a project or formulation to open it beside the page.',
+            'Type a question and press Enter (Shift+Enter starts a new line). In a conversation about a formulation, Sous Chef reads it first, with its lines, targets and nutrient profile.',
             'While it works you’ll see what it looked at, for example “Read a formulation” or “Searched the web for …”.',
           ],
         },
@@ -31,6 +31,41 @@ export const sousChef: HelpSection = {
         {
           type: 'note',
           text: 'Sous Chef reads your data but never changes it. When it suggests a change, it tells you what to change and where. Check safety-critical and regulatory advice, and confirm changes at the bench.',
+        },
+      ],
+    },
+    {
+      slug: 'beside-your-work',
+      title: 'Sous Chef beside a project or formulation',
+      summary: 'Link a conversation to an iteration, a whole formulation or a project, and jump between them without losing the chat.',
+      blocks: [
+        {
+          type: 'p',
+          text: 'On a project or formulation, **Ask Sous Chef** opens Sous Chef in a panel beside the page, so you can keep the formula in view while you talk it through.',
+        },
+        {
+          type: 'terms',
+          items: [
+            { term: 'This iteration', text: 'The version you’re looking at, for example v3. Sous Chef reads that iteration and knows about the others.' },
+            { term: 'The whole formulation', text: 'Every iteration of the formulation. Good for following how it changed from version to version.' },
+            { term: 'The project', text: 'The project and all its formulations.' },
+          ],
+        },
+        {
+          type: 'steps',
+          items: [
+            'Click **Ask Sous Chef**. Under **New conversation about**, pick what the conversation is about, or pick up a conversation listed under **About this formulation** or **About the project**.',
+            'To change what a conversation is linked to, click **Change** under its title and pick another level, or **Nothing** to unlink it.',
+            'When Sous Chef mentions another iteration, another formulation in the project or the project itself, the name is a link. Click it to open it; the conversation stays open in the panel, even while Sous Chef is still answering.',
+          ],
+        },
+        {
+          type: 'tip',
+          text: 'Following a link from the full Sous Chef page opens the formulation with the conversation carried on in the panel beside it.',
+        },
+        {
+          type: 'note',
+          text: 'If the formulation you’re on has unsaved changes, following a link asks first. Save, or choose **Leave anyway** to discard them.',
         },
       ],
     },

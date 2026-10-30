@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildContextPrompt, chatInputSchema, noteInputSchema, titleFromMessage } from './sous-chef'
+import { buildContextPrompt, chatInputSchema, conversationPatchSchema, linkScope, noteInputSchema, titleFromMessage } from './sous-chef'
 
 describe('titleFromMessage', () => {
   it('keeps short messages on one line', () => {
@@ -30,7 +30,7 @@ describe('buildContextPrompt', () => {
       }],
     })
     expect(prompt).toContain('- [n1] Decision (2026-10-20; project: Oat Bar, formulation: Base v3): Use allulose')
-    expect(prompt).toContain('opened from the project “Oat Bar”')
+    expect(prompt).toContain('is about the project “Oat Bar”')
     expect(prompt).toContain('Team: Test Kitchen. Today is 2026-10-29.')
   })
 })
@@ -41,5 +41,24 @@ describe('schemas', () => {
     expect(noteInputSchema.safeParse({ kind: 'idea', content: 'x' }).success).toBe(false)
     expect(noteInputSchema.safeParse({ kind: 'learning', content: ' 0.2% gellan set right ' }).data?.content)
       .toBe('0.2% gellan set right')
+  })
+})
+
+describe('links', () => {
+  const id = '6f1c2b8e-3a4d-4e5f-8a9b-0c1d2e3f4a5b'
+
+  it('takes the most specific stored level as the scope', () => {
+    expect(linkScope({ projectId: id, formulationFamilyId: id, formulationId: id })).toBe('iteration')
+    expect(linkScope({ projectId: id, formulationFamilyId: id, formulationId: null })).toBe('formulation')
+    expect(linkScope({ projectId: id, formulationFamilyId: null, formulationId: null })).toBe('project')
+    expect(linkScope({ projectId: null, formulationFamilyId: null, formulationId: null })).toBeNull()
+  })
+
+  it('accepts a link, an unlink, or neither, and refuses an unknown scope or a bad id', () => {
+    expect(chatInputSchema.safeParse({ message: 'hi', link: { scope: 'formulation', id } }).success).toBe(true)
+    expect(conversationPatchSchema.safeParse({ link: null }).success).toBe(true)
+    expect(conversationPatchSchema.safeParse({ title: 'Gellan trials' }).data?.link).toBeUndefined()
+    expect(conversationPatchSchema.safeParse({ link: { scope: 'batch', id } }).success).toBe(false)
+    expect(conversationPatchSchema.safeParse({ link: { scope: 'project', id: 'nope' } }).success).toBe(false)
   })
 })

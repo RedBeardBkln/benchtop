@@ -3,32 +3,19 @@ import Anthropic from '@anthropic-ai/sdk'
 import { and, desc, eq } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { formulations, projects, sousChefConversations, sousChefMessages } from '@/lib/db/schema'
+import { sousChefConversations, sousChefMessages } from '@/lib/db/schema'
 import { AI_MODEL } from '@/lib/ai-json'
 import {
   buildContextPrompt, chatInputSchema, HISTORY_TURNS, SOUS_CHEF_PERSONA, titleFromMessage, type SousChefEvent,
 } from '@/lib/sous-chef'
-import { loadPromptNotes, resolveNoteLinks, runSousChefTool, SOUS_CHEF_TOOLS, type SousChefScope } from '@/lib/sous-chef-server'
+import {
+  describeLinkForPrompt, loadPromptNotes, resolveConversationLink, runSousChefTool, SOUS_CHEF_TOOLS, type SousChefScope,
+} from '@/lib/sous-chef-server'
 
 export const maxDuration = 300
 
 // Model calls in one turn (each tool round trip is one); stops a runaway loop
 const MAX_ROUNDS = 12
-
-async function focusLabel(projectId: string | null, formulationId: string | null): Promise<string | null> {
-  if (formulationId) {
-    const [f] = await db
-      .select({ name: formulations.name, version: formulations.version, project: projects.name })
-      .from(formulations).innerJoin(projects, eq(formulations.projectId, projects.id))
-      .where(eq(formulations.id, formulationId)).limit(1)
-    return f ? `the formulation “${f.name}” v${f.version} (id ${formulationId}) in the project “${f.project}” (id ${projectId})` : null
-  }
-  if (projectId) {
-    const [p] = await db.select({ name: projects.name }).from(projects).where(eq(projects.id, projectId)).limit(1)
-    return p ? `the project “${p.name}” (id ${projectId})` : null
-  }
-  return null
-}
 
 // POST: send a message, get Sous Chef's reply as newline-delimited JSON events (SousChefEvent)
 export async function POST(req: NextRequest) {
@@ -57,10 +44,9 @@ export async function POST(req: NextRequest) {
     conversation = row
   } else {
     // A link to something the caller can't see is dropped rather than refused
-    const links = await resolveNoteLinks(scope, { projectId: input.projectId, formulationId: input.formulationId })
+    const ids = await resolveConversationLink(scope, input.link) ?? await resolveConversationLink(scope, null)
     ;[conversation] = await db.insert(sousChefConversations).values({
-      accountId: ctx.account.id, userId: ctx.user.id, title: titleFromMessage(input.message),
-      projectId: links?.projectId ?? null, formulationId: links?.formulationId ?? null,
+      accountId: ctx.account.id, userId: ctx.user.id, title: titleFromMessage(input.message), ...ids,
     }).returning()
     isNew = true
   }
@@ -74,7 +60,7 @@ export async function POST(req: NextRequest) {
       .orderBy(desc(sousChefMessages.createdAt))
       .limit(HISTORY_TURNS),
     loadPromptNotes(scope),
-    focusLabel(conversation.projectId, conversation.formulationId),
+    describeLinkForPrompt(scope, conversation),
   ])
   const turns = history.reverse()
   while (turns.length > 0 && turns[0].role !== 'user') turns.shift()
@@ -156,11 +142,16 @@ export async function POST(req: NextRequest) {
           }
 
           messages.push({ role: 'assistant', content: message.content })
-          const results = await Promise.all(toolUses.map(b => runSousChefTool(b, {
-            scope,
-            conversationId: conversation.id,
-            onNote: note => send({ type: 'note', ...note }),
-          })))
+          // One at a time: a dozen formulation reads at once put more queries in flight than the database
+          // client has connections, and through the pooler some then stall until the statement timeout
+          const results: Awaited<ReturnType<typeof runSousChefTool>>[] = []
+          for (const b of toolUses) {
+            results.push(await runSousChefTool(b, {
+              scope,
+              conversationId: conversation.id,
+              onNote: note => send({ type: 'note', ...note }),
+            }))
+          }
           for (const r of results) if (r.label) logActivity(r.label)
           messages.push({ role: 'user', content: results.map(r => r.result) })
         }

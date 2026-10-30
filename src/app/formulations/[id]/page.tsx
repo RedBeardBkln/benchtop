@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
 import { requirePage } from '@/lib/auth/context'
-import { getOwnedFormulation } from '@/lib/tenancy'
+import { getOwnedFormulation, getOwnedProject } from '@/lib/tenancy'
 import { AppShell } from '@/components/app-shell'
 import { FormulationGrid } from '@/components/formulations/formulation-grid'
 import { isTeamAdmin } from '@/lib/team-access'
-import { AskSousChefButton } from '@/components/sous-chef/ask-sous-chef-button'
+import { SousChefPageContext } from '@/components/sous-chef/sous-chef-session'
 
 export default async function FormulationPage({
   params,
@@ -14,12 +14,20 @@ export default async function FormulationPage({
   const ctx = await requirePage()
 
   const { id } = await params
-  if (!(await getOwnedFormulation(ctx, id))) notFound()
+  const f = await getOwnedFormulation(ctx, id)
+  if (!f) notFound()
+  // For Sous Chef: what this iteration is, so a conversation can be linked to it, its formulation or its project
+  const project = await getOwnedProject(ctx, f.projectId)
 
   return (
     <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin} showClients={isTeamAdmin(ctx.role)}>
       <FormulationGrid key={id} id={id} />
-      <AskSousChefButton kind="formulation" id={id} />
+      {project && (
+        <SousChefPageContext
+          project={{ id: project.id, name: project.name }}
+          formulation={{ id, familyId: f.familyId, name: f.name, version: f.version }}
+        />
+      )}
     </AppShell>
   )
 }
