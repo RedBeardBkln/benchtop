@@ -101,6 +101,8 @@ export async function POST(req: NextRequest) {
       const parts: string[] = []
       const activity: string[] = []
       const logActivity = (label: string) => {
+        // Web search runs from code the model writes, which can repeat the same query; list it once
+        if (activity.includes(label)) return
         activity.push(label)
         send({ type: 'activity', label })
       }
