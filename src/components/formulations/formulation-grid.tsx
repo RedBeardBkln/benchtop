@@ -13,6 +13,7 @@ import type { FormulationDetail, IngredientDetail, IngredientListRow, Nutrient, 
 import { categoryPath, onHandAlternatives } from '@/lib/ingredient-categories'
 import { calcNutrientContributions, calcNutrientProfile, dryBasisFactor, formatAmt, type NutrientContribution } from '@/lib/formulation-calc'
 import { toLossStep } from '@/lib/process-loss'
+import { flowForLines, resolveWithStages, stageIndex } from '@/lib/staged-additions'
 import { formatWeightG } from '@/lib/weight'
 import { CompanyLogo } from '@/components/company-logo'
 import { WeightInput } from '@/components/formulations/weight-input'
@@ -23,7 +24,7 @@ import {
 } from '@/lib/weight-units'
 import { PctInput } from '@/components/formulations/pct-input'
 import { LockToggle } from '@/components/formulations/lock-toggle'
-import { resolveLines, type Anchor } from '@/lib/formula-lock'
+import type { Anchor } from '@/lib/formula-lock'
 import { PCT_DECIMALS_MIN, PCT_DECIMALS_MAX, readPctDecimals, writePctDecimals } from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtBasis, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import { withUnit } from '@/lib/units'
@@ -169,8 +170,9 @@ type LineState = {
   densityGPerMl: number | null   // the ingredient's, for volume units
   moisturePct: number | null     // the ingredient's, for dry-basis targets
   locked: boolean          // quantity lock: keeps its grams
-  pctLocked: boolean       // %-lock: always `lockedPct` % of the batch
+  pctLocked: boolean       // %-lock: always `lockedPct` % of the batch (of the mass after its step, when staged)
   lockedPct: number | null
+  addedAfterStepId: string | null  // process step it's added after; null = the starting blend
   // Usage limits Solve must keep to (null = no limit)
   minPct: number | null
   maxPct: number | null
@@ -473,7 +475,9 @@ export function FormulationGrid({ id }: { id: string }) {
         moisturePct: numOrNull(l.ingredientMoisturePct),
         locked: l.locked,
         pctLocked: l.pctLocked,
-        lockedPct: l.pctLocked ? parseFloat(l.pct) : null,
+        // A staged line's locked % is of the mass after its step, kept in stage_pct (pct is always of the batch)
+        lockedPct: l.pctLocked ? parseFloat(l.addedAfterStepId && l.stagePct != null ? l.stagePct : l.pct) : null,
+        addedAfterStepId: l.addedAfterStepId,
         minPct: l.minPct != null ? parseFloat(l.minPct) : null,
         maxPct: l.maxPct != null ? parseFloat(l.maxPct) : null,
         nutrients: l.nutrients.map(n => ({
@@ -499,27 +503,84 @@ export function FormulationGrid({ id }: { id: string }) {
   // Derived values
   const totalWeightG = useMemo(() => lines.reduce((s, l) => s + (l.weightG || 0), 0), [lines])
 
-  // Why the current locks can't all be honored (null when they can, or when nothing is locked)
-  const lockProblem = useMemo(() => {
-    if (!batchLocked && !lines.some(l => l.pctLocked)) return null
-    return resolveLines({ lines, batchLocked, batchG: batchTargetG }).problem
-  }, [lines, batchLocked, batchTargetG])
-
   // Saved process steps drive yield: each step's loss shifts the finished weight and/or profile
   const processSteps = useMemo(() => data?.processSteps ?? [], [data?.processSteps])
+  const lossSteps = useMemo(() => processSteps.map(toLossStep), [processSteps])
+  const isStaged = (l: Pick<LineState, 'addedAfterStepId'>) => stageIndex(l.addedAfterStepId, lossSteps) >= 0
+
+  // Why the current locks can't all be honored (null when they can, or when nothing is locked)
+  const lockProblem = useMemo(() => {
+    if (!batchLocked && !lines.some(l => l.pctLocked || stageIndex(l.addedAfterStepId, lossSteps) >= 0)) return null
+    return resolveWithStages({ lines, steps: lossSteps, batchLocked, batchG: batchTargetG }).problem
+  }, [lines, lossSteps, batchLocked, batchTargetG])
+
+  // The batch run through the steps: the weight leaving each step is what a staged line's % is of
+  const processFlow = useMemo(() => flowForLines(lines, lossSteps), [lines, lossSteps])
+
+  /** Weight leaving the step a staged line is added after (null for the starting blend) */
+  function stageMassG(l: Pick<LineState, 'addedAfterStepId'>): number | null {
+    const i = stageIndex(l.addedAfterStepId, lossSteps)
+    return i >= 0 ? processFlow.massAfterStepG[i] : null
+  }
+
+  // Process steps save straight away, so staged lines follow them here: a removed step's lines go back to the
+  // starting blend at their grams, and a %-locked staged line is recalculated from the new mass after its step.
+  const stepsSeenRef = useRef<typeof lossSteps | null>(null)
+  useEffect(() => {
+    if (!initDoneRef.current) return
+    const first = stepsSeenRef.current === null
+    if (stepsSeenRef.current === lossSteps) return
+    stepsSeenRef.current = lossSteps
+    if (first) return
+
+    const known = new Set(lossSteps.map(s => s.id))
+    const total = lines.reduce((s, l) => s + l.weightG, 0)
+    const orphaned = lines.some(l => l.addedAfterStepId && !known.has(l.addedAfterStepId))
+    const next = lines.map(l => (l.addedAfterStepId && !known.has(l.addedAfterStepId)
+      ? {
+          ...l,
+          addedAfterStepId: null,
+          lockedPct: l.pctLocked && total > 0 ? Math.round((l.weightG / total) * 100 * 1e4) / 1e4 : l.lockedPct,
+        }
+      : l))
+    if (!orphaned && !next.some(isStaged)) return
+
+    const res = resolveWithStages({ lines: next, steps: lossSteps, batchLocked, batchG: batchTargetG })
+    const resolved = res.problem ? next : next.map(l => ({ ...l, weightG: res.weights[l.key] ?? l.weightG }))
+    if (!orphaned && resolved.every((l, i) => Math.abs(l.weightG - next[i].weightG) < 1e-9)) return
+    setLines(resolved)
+    markDirty()
+    toast.info('Ingredients added after a process step were updated to match the steps. Save to keep the change.', { id: 'stage-sync' })
+  }, [lossSteps]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // For the process steps panel: the weight leaving each step, and what goes in after it
+  const stageSummary = useMemo(() => Object.fromEntries(lossSteps.map((s, i) => [s.id!, {
+    massAfterG: processFlow.massAfterStepG[i],
+    added: lines
+      .filter(l => l.addedAfterStepId === s.id)
+      .map(l => ({
+        name: l.ingredientName,
+        weightG: l.weightG,
+        pct: processFlow.massAfterStepG[i] > 0 ? (l.weightG / processFlow.massAfterStepG[i]) * 100 : 0,
+        pctLocked: l.pctLocked,
+      })),
+  }])), [lossSteps, lines, processFlow])
 
   const calcResult = useMemo(() => {
     if (!allNutrients || lines.length === 0) return null
     return calcNutrientProfile({
-      lines: lines.map(l => ({ ingredientId: l.ingredientId, weightG: l.weightG, nutrients: l.nutrients, moisturePct: l.moisturePct })),
+      lines: lines.map(l => ({
+        ingredientId: l.ingredientId, weightG: l.weightG, nutrients: l.nutrients, moisturePct: l.moisturePct,
+        addedAfterStepId: l.addedAfterStepId,
+      })),
       allNutrients: allNutrients.map(n => ({
         id: n.id, name: n.name, unit: n.unit, category: n.category,
         dailyValueAmount: n.dailyValueAmount != null ? Number(n.dailyValueAmount) : null,
       })),
       servingSizeG: servingSizeG ? parseFloat(servingSizeG) : undefined,
-      steps: processSteps.map(toLossStep),
+      steps: lossSteps,
     })
-  }, [lines, allNutrients, servingSizeG, processSteps])
+  }, [lines, allNutrients, servingSizeG, lossSteps])
 
   // Grid nutrient columns
   const gridNutrients = useMemo(() => {
@@ -812,6 +873,7 @@ export function FormulationGrid({ id }: { id: string }) {
             pctLocked: l.pctLocked,
             weightUnit: l.weightUnit,
             lockedPct: l.pctLocked ? l.lockedPct : null,
+            addedAfterStepId: isStaged(l) ? l.addedAfterStepId : null,
             minPct: l.minPct,
             maxPct: l.maxPct,
           })),
@@ -885,11 +947,11 @@ export function FormulationGrid({ id }: { id: string }) {
   function applyLines(next: LineState[], anchor?: Anchor, batch?: { locked: boolean; g: number | null }) {
     const bl = batch ? batch.locked : batchLocked
     const bg = batch ? batch.g : batchTargetG
-    if (!bl && !next.some(l => l.pctLocked) && anchor?.kind !== 'pct') {
+    if (!bl && !next.some(l => l.pctLocked || isStaged(l)) && anchor?.kind !== 'pct') {
       setLines(next)
       return
     }
-    const res = resolveLines({ lines: next, batchLocked: bl, batchG: bg, anchor })
+    const res = resolveWithStages({ lines: next, steps: lossSteps, batchLocked: bl, batchG: bg, anchor })
     setLines(next.map(l => ({ ...l, weightG: res.weights[l.key] ?? l.weightG })))
     if (res.clamped) {
       toast.info('The batch size is locked, so that value was adjusted to fit the other locked values', { id: 'lock-clamped' })
@@ -932,7 +994,28 @@ export function FormulationGrid({ id }: { id: string }) {
     applyLines(lines.map(l => {
       if (l.key !== key) return l
       if (l.pctLocked) return { ...l, pctLocked: false, lockedPct: null }
-      return { ...l, pctLocked: true, locked: false, lockedPct: Math.round((l.weightG / totalWeightG) * 100 * 1e4) / 1e4 }
+      return { ...l, pctLocked: true, locked: false, lockedPct: pctOfBasis(l, l.weightG) }
+    }))
+    markDirty()
+  }
+
+  /** A line's grams as a usage % of what it's measured against: the batch, or the mass after its step */
+  function pctOfBasis(l: Pick<LineState, 'addedAfterStepId'>, weightG: number): number {
+    const basis = stageMassG(l) ?? totalWeightG
+    return basis > 0 ? Math.round((weightG / basis) * 100 * 1e4) / 1e4 : 0
+  }
+
+  // Moving a line into or out of a step keeps its grams; a locked % is re-expressed against the new basis
+  function setLineStage(key: string, stepId: string | null) {
+    const line = lines.find(l => l.key === key)
+    if (!line) return
+    const next = lines.map(l => (l.key === key ? { ...l, addedAfterStepId: stepId } : l))
+    const i = stageIndex(stepId, lossSteps)
+    // Measured with the line already moved: it no longer counts in the mass leaving its new step
+    const basis = i >= 0 ? flowForLines(next, lossSteps).massAfterStepG[i] : totalWeightG
+    applyLines(next.map(l => l.key !== key ? l : {
+      ...l,
+      lockedPct: l.pctLocked ? (basis > 0 ? Math.round((line.weightG / basis) * 100 * 1e4) / 1e4 : 0) : null,
     }))
     markDirty()
   }
@@ -992,6 +1075,7 @@ export function FormulationGrid({ id }: { id: string }) {
       locked: false,
       pctLocked: false,
       lockedPct: null,
+      addedAfterStepId: null,
       minPct: null,
       maxPct: null,
       nutrients: ing.nutrients,
@@ -1672,7 +1756,10 @@ export function FormulationGrid({ id }: { id: string }) {
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
             {lines.map((line) => {
-              const linePct = totalWeightG > 0 ? (line.weightG / totalWeightG) * 100 : 0
+              const stageStepIdx = stageIndex(line.addedAfterStepId, lossSteps)
+              const stageMass = stageStepIdx >= 0 ? processFlow.massAfterStepG[stageStepIdx] : null
+              const pctBasis = stageMass ?? totalWeightG
+              const linePct = pctBasis > 0 ? (line.weightG / pctBasis) * 100 : 0
               const lineUnit = effectiveUnit(line.weightUnit, columnUnit, line.densityGPerMl)
               // The column is in a volume unit but this ingredient has no density, so it stays in grams
               const columnFallback = !line.weightUnit && isVolumeUnit(columnUnit) && !line.densityGPerMl
@@ -1735,6 +1822,27 @@ export function FormulationGrid({ id }: { id: string }) {
                         </button>
                       )
                     })()}
+                    {processSteps.length > 0 && (isStaged(line) || !isLocked) && (
+                      <select
+                        value={isStaged(line) ? line.addedAfterStepId! : ''}
+                        onChange={e => setLineStage(line.key, e.target.value || null)}
+                        disabled={isLocked}
+                        aria-label={`When ${line.ingredientName} is added`}
+                        data-tip="When this ingredient goes in. Added after a process step, only the later steps’ losses apply to it, and its usage % is of the batch weight leaving that step."
+                        className={`mt-0.5 block max-w-xs truncate text-[11px] bg-transparent border border-transparent hover:border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-100 print:hidden ${
+                          isStaged(line)
+                            ? 'text-indigo-700 font-medium'
+                            : 'text-gray-400 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100'
+                        }`}
+                      >
+                        <option value="">In the starting blend</option>
+                        {processSteps.map((s, i) => (
+                          <option key={s.id} value={s.id}>
+                            Added after step {i + 1}: {s.instruction.length > 40 ? `${s.instruction.slice(0, 40).trimEnd()}…` : s.instruction}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -1781,17 +1889,33 @@ export function FormulationGrid({ id }: { id: string }) {
                         decimals={pctDecimals}
                         onChange={p => updatePct(line.key, p)}
                         disabled={isLocked || line.locked}
-                        tip={line.locked ? 'Set by the locked weight. Unlock the weight to edit.' : undefined}
+                        tip={line.locked
+                          ? 'Set by the locked weight. Unlock the weight to edit.'
+                          : stageMass != null
+                            ? `% of the ${formatGramsIn(stageMass, columnUnit)} batch leaving step ${stageStepIdx + 1}, not of the total input`
+                            : undefined}
                       />
                       <LockToggle
                         active={line.pctLocked}
                         disabled={isLocked}
                         onClick={() => togglePctLock(line.key)}
-                        lockedTitle="Usage % locked: this ingredient always stays this share of the batch. Click to unlock."
-                        unlockedTitle="Lock the usage %, so this ingredient always stays the same share of the batch"
+                        lockedTitle={stageMass != null
+                          ? `Usage % locked: always this share of what leaves step ${stageStepIdx + 1}, so it follows that step’s loss. Click to unlock.`
+                          : 'Usage % locked: this ingredient always stays this share of the batch. Click to unlock.'}
+                        unlockedTitle={stageMass != null
+                          ? `Lock the usage %, so this ingredient is always this share of what leaves step ${stageStepIdx + 1}`
+                          : 'Lock the usage %, so this ingredient always stays the same share of the batch'}
                         disabledTip={lockedReason}
                       />
                     </div>
+                    {stageMass != null && (
+                      <div
+                        className="mt-0.5 text-[10px] leading-tight text-indigo-600 whitespace-nowrap"
+                        data-tip="The usage % above is of the batch weight leaving that step. This is the same ingredient as a share of everything weighed in."
+                      >
+                        of step {stageStepIdx + 1} · {(totalWeightG > 0 ? (line.weightG / totalWeightG) * 100 : 0).toFixed(pctDecimals)}% of input
+                      </div>
+                    )}
                   </td>
                   {gridNutrients.map(n => {
                     const contrib = getNutrientContrib(line, n.id)
@@ -1925,6 +2049,8 @@ export function FormulationGrid({ id }: { id: string }) {
         <ProcessStepsPanel
           formulationId={id}
           steps={data.processSteps ?? []}
+          stages={stageSummary}
+          formatWeight={g => formatGramsIn(g, columnUnit)}
           isLocked={isLocked}
           canEditLibrary={data.canEditLibrary ?? false}
         />
@@ -2396,7 +2522,7 @@ export function FormulationGrid({ id }: { id: string }) {
           formulationId={id}
           onApply={(newLines) => {
             setLines(newLines.map(l => ({
-              ...l, pctLocked: false, lockedPct: null, minPct: null, maxPct: null,
+              ...l, pctLocked: false, lockedPct: null, addedAfterStepId: null, minPct: null, maxPct: null,
               weightUnit: null, densityGPerMl: numOrNull(libraryById.get(l.ingredientId)?.densityGPerMl),
               moisturePct: numOrNull(libraryById.get(l.ingredientId)?.moisturePct),
             })))
@@ -2422,7 +2548,8 @@ export function FormulationGrid({ id }: { id: string }) {
           rows={[...lines].sort((a, b) => a.position - b.position).map(l => ({
             key: l.key,
             name: l.ingredientName,
-            locked: l.locked || l.pctLocked,
+            // Solve keeps a staged line's grams as they are
+            locked: l.locked || l.pctLocked || isStaged(l),
             minPct: l.minPct,
             maxPct: l.maxPct,
           }))}

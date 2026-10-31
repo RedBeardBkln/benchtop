@@ -1,0 +1,3 @@
+ALTER TABLE "formulation_lines" ADD COLUMN "added_after_step_id" uuid;--> statement-breakpoint
+ALTER TABLE "formulation_lines" ADD COLUMN "stage_pct" numeric(8, 5);--> statement-breakpoint
+ALTER TABLE "formulation_lines" ADD CONSTRAINT "formulation_lines_added_after_step_id_process_steps_id_fk" FOREIGN KEY ("added_after_step_id") REFERENCES "public"."process_steps"("id") ON DELETE set null ON UPDATE no action;

@@ -1,6 +1,7 @@
 // Pure calculation functions — no side effects, fully testable
 
-import { computeProcessYield, type LossStep, type ProcessYield } from '@/lib/process-loss'
+import type { LossStep, ProcessFlow } from '@/lib/process-loss'
+import { flowForLines, stageIndex } from '@/lib/staged-additions'
 
 export type CalcLine = {
   ingredientId: string
@@ -8,6 +9,8 @@ export type CalcLine = {
   nutrients: Array<{ nutrientId: string; amountPer100g: number }>
   /** The ingredient's water, % of its weight; needed for dry-basis values */
   moisturePct?: number | null
+  /** Process step this line is added after (see lib/staged-additions.ts); null = the starting blend */
+  addedAfterStepId?: string | null
 }
 
 export type CalcNutrient = {
@@ -43,9 +46,10 @@ export type NutrientResult = {
  *   total_n in batch            = Σ contributions
  *   per 100g finished           = total_n / (totalWeightG × concentrationYield) × 100
  *
- * Yield comes from the per-step losses (see computeProcessYield): production loss
+ * Yield comes from the per-step losses (see simulateProcess): production loss
  * lowers the finished weight without changing the profile, moisture loss
- * concentrates it.
+ * concentrates it. A line added after a step only goes through the steps after it,
+ * so its contribution is scaled by its stage factor (see `stageFactors`).
  */
 export function calcNutrientProfile(opts: {
   lines: CalcLine[]
@@ -56,18 +60,28 @@ export function calcNutrientProfile(opts: {
   const { lines, allNutrients, servingSizeG, steps = [] } = opts
 
   const totalWeightG = lines.reduce((s, l) => s + l.weightG, 0)
-  const processYield = computeProcessYield(totalWeightG, steps)
+
+  const processYield = flowForLines(lines, steps)
   const { finishedWeightG } = processYield
-  // Weight the batch's nutrients are spread over once moisture has left
-  const concentrationWeightG = totalWeightG * (processYield.concentrationYieldPct / 100)
+
+  // Production loss takes a share of whatever is in the batch at that step. Relative to the starting blend,
+  // an ingredient added later keeps more of itself: that ratio is its stage factor (1 with no staging).
+  const keptRef = processYield.keptFromStart > 0 ? processYield.keptFromStart : 1
+  const stageFactors: Record<string, number> = {}
+  steps.forEach((s, i) => { if (s.id) stageFactors[s.id] = processYield.keptAfterStep[i] / keptRef })
+  const factorOf = (l: CalcLine) => (stageIndex(l.addedAfterStepId, steps) >= 0 ? stageFactors[l.addedAfterStepId!] : 1)
+
+  // Weight the batch's nutrients (as weighed in the starting blend) are spread over once moisture has left
+  const concentrationWeightG = processYield.keptFromStart > 0 ? finishedWeightG / keptRef : totalWeightG
 
   // Accumulate absolute amounts contributed by each line
   const totals = new Map<string, number>()
   for (const line of lines) {
     if (line.weightG <= 0) continue
+    const factor = factorOf(line)
     for (const n of line.nutrients) {
       if (n.amountPer100g == null) continue
-      const contrib = n.amountPer100g * (line.weightG / 100)
+      const contrib = n.amountPer100g * (line.weightG / 100) * factor
       totals.set(n.nutrientId, (totals.get(n.nutrientId) ?? 0) + contrib)
     }
   }
@@ -96,9 +110,9 @@ export function calcNutrientProfile(opts: {
   const missingMoistureIds = lines.filter(l => l.weightG > 0 && l.moisturePct == null).map(l => l.ingredientId)
   const dryMatterG = missingMoistureIds.length > 0
     ? null
-    : lines.reduce((s, l) => s + (l.weightG > 0 ? l.weightG * (1 - Math.min(100, Math.max(0, l.moisturePct ?? 0)) / 100) : 0), 0)
+    : lines.reduce((s, l) => s + (l.weightG > 0 ? l.weightG * factorOf(l) * (1 - Math.min(100, Math.max(0, l.moisturePct ?? 0)) / 100) : 0), 0)
 
-  return { results, totalWeightG, finishedWeightG, concentrationWeightG, processYield, dryMatterG, missingMoistureIds }
+  return { results, totalWeightG, finishedWeightG, concentrationWeightG, processYield, stageFactors, dryMatterG, missingMoistureIds }
 }
 
 /**
@@ -115,7 +129,12 @@ export type CalcResult = {
   finishedWeightG: number
   /** Weight the batch's nutrients are spread over once moisture has left (the per-100 g basis) */
   concentrationWeightG: number
-  processYield: ProcessYield
+  processYield: ProcessFlow
+  /**
+   * By step id: how much of a line added after that step reaches the finished product, relative to the
+   * starting blend (1 with no production loss after it). Pass to calcNutrientContributions.
+   */
+  stageFactors: Record<string, number>
   /** Grams of dry matter in the batch, or null when an ingredient's moisture % is unknown */
   dryMatterG: number | null
   /** Ingredients in the batch without a moisture % */
@@ -124,7 +143,7 @@ export type CalcResult = {
 
 export type NutrientContribution<L> = {
   line: L
-  /** Absolute amount this line puts into the batch */
+  /** Amount this line puts into the batch (scaled by its stage factor when added after a step) */
   inBatch: number
   /** This line's part of the nutrient's per-100 g finished value (the parts sum to the total) */
   perFinished100g: number
@@ -140,12 +159,14 @@ export function calcNutrientContributions<L extends CalcLine>(
   lines: L[],
   nutrientId: string,
   concentrationWeightG: number,
+  stageFactors: Record<string, number> = {},
 ): NutrientContribution<L>[] {
   const amounts = lines.flatMap(line => {
     if (line.weightG <= 0) return []
     const n = line.nutrients.find(n => n.nutrientId === nutrientId)
     if (!n || n.amountPer100g == null) return []
-    const inBatch = n.amountPer100g * (line.weightG / 100)
+    const factor = line.addedAfterStepId ? stageFactors[line.addedAfterStepId] ?? 1 : 1
+    const inBatch = n.amountPer100g * (line.weightG / 100) * factor
     return inBatch > 0 ? [{ line, inBatch }] : []
   })
   const total = amounts.reduce((s, a) => s + a.inBatch, 0)
@@ -182,7 +203,7 @@ export function buildContributionReport<L extends CalcLine>(
 ): ContributionReportNutrient<L>[] {
   const perServing = servingSizeG != null && servingSizeG > 0
   return result.results.map(nutrient => {
-    const contributions = calcNutrientContributions(lines, nutrient.nutrientId, result.concentrationWeightG)
+    const contributions = calcNutrientContributions(lines, nutrient.nutrientId, result.concentrationWeightG, result.stageFactors)
       .map(c => ({ ...c, perServing: perServing ? (c.perFinished100g * servingSizeG) / 100 : undefined }))
     return { nutrient, contributions, noneCount: lines.length - contributions.length }
   })

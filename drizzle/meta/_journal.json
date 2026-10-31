@@ -232,6 +232,13 @@
       "when": 1793462278668,
       "tag": "0032_invoicing_connection",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793474343000,
+      "tag": "0033_staged_additions",
+      "breakpoints": true
     }
   ]
 }

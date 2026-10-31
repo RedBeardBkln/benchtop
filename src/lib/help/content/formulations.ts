@@ -324,6 +324,19 @@ export const formulations: HelpSection = {
           type: 'p',
           text: '**Example:** a 1,000 g batch. Step 1 has a 2% production loss, leaving 980 g. Step 2 has a 100 g moisture loss, leaving 880 g. **Yield** = 880 ÷ 1,000 = **88%**, and nutrition per 100 g is about 11% higher than the raw mix (980 ÷ 880).',
         },
+        { type: 'h', text: 'Ingredients added after a step' },
+        {
+          type: 'p',
+          text: 'Some ingredients go in part-way through, after a step has already taken weight out. Under the ingredient’s name on the formula grid, change **In the starting blend** to **Added after step N**. Only the losses of the steps after N apply to it. Its **%** is then a share of the batch weight **leaving step N**, not of everything you weighed in. Lock the % and its grams follow that weight whenever the batch or a loss changes. The small line under the % shows the same ingredient as a share of the total input.',
+        },
+        {
+          type: 'p',
+          text: '**Example:** 1,575 g milk and 25 g sugar are blended, pasteurized, fermented and homogenized, then centrifuged with a 60% moisture loss, leaving 640 g. The flavoring is **Added after step 5** with its % locked at **0.10%**, so it’s 0.64 g: 0.10% of the 640 g, not of the 1,600 g you started with. Each step in **Process steps** shows the weight leaving it and what goes in next.',
+        },
+        {
+          type: 'tip',
+          text: 'A locked **Batch (g)** still counts everything, the late additions included. **Solve** keeps an added-after ingredient’s grams as they are. If you delete its step, the ingredient goes back into the starting blend at the same grams.',
+        },
         { type: 'h', text: 'Recording measurements at the bench' },
         {
           type: 'p',
@@ -744,6 +757,10 @@ export const formulations: HelpSection = {
     {
       q: 'Is a “% of batch” loss based on the starting batch?',
       a: 'No, it’s based on the weight going into that step, after any earlier losses.',
+    },
+    {
+      q: 'How do I set an ingredient’s % against the batch after a step, not against the starting weight?',
+      a: 'Under its name on the formula grid, choose **Added after step N**, then type its % and lock it. The % is then of the batch weight leaving that step. See [Process steps, losses and yield](#process-steps).',
     },
     {
       q: 'Why does my nutrition look too low?',

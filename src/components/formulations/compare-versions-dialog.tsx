@@ -29,6 +29,7 @@ function profile(f: FormulationDetail | undefined, allNutrients: Nutrient[]): Ca
     lines: f.lines.map(l => ({
       ingredientId: l.ingredientId,
       weightG: parseFloat(l.weightG),
+      addedAfterStepId: l.addedAfterStepId,
       nutrients: l.nutrients.map(n => ({ ...n, amountPer100g: parseFloat(n.amountPer100g) })),
     })),
     allNutrients: allNutrients.map(n => ({

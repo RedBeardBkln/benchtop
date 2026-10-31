@@ -69,6 +69,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     .select({
       ingredientId: formulationLines.ingredientId,
       weightG: formulationLines.weightG,
+      addedAfterStepId: formulationLines.addedAfterStepId,
       ingredientName: ingredients.name,
       labelName: ingredients.labelName,
       verification: ingredients.verification,
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     })),
     allergens: (allergensBy.get(l.ingredientId) ?? []).map(a => a.allergen),
     subIngredients: (subsBy.get(l.ingredientId) ?? []).map(s => s.name),
+    addedAfterStepId: l.addedAfterStepId,
   }))
 
   const derived = deriveIngredientFromFormulation({

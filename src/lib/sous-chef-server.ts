@@ -7,6 +7,7 @@ import {
   ingredients, nutrients, processSteps, projects, sousChefConversations, sousChefMessages, sousChefNotes, subIngredients,
 } from '@/lib/db/schema'
 import { calcNutrientProfile } from '@/lib/formulation-calc'
+import { stageIndex } from '@/lib/staged-additions'
 import { categoryPath } from '@/lib/ingredient-categories'
 import { getIngredientCosts } from '@/lib/costing-server'
 import { getOwnedFormulation, getOwnedProject, visibleProjectIds, visibleProjects, type TenantScope } from '@/lib/tenancy'
@@ -279,6 +280,7 @@ const TOOLS = [
           ingredientId: formulationLines.ingredientId, name: ingredients.name, onHand: ingredients.onHand,
           moisturePct: ingredients.moisturePct, weightG: formulationLines.weightG, pct: formulationLines.pct,
           minPct: formulationLines.minPct, maxPct: formulationLines.maxPct,
+          addedAfterStepId: formulationLines.addedAfterStepId, stagePct: formulationLines.stagePct,
         })
         .from(formulationLines)
         .innerJoin(ingredients, eq(formulationLines.ingredientId, ingredients.id))
@@ -292,7 +294,7 @@ const TOOLS = [
           : Promise.resolve([]),
         db.select({ id: nutrients.id, name: nutrients.name, unit: nutrients.unit, category: nutrients.category, dailyValueAmount: nutrients.dailyValueAmount })
           .from(nutrients).orderBy(nutrients.displayOrder),
-        db.select({ stepNo: processSteps.stepNo, instruction: processSteps.instruction, params: processSteps.params, lossType: processSteps.lossType, lossAmount: processSteps.lossAmount, lossUnit: processSteps.lossUnit })
+        db.select({ id: processSteps.id, stepNo: processSteps.stepNo, instruction: processSteps.instruction, params: processSteps.params, lossType: processSteps.lossType, lossAmount: processSteps.lossAmount, lossUnit: processSteps.lossUnit })
           .from(processSteps).where(eq(processSteps.formulationId, f.id)).orderBy(processSteps.stepNo),
         db.select({ nutrient: nutrients.name, label: formulationTargets.label, comparator: formulationTargets.comparator, value: formulationTargets.value, valueMax: formulationTargets.valueMax, unit: formulationTargets.unit, basis: formulationTargets.basis })
           .from(formulationTargets).leftJoin(nutrients, eq(formulationTargets.nutrientId, nutrients.id))
@@ -305,11 +307,12 @@ const TOOLS = [
           ingredientId: l.ingredientId,
           weightG: Number(l.weightG),
           moisturePct: num(l.moisturePct),
+          addedAfterStepId: l.addedAfterStepId,
           nutrients: nutrientRows.filter(n => n.ingredientId === l.ingredientId).map(n => ({ nutrientId: n.nutrientId, amountPer100g: Number(n.amountPer100g) })),
         })),
         allNutrients: allNutrients.map(n => ({ ...n, dailyValueAmount: num(n.dailyValueAmount) })),
         servingSizeG,
-        steps: steps.map(s => ({ lossType: s.lossType, lossAmount: num(s.lossAmount), lossUnit: s.lossUnit })),
+        steps: steps.map(s => ({ id: s.id, lossType: s.lossType, lossAmount: num(s.lossAmount), lossUnit: s.lossUnit })),
       })
       return {
         id: f.id, name: f.name, version: f.version, status: f.status, projectId: f.projectId, project: project?.name,
@@ -318,6 +321,11 @@ const TOOLS = [
         lines: lines.map(l => ({
           ingredientId: l.ingredientId, ingredient: l.name, onHand: l.onHand,
           grams: round(Number(l.weightG)), pct: round(Number(l.pct)),
+          // Added after a process step instead of in the starting blend; stagePct = locked % of the batch leaving it
+          ...(() => {
+            const i = stageIndex(l.addedAfterStepId, steps)
+            return i < 0 ? {} : { addedAfterStep: i + 1, stagePct: num(l.stagePct) }
+          })(),
           solverBounds: l.minPct != null || l.maxPct != null ? { minPct: num(l.minPct), maxPct: num(l.maxPct) } : undefined,
           costPerKg: costs[l.ingredientId]?.cost?.perKg ?? null,
         })),

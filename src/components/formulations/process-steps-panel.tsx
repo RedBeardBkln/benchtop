@@ -156,14 +156,30 @@ async function jsonOrThrow(r: Response) {
   return body
 }
 
+/** What happens to the batch at one step, from the formula grid (see lib/staged-additions.ts) */
+export type StepStage = {
+  /** Batch weight leaving the step, after its loss */
+  massAfterG: number
+  /** Ingredients added after the step; pct is of massAfterG */
+  added: Array<{ name: string; weightG: number; pct: number; pctLocked: boolean }>
+}
+
+// Enough places for a small usage % like 0.10% without trailing noise
+const formatPct = (pct: number) => Number(pct.toFixed(pct < 1 ? 3 : 2)).toString()
+
 export function ProcessStepsPanel({
   formulationId,
   steps,
+  stages,
+  formatWeight = g => `${Number(g.toFixed(1))} g`,
   isLocked,
   canEditLibrary,
 }: {
   formulationId: string
   steps: ProcessStepDetail[]
+  /** By step id; shown under each step once any step has a loss or an ingredient added after it */
+  stages?: Record<string, StepStage>
+  formatWeight?: (g: number) => string
   isLocked: boolean
   /** The equipment list belongs to the library, so renaming or removing needs library edit access */
   canEditLibrary: boolean
@@ -195,6 +211,8 @@ export function ProcessStepsPanel({
     queryFn: () => fetch('/api/equipment').then(jsonOrThrow),
     staleTime: 0,
   })
+
+  const showFlow = steps.some(s => s.lossType) || Object.values(stages ?? {}).some(s => s.added.length > 0)
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['formulation', formulationId] })
@@ -439,6 +457,22 @@ export function ProcessStepsPanel({
                             />
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {showFlow && stages?.[step.id] && (
+                      <div className="px-2 text-[11px] text-gray-500">
+                        <Term tip="The batch weight once this step’s loss is applied, from the formula’s current amounts (unsaved changes included).">
+                          {formatWeight(stages[step.id].massAfterG)} leaves this step
+                        </Term>
+                        {stages[step.id].added.length > 0 && (
+                          <span className="text-indigo-700">
+                            {' · then add '}
+                            {stages[step.id].added.map(a => (
+                              `${a.name} ${formatPct(a.pct)}% (${formatWeight(a.weightG)})${a.pctLocked ? '' : ', fixed amount'}`
+                            )).join(', ')}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

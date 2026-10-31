@@ -55,6 +55,29 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
       })
       .returning()
 
+    // Steps first: lines added after a step point at the copy's step
+    const sourceSteps = await tx
+      .select()
+      .from(processSteps)
+      .where(eq(processSteps.formulationId, source.id))
+
+    const newStepId = new Map(sourceSteps.map(s => [s.id, crypto.randomUUID()]))
+    if (sourceSteps.length > 0) {
+      await tx.insert(processSteps).values(
+        sourceSteps.map(s => ({
+          id: newStepId.get(s.id)!,
+          formulationId: created.id,
+          stepNo: s.stepNo,
+          instruction: s.instruction,
+          params: s.params,
+          lossType: s.lossType,
+          lossAmount: s.lossAmount,
+          lossUnit: s.lossUnit,
+          equipmentId: s.equipmentId,
+        }))
+      )
+    }
+
     const sourceLines = await tx
       .select()
       .from(formulationLines)
@@ -73,26 +96,8 @@ export async function duplicateFormulation(source: Formulation, target: Target) 
           locked: l.locked,
           pctLocked: l.pctLocked,
           weightUnit: l.weightUnit,
-        }))
-      )
-    }
-
-    const sourceSteps = await tx
-      .select()
-      .from(processSteps)
-      .where(eq(processSteps.formulationId, source.id))
-
-    if (sourceSteps.length > 0) {
-      await tx.insert(processSteps).values(
-        sourceSteps.map(s => ({
-          formulationId: created.id,
-          stepNo: s.stepNo,
-          instruction: s.instruction,
-          params: s.params,
-          lossType: s.lossType,
-          lossAmount: s.lossAmount,
-          lossUnit: s.lossUnit,
-          equipmentId: s.equipmentId,
+          addedAfterStepId: l.addedAfterStepId ? newStepId.get(l.addedAfterStepId) ?? null : null,
+          stagePct: l.addedAfterStepId && newStepId.has(l.addedAfterStepId) ? l.stagePct : null,
         }))
       )
     }

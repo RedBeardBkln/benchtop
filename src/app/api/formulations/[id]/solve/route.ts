@@ -46,6 +46,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       moisturePct: ingredients.moisturePct,
       locked: formulationLines.locked,
       pctLocked: formulationLines.pctLocked,
+      addedAfterStepId: formulationLines.addedAfterStepId,
       minPct: formulationLines.minPct,
       maxPct: formulationLines.maxPct,
       position: formulationLines.position,
@@ -73,8 +74,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       key: line.ingredientId,
       ingredientName: line.ingredientId,
       weightG: parseFloat(line.weightG ?? '0'),
-      // A %-locked line is as fixed for the solver as a quantity-locked one
-      locked: (line.locked || line.pctLocked) ?? false,
+      // A %-locked line is as fixed for the solver as a quantity-locked one, and so is one added after a
+      // process step (its grams follow the batch at that step, which the solver doesn't model)
+      locked: (line.locked || line.pctLocked || line.addedAfterStepId != null) ?? false,
       minPct: line.minPct != null ? parseFloat(line.minPct) : 0,
       maxPct: line.maxPct != null ? parseFloat(line.maxPct) : 100,
       moisturePct: line.moisturePct != null ? parseFloat(line.moisturePct) : null,

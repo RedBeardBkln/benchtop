@@ -14,6 +14,8 @@ export type SourceLine = {
   allergens: string[]
   /** The ingredient's own declared sub-ingredient list, in order (empty for simple ingredients). */
   subIngredients: string[]
+  /** Process step the line is added after (see lib/staged-additions.ts); null/absent = the starting blend */
+  addedAfterStepId?: string | null
 }
 
 export type DerivedIngredient = {
@@ -50,7 +52,7 @@ export function deriveIngredientFromFormulation(opts: {
   if (lines.length === 0) return null
 
   const calc = calcNutrientProfile({
-    lines: lines.map((l, i) => ({ ingredientId: String(i), weightG: l.weightG, nutrients: l.nutrients })),
+    lines: lines.map((l, i) => ({ ingredientId: String(i), weightG: l.weightG, nutrients: l.nutrients, addedAfterStepId: l.addedAfterStepId })),
     allNutrients: opts.allNutrients,
     steps: opts.steps,
   })

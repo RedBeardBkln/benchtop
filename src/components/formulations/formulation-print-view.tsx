@@ -8,7 +8,8 @@ import type { FormulationDetail, Nutrient, ProjectTarget } from '@/lib/types'
 import { buildContributionReport, calcNutrientProfile, dryBasisFactor, formatAmt } from '@/lib/formulation-calc'
 import { withUnit } from '@/lib/units'
 import { formatNoteDate, noteWasEdited, useFormulationNotes } from '@/components/formulations/formulation-notes'
-import { computeProcessYield, describeStepLoss, toLossStep } from '@/lib/process-loss'
+import { describeStepLoss, toLossStep } from '@/lib/process-loss'
+import { flowForLines, stageIndex } from '@/lib/staged-additions'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
 import { formatWeightG } from '@/lib/weight'
 import { PCT_DECIMALS_MIN, readPctDecimals } from '@/lib/pct-display'
@@ -100,7 +101,10 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const notes = data.notes?.trim() ?? ''
   const sortedSteps = [...data.processSteps].sort((a, b) => a.stepNo - b.stepNo)
   const lossSteps = sortedSteps.map(toLossStep)
-  const processYield = computeProcessYield(totalWeightG, lossSteps)
+  const processYield = flowForLines(
+    sortedLines.map(l => ({ weightG: parseFloat(l.weightG), addedAfterStepId: l.addedAfterStepId })),
+    lossSteps,
+  )
 
   // Same inputs as the editor's calcResult, built from the saved formulation
   const calcLines = sortedLines.map(l => ({
@@ -108,6 +112,7 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
     ingredientName: l.ingredientName,
     ingredientId: l.ingredientId,
     weightG: parseFloat(l.weightG),
+    addedAfterStepId: l.addedAfterStepId,
     nutrients: l.nutrients.map(n => ({
       nutrientId: n.nutrientId,
       amountPer100g: parseFloat(n.amountPer100g),
@@ -214,9 +219,20 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                 const weightG = parseFloat(line.weightG)
                 const density = line.ingredientDensityGPerMl != null ? parseFloat(line.ingredientDensityGPerMl) : null
                 const pct = totalWeightG > 0 ? (weightG / totalWeightG) * 100 : 0
+                const stage = stageIndex(line.addedAfterStepId, lossSteps)
                 return (
                   <tr key={line.id} className="border-b border-gray-200">
-                    <td className="py-1.5 pr-2 text-gray-900">{line.ingredientName}</td>
+                    <td className="py-1.5 pr-2 text-gray-900">
+                      {line.ingredientName}
+                      {stage >= 0 && (
+                        <span className="ml-1.5 text-xs text-gray-500">
+                          (added after step {stage + 1}
+                          {processYield.massAfterStepG[stage] > 0
+                            ? `, ${(weightG / processYield.massAfterStepG[stage] * 100).toFixed(Math.max(pctDecimals, 2))}% of the batch at that point`
+                            : ''})
+                        </span>
+                      )}
+                    </td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-gray-800 whitespace-nowrap">
                       {formatGramsIn(weightG, effectiveUnit(asUnit(line.weightUnit), columnUnit, density), density)}
                     </td>
@@ -260,6 +276,16 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                       <div className="flex-1">
                         <p>{step.instruction}</p>
                         {lossLabel && <p className="mt-0.5 text-xs text-gray-500">{lossLabel}</p>}
+                        {(() => {
+                          const added = sortedLines.filter(l => stageIndex(l.addedAfterStepId, lossSteps) === i)
+                          if (added.length === 0) return null
+                          return (
+                            <p className="mt-0.5 text-xs text-gray-700">
+                              {formatGramsIn(processYield.massAfterStepG[i], columnUnit)} leaves this step. Then add:{' '}
+                              {added.map(l => `${l.ingredientName} ${formatGramsIn(parseFloat(l.weightG), columnUnit)}`).join(', ')}
+                            </p>
+                          )
+                        })()}
                         {/* Always printed; empty boxes are for writing in measurements at the bench */}
                         <div className="mt-1.5 grid grid-cols-12 gap-x-2 gap-y-1.5">
                           {boxes.map(box => (

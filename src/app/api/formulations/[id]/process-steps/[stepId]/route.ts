@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { processSteps } from '@/lib/db/schema'
+import { formulationLines, processSteps } from '@/lib/db/schema'
 import { and, eq, gt, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { lossFields, lossFieldsError } from '@/lib/process-loss-fields'
@@ -83,6 +83,13 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   if (!loaded.ok) return loaded.res
 
   await db.transaction(async (tx) => {
+    // Lines added after this step go back to the starting blend at their grams (the FK clears the step);
+    // their stage % no longer has a step to be measured against. `pct` already holds their share of the batch.
+    await tx
+      .update(formulationLines)
+      .set({ stagePct: null })
+      .where(and(eq(formulationLines.formulationId, id), eq(formulationLines.addedAfterStepId, stepId)))
+
     const [deleted] = await tx
       .delete(processSteps)
       .where(and(eq(processSteps.id, stepId), eq(processSteps.formulationId, id)))

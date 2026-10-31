@@ -62,6 +62,8 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       locked: formulationLines.locked,
       pctLocked: formulationLines.pctLocked,
       weightUnit: formulationLines.weightUnit,
+      addedAfterStepId: formulationLines.addedAfterStepId,
+      stagePct: formulationLines.stagePct,
       minPct: formulationLines.minPct,
       maxPct: formulationLines.maxPct,
     })

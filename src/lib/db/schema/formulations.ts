@@ -1,6 +1,7 @@
 import {
   pgTable, uuid, text, integer, numeric, boolean,
   timestamp, jsonb, index, uniqueIndex, foreignKey,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 import { formulationModeEnum, formulationStatusEnum, targetBasisEnum } from './enums'
 import { projects } from './projects'
@@ -78,6 +79,12 @@ export const formulationLines = pgTable('formulation_lines', {
   pctLocked: boolean('pct_locked').notNull().default(false),
   // This line's own display unit, overriding the formulation's weight_unit; null = follow the column
   weightUnit: text('weight_unit'),
+  // Added to the batch after this process step's loss (so earlier losses don't apply to it); null = in the
+  // starting blend. Cleared if the step is removed, leaving the line in the starting blend at its grams.
+  addedAfterStepId: uuid('added_after_step_id').references((): AnyPgColumn => processSteps.id, { onDelete: 'set null' }),
+  // With pct_locked on a staged line: its usage % of the batch weight leaving that step. `pct` stays % of
+  // the total batch input either way (see lib/staged-additions.ts).
+  stagePct: numeric('stage_pct', { precision: 8, scale: 5 }),
 }, (t) => [
   index('formulation_lines_formulation_idx').on(t.formulationId),
   index('formulation_lines_ingredient_idx').on(t.ingredientId),

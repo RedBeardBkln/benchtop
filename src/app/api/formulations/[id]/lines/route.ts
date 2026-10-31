@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { formulationLines, formulations } from '@/lib/db/schema'
+import { formulationLines, formulations, processSteps } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { hasValidWeightPrecision } from '@/lib/weight'
@@ -18,7 +18,10 @@ const lineSchema = z.object({
   pctLocked: z.boolean().default(false),
   // The line's own display unit; null follows the formulation's column unit
   weightUnit: z.enum(WEIGHT_UNITS).nullable().optional(),
+  // For a line added after a process step, % of the batch weight leaving that step
   lockedPct: z.number().min(0).max(100).nullable().optional(),
+  // Process step of this formulation the line is added after; null = the starting blend
+  addedAfterStepId: z.string().uuid().nullable().optional(),
   minPct: z.number().min(0).max(100).nullable().optional(),
   maxPct: z.number().min(0).max(100).nullable().optional(),
 })
@@ -46,6 +49,17 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   }
   const totalWeightG = lines.reduce((s, l) => s + l.weightG, 0)
 
+  // Step ids come from the request body: each must be a step of this formulation
+  const stepIds = new Set(lines.flatMap(l => (l.addedAfterStepId ? [l.addedAfterStepId] : [])))
+  if (stepIds.size > 0) {
+    const own = await db
+      .select({ id: processSteps.id })
+      .from(processSteps)
+      .where(eq(processSteps.formulationId, id))
+    const ownIds = new Set(own.map(s => s.id))
+    if ([...stepIds].some(s => !ownIds.has(s))) return notFoundResponse('Process step not found')
+  }
+
   await db.transaction(async tx => {
     await tx.delete(formulationLines).where(eq(formulationLines.formulationId, id))
 
@@ -56,8 +70,9 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
           ingredientId: l.ingredientId,
           position: l.position,
           weightG: l.weightG.toString(),
-          // A %-locked line stores the exact locked value rather than a recomputed (rounded) one
-          pct: l.pctLocked && l.lockedPct != null
+          // A %-locked line stores the exact locked value rather than a recomputed (rounded) one; a staged
+          // line's locked value is of the mass after its step, so it goes in stage_pct instead
+          pct: l.pctLocked && l.lockedPct != null && !l.addedAfterStepId
             ? l.lockedPct.toString()
             : totalWeightG > 0
               ? ((l.weightG / totalWeightG) * 100).toString()
@@ -65,6 +80,8 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
           locked: l.locked,
           pctLocked: l.pctLocked,
           weightUnit: l.weightUnit ?? null,
+          addedAfterStepId: l.addedAfterStepId ?? null,
+          stagePct: l.addedAfterStepId && l.pctLocked && l.lockedPct != null ? l.lockedPct.toString() : null,
           minPct: l.minPct?.toString() ?? null,
           maxPct: l.maxPct?.toString() ?? null,
         }))
