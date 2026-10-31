@@ -20,6 +20,8 @@ export const timeEntries = pgTable('time_entries', {
   endedAt: timestamp('ended_at', { withTimezone: true }),
   billed: boolean('billed').notNull().default(false),
   billedAt: timestamp('billed_at', { withTimezone: true }),
+  // The invoice it was billed on, when an invoicing connection marked it (see lib/invoicing-connection.ts)
+  billedRef: text('billed_ref'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [

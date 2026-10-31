@@ -36,6 +36,7 @@ const NOUNS: Record<string, string> = {
   billing: 'billing',
   branding: 'branding',
   clients: 'client',
+  connect: 'invoicing connection',
   equipment: 'equipment',
   feedback: 'feedback',
   'formulation-imports': 'formulation import',

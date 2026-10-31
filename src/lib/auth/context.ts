@@ -57,7 +57,11 @@ export async function getContext(): Promise<ContextResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, reason: 'unauthenticated' }
+  return contextForUser({ id: user.id, email: user.email })
+}
 
+// The same checks for a person already identified some other way (an invoicing connection key)
+export async function contextForUser(user: { id: string; email: string | undefined }): Promise<ContextResult> {
   const [row] = await db
     .select({ role: accountMembers.role, access: accountMembers.access, account: accounts })
     .from(accountMembers)

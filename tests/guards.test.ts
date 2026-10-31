@@ -26,6 +26,8 @@ describe('every API route is gated', () => {
   // Public on purpose: the webhook authenticates by Stripe signature, redeem by invite token,
   // auth/confirm is Supabase's email-link callback (not under /api).
   const PUBLIC_ROUTES = new Set(['src/app/api/stripe/webhook/route.ts', 'src/app/api/invitations/redeem/route.ts'])
+  // The invoicing connection authenticates by key instead of a session
+  const CONNECTION_ROUTES = (file: string) => file.startsWith('src/app/api/connect/')
   const routes = walk(path.join(ROOT, 'src/app/api'), f => f.endsWith('route.ts')).map(rel)
 
   it('finds the routes', () => {
@@ -38,6 +40,10 @@ describe('every API route is gated', () => {
       expect(src).not.toMatch(/requireApi\(/)
       return
     }
+    if (CONNECTION_ROUTES(file)) {
+      expect(src).toMatch(/requireConnection\(req\)/)
+      return
+    }
     expect(src).toMatch(/requireApi\(/)
     // The old per-route auth preamble must be gone: it authenticates but never scopes
     expect(src).not.toMatch(/@\/lib\/supabase\/server/)
@@ -47,6 +53,7 @@ describe('every API route is gated', () => {
     const mw = read(path.join(ROOT, 'src/middleware.ts'))
     expect(mw).toContain('/api/stripe/webhook')
     expect(mw).toContain('/api/invitations/redeem')
+    expect(mw).toContain('/api/connect')
     expect(mw).toContain('/invite')
     expect(mw).toContain('/legal')
   })

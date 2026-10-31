@@ -1,7 +1,7 @@
 import { eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
-  accountMembers, accounts, activityLog, auditLog, clients, equipment, ingredientDocs, ingredients, intakeItems,
+  accountMembers, accounts, activityLog, auditLog, clients, equipment, ingredientDocs, ingredients, intakeItems, invoicingConnections,
   profiles, projects, sousChefConversations, sousChefNotes, subscriptions, suppliers, timeEntries,
 } from '@/lib/db/schema'
 import { clearBranding } from '@/lib/logo-server'
@@ -94,6 +94,7 @@ export async function deleteAccount(accountId: string, subscription?: Sub | null
     await tx.delete(equipment).where(eq(equipment.accountId, accountId))
     await tx.delete(auditLog).where(eq(auditLog.accountId, accountId))
     await tx.delete(activityLog).where(eq(activityLog.accountId, accountId))
+    await tx.delete(invoicingConnections).where(eq(invoicingConnections.accountId, accountId))
     await tx.delete(subscriptions).where(eq(subscriptions.accountId, accountId))
     await tx.delete(accountMembers).where(eq(accountMembers.accountId, accountId))
     if (memberIds.length > 0) await tx.delete(profiles).where(inArray(profiles.userId, memberIds))

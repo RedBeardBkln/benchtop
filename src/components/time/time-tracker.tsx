@@ -352,7 +352,9 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
                         checked={e.billed}
                         disabled={!e.canEdit || setBilledFor.isPending}
                         onChange={() => setBilledFor.mutate({ ids: [e.id], value: !e.billed })}
-                        data-tip={e.billed && e.billedAt ? `Marked billed ${new Date(e.billedAt).toLocaleDateString()}` : undefined}
+                        data-tip={e.billed && e.billedAt
+                          ? `${e.billedRef ? `Billed on invoice ${e.billedRef}` : 'Marked billed'} ${new Date(e.billedAt).toLocaleDateString()}`
+                          : undefined}
                         className="h-4 w-4 accent-blue-600 align-middle"
                       />
                     </td>

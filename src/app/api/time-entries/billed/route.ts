@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const now = new Date()
   const rows = await db
     .update(timeEntries)
-    .set({ billed, billedAt: billed ? now : null, updatedAt: now })
+    .set({ billed, billedAt: billed ? now : null, ...(billed ? {} : { billedRef: null }), updatedAt: now })
     // Only rows whose status actually changes, so an earlier billed date is kept
     .where(and(inArray(timeEntries.id, editable), eq(timeEntries.billed, !billed)))
     .returning({ id: timeEntries.id })

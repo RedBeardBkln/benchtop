@@ -36,6 +36,7 @@ describe('describeActivity', () => {
     expect(describeActivity('POST', '/api/projects')).toBe('Created project')
     expect(describeActivity('DELETE', `/api/clients/${ID}/contacts/${ID}`)).toBe('Client: contacts (deleted)')
     expect(describeActivity('POST', '/api/time-entries')).toBe('Created time entry')
+    expect(describeActivity('POST', '/api/connect/time/billed')).toBe('Invoicing connection: time billed (created)')
   })
 })
 

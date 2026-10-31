@@ -55,6 +55,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         endedAt,
         billed,
         billedAt: billed === entry.billed ? entry.billedAt : billed ? new Date() : null,
+        billedRef: billed ? entry.billedRef : null,
         updatedAt: new Date(),
       })
       .where(eq(timeEntries.id, entry.id))

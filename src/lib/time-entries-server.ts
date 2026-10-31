@@ -93,6 +93,8 @@ export type TimeEntryRow = {
   endedAt: string | null
   billed: boolean
   billedAt: string | null
+  /** The invoice it was billed on, when the invoicing connection marked it */
+  billedRef: string | null
   canEdit: boolean
 }
 
@@ -141,6 +143,7 @@ export async function loadTimeEntries(ctx: AuthContext, filter: TimeFilter): Pro
       endedAt: e.endedAt?.toISOString() ?? null,
       billed: e.billed,
       billedAt: e.billedAt?.toISOString() ?? null,
+      billedRef: e.billedRef,
       canEdit: admin || e.userId === ctx.user.id,
     })),
   }

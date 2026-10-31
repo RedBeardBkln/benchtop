@@ -3,10 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { METHOD_HEADER, PATH_HEADER } from '@/lib/activity'
 
 // Routes that never need a session and must not be redirected/401'd: the public invite page,
-// legal pages, the invite-redemption API and the Stripe webhook (which authenticates by signature).
+// legal pages, the invite-redemption API, the Stripe webhook (which authenticates by signature) and
+// the invoicing connection (which authenticates by key, see lib/invoicing-connection-server.ts).
 function isOpenRoute(pathname: string): boolean {
   const is = (base: string) => pathname === base || pathname.startsWith(base + '/')
-  return is('/invite') || is('/legal') || is('/api/invitations/redeem') || is('/api/stripe/webhook')
+  return is('/invite') || is('/legal') || is('/api/invitations/redeem') || is('/api/stripe/webhook') || is('/api/connect')
 }
 
 export async function middleware(request: NextRequest) {
