@@ -93,9 +93,9 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
   // Filters
   const [clientId, setClientId] = useState('')
   const [projectId, setProjectId] = useState('')
-  const [billed, setBilled] = useState<BilledFilter>('all')
+  const [billed, setBilled] = useState<BilledFilter>('unbilled')
   const [person, setPerson] = useState('me')
-  const [period, setPeriod] = useState<Period>('this-month')
+  const [period, setPeriod] = useState<Period>('all')
   const thisMonth = periodRange('this-month')!
   const [from, setFrom] = useState(thisMonth.from)
   const [to, setTo] = useState(thisMonth.to)
