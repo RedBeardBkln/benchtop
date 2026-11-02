@@ -19,7 +19,7 @@ type BatchRun = {
 
 export const batchRunsKey = (formulationId: string) => ['batch-runs', formulationId]
 
-/** Batches recorded with "Complete batch" for this version, newest first. Hidden until there is one. */
+/** Production runs logged with "Log production" for this version, newest first. Hidden until there is one. */
 export function BatchHistoryPanel({ formulationId }: { formulationId: string }) {
   const [open, setOpen] = useState(false)
   const { data: runs = [] } = useQuery<BatchRun[]>({
@@ -39,7 +39,7 @@ export function BatchHistoryPanel({ formulationId }: { formulationId: string }) 
         type="button"
         onClick={() => setOpen(v => !v)}
         aria-expanded={open}
-        data-tip={open ? 'Hides the batch history' : 'Shows each batch recorded with Complete batch for this version'}
+        data-tip={open ? 'Hides the batch history' : 'Shows each production run logged with Log production for this version'}
         className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-gray-600 transition-colors"
       >
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}

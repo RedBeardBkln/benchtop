@@ -21,7 +21,7 @@ export const formulations: HelpSection = {
           items: [
             { term: '← Project name', text: 'Takes you back to the project.' },
             { term: 'Name and version', text: 'The formulation’s name, its version (such as `v2`), a box to describe this version, the mode (**Ground up** or **Reverse**) and status (**draft** or **locked**).' },
-            { term: 'Buttons (top right)', text: '`Save`, `Solve`, `Duplicate`, `Finalize` / `Unlock`, `Save as ingredient`, `NFP`, `Print`, `Complete batch`, `Archive`, and for reverse formulations `Reverse wizard`. Some only appear when they apply.' },
+            { term: 'Buttons (top right)', text: '`Save`, `Solve`, `Save as ingredient`, `NFP`, `Log production` and, for reverse formulations, `Reverse wizard`. `Options` holds **Duplicate**, `Finalize & lock` / `Unlock for editing`, `Print` and **Archive**. Some only appear when they apply.' },
             { term: 'Gray settings bar', text: '**Batch (g)**, **Serving (g)** and **Yield**.' },
             { term: 'Formula / COGS tabs', text: 'Only if you turned on COGS in [Preferences](/settings/preferences).' },
             { term: 'Ingredient grid', text: 'The recipe itself: each ingredient with its weight, percentage and nutrients.' },
@@ -54,7 +54,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'p',
-          text: 'Some tools use what is on screen, even before you save: the totals, nutrition, Validation, the Nutrition Facts panel and COGS. Others use the **last saved** version, so save first: **Print**, **Solve**, **Duplicate**, **Complete batch** and **Save as ingredient**.',
+          text: 'Some tools use what is on screen, even before you save: the totals, nutrition, Validation, the Nutrition Facts panel and COGS. Others use the **last saved** version, so save first: **Print**, **Solve**, **Duplicate**, **Log production** and **Save as ingredient**.',
         },
       ],
     },
@@ -400,8 +400,8 @@ export const formulations: HelpSection = {
           type: 'steps',
           items: [
             'Click `Save` first. Copies are made from the saved recipe, so Benchtop asks you to save if you haven’t.',
-            'Click `Duplicate`.',
-            'Choose **New iteration** to make the next version of this formulation (for example v4), or **New formulation** to make a separate formulation with a new name, starting at v1, in the same project.',
+            'Click `Options`.',
+            'Under **Duplicate**, choose **New iteration** to make the next version of this formulation (for example v4), or **New formulation** to make a separate formulation with a new name, starting at v1, in the same project.',
             'The copy opens straight away as a **draft** you can edit.',
           ],
         },
@@ -421,15 +421,15 @@ export const formulations: HelpSection = {
         { type: 'h', text: 'Finalizing (locking) a version' },
         {
           type: 'p',
-          text: 'When a version is approved, click `Finalize`, then `Finalize & lock`. It becomes **locked** so nobody changes it by accident. You can still print it, make Nutrition Facts panels, duplicate it, record batches and save it as an ingredient. To change it, either click `Unlock` (`Yes, unlock`) or, better, make a **New iteration** so the approved version stays as it was.',
+          text: 'When a version is approved, click `Options` → `Finalize & lock`, then confirm with `Finalize & lock`. It becomes **locked** so nobody changes it by accident. You can still print it, make Nutrition Facts panels, duplicate it, log production and save it as an ingredient. To change it, either click `Options` → `Unlock for editing` (`Yes, unlock`) or, better, make a **New iteration** so the approved version stays as it was.',
         },
         { type: 'h', text: 'Renaming and archiving' },
         {
           type: 'list',
           items: [
             '**Rename:** move your mouse over the name and click the pencil. The new name applies to every version.',
-            '**Archive:** click `Archive`, then `Yes, archive`. All versions are hidden from the project. To bring them back, open the project, click `Archived (N)`, then `Restore`.',
-            '**Archive one version:** when the formulation has another version that isn’t archived, `Archive` opens a menu. Choose `Archive vN only`, then `Yes, archive`. The other versions stay live, and the project page shows the newest live one. The archived version is listed under **Archived** in the version list; open it and click `Restore iteration` to bring it back. The last live version can’t be archived on its own; archive the whole formulation instead.',
+            '**Archive:** click `Options` → `Archive formulation` (or `Archive whole formulation`), then `Yes, archive`. All versions are hidden from the project. To bring them back, open the project, click `Archived (N)`, then `Restore`.',
+            '**Archive one version:** when the formulation has another version that isn’t archived, `Options` also offers `Archive vN only`. Choose it, then `Yes, archive`. The other versions stay live, and the project page shows the newest live one. The archived version is listed under **Archived** in the version list; open it and click `Restore iteration` to bring it back. The last live version can’t be archived on its own; archive the whole formulation instead.',
             'Formulations can’t be deleted, only archived.',
           ],
         },
@@ -522,7 +522,7 @@ export const formulations: HelpSection = {
           type: 'steps',
           items: [
             'Click `Save` first. Printing uses the last saved version.',
-            'Click `Print`.',
+            'Click `Options` → `Print`.',
             'Choose what to include: **Formulation** (ingredients and settings), **Process steps**, **Full nutrient profile**, **Nutrient contributions by ingredient** (each nutrient split by the ingredients that supply it), **Validation vs project targets**, and **Notes and findings** (the dated notes on this version).',
             'Click `Print`. A print-friendly page opens in a new tab. (If nothing opens, allow pop-ups for Benchtop in your browser.)',
             'Click `Print` on that page, or choose “Save as PDF” in your browser’s print window.',
@@ -536,26 +536,26 @@ export const formulations: HelpSection = {
     },
     {
       slug: 'complete-batch',
-      title: 'Recording a completed batch (stock)',
+      title: 'Logging production (stock)',
       summary: 'Take the ingredients you used out of your stock levels.',
       blocks: [
         {
           type: 'p',
-          text: 'When you actually make a batch, `Complete batch` subtracts the amounts used from each ingredient’s **Stock** (only for ingredients where you track stock; see [Stock and on-hand](/help/ingredients#stock)).',
+          text: 'When you actually make a batch, `Log production` subtracts the amounts used from each ingredient’s **Stock** (only for ingredients where you track stock; see [Stock and on-hand](/help/ingredients#stock)).',
         },
         {
           type: 'steps',
           items: [
-            'Save the formulation, then click `Complete batch`.',
+            'Save the formulation, then click `Log production`.',
             'Set the **Batch multiplier**. 1 means you made exactly the saved batch; 2 means double; 0.5 means half.',
             'Optionally add **Notes**, such as “Trial batch for sampling”.',
             'Optionally click `Preview` to see how much stock each tracked ingredient will have left. Anything that would go below zero shows in red.',
-            'Click `Complete batch`. You’ll see how many stock levels were updated.',
+            'Click `Log production`. You’ll see how many stock levels were updated.',
           ],
         },
         {
           type: 'p',
-          text: 'Every completed batch is listed under **Batch history**, below the process steps, with its date, multiplier, batch weight, who recorded it and your notes. Click the heading to open it. Each version keeps its own history.',
+          text: 'Every logged production run is listed under **Batch history**, below the process steps, with its date, multiplier, batch weight, who recorded it and your notes. Click the heading to open it. Each version keeps its own history.',
         },
         {
           type: 'warning',
@@ -575,7 +575,7 @@ export const formulations: HelpSection = {
         {
           type: 'steps',
           items: [
-            'Finalize the version first (`Finalize` → `Finalize & lock`).',
+            'Finalize the version first (`Options` → `Finalize & lock`, then confirm).',
             'Click `Save as ingredient`.',
             'Check the **Ingredient name** and click `Save ingredient`.',
           ],
@@ -776,15 +776,15 @@ export const formulations: HelpSection = {
     },
     {
       q: 'Duplicate says “Save your changes first.”',
-      a: 'Copies are made from the saved recipe. Click `Save`, then `Duplicate` again.',
+      a: 'Copies are made from the saved recipe. Click `Save`, then `Options` → **New iteration** or **New formulation** again.',
     },
     {
       q: 'How do I edit a finalized (locked) formulation?',
-      a: 'Click `Unlock` and confirm. Or better, use `Duplicate` → **New iteration** to make an editable copy and keep the approved version unchanged.',
+      a: 'Click `Options` → `Unlock for editing` and confirm. Or better, use `Options` → **New iteration** to make an editable copy and keep the approved version unchanged.',
     },
     {
       q: 'How do I delete a formulation or one version?',
-      a: 'You can’t delete them, but you can `Archive` a formulation (all versions at once) and `Restore` it later from the project’s **Archived** list. To set aside just one version, choose `Archive vN only` from the `Archive` menu; restore it with `Restore iteration` on that version.',
+      a: 'You can’t delete them, but you can archive a formulation from `Options` (all versions at once) and `Restore` it later from the project’s **Archived** list. To set aside just one version, choose `Archive vN only` from the `Options` menu; restore it with `Restore iteration` on that version.',
     },
     {
       q: 'Can I compare two versions side by side?',
@@ -867,7 +867,7 @@ export const formulations: HelpSection = {
       a: 'Open the formulation version you made them from and click **Batch history** below the process steps. It only appears once a batch has been completed for that version.',
     },
     {
-      q: 'Does Complete batch check I have enough stock?',
+      q: 'Does Log production check I have enough stock?',
       a: 'It doesn’t stop you, but `Preview` shows what each tracked ingredient will have left and warns in red when stock would go below zero. Adjust stock on the ingredient’s page if needed.',
     },
     {

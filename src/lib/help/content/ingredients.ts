@@ -354,7 +354,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'p',
-          text: 'When you use **Complete batch** on a formulation, the amounts used are subtracted from stock, and listed under **Depletion history**. Stock can go below zero; if it does, set it to the real amount. See [Recording a completed batch](/help/formulations#complete-batch).',
+          text: 'When you use **Log production** on a formulation, the amounts used are subtracted from stock, and listed under **Depletion history**. Stock can go below zero; if it does, set it to the real amount. See [Logging production](/help/formulations#complete-batch).',
         },
       ],
     },

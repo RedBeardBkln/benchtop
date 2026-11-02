@@ -84,14 +84,14 @@ export function CompleteBatchDialog({
 
       const tracked = (body.depletions as Depletion[]).filter(d => d.remainingG !== null)
       if (tracked.length > 0) {
-        toast.success(`Batch recorded — ${tracked.length} stock level${tracked.length !== 1 ? 's' : ''} updated`)
+        toast.success(`Production logged — ${tracked.length} stock level${tracked.length !== 1 ? 's' : ''} updated`)
       } else {
-        toast.success('Batch recorded')
+        toast.success('Production logged')
       }
       reset()
       onCompleted()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to complete batch')
+      toast.error(err instanceof Error ? err.message : 'Failed to log production')
     } finally {
       setIsCompleting(false)
     }
@@ -106,7 +106,7 @@ export function CompleteBatchDialog({
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <PackageCheck size={16} className="text-emerald-500" />
-            <h2 className="text-sm font-semibold text-gray-900">Complete batch</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Log production</h2>
           </div>
           <button onClick={handleClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
             <X size={16} />
@@ -115,7 +115,7 @@ export function CompleteBatchDialog({
 
         <div className="px-5 py-5 space-y-4">
           <p className="text-xs text-gray-500">
-            Recording a completed batch of <span className="font-medium text-gray-800">{formulationName}</span> will
+            Logging a production run of <span className="font-medium text-gray-800">{formulationName}</span> will
             deduct the ingredient quantities from tracked <Term t="stock">stock</Term> levels. It uses the last saved version.
           </p>
 
@@ -218,7 +218,7 @@ export function CompleteBatchDialog({
                        rounded-md hover:bg-emerald-700 disabled:opacity-40 transition-colors"
           >
             {isCompleting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-            {isCompleting ? 'Recording…' : 'Complete batch'}
+            {isCompleting ? 'Recording…' : 'Log production'}
           </button>
         </div>
       </div>

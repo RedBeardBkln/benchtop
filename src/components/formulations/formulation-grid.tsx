@@ -8,6 +8,7 @@ import {
   ArrowLeft, Save, Plus, X, Trash2, ChevronDown, ChevronUp, ChevronRight, Lock,
   Database, ArrowLeftRight, GitBranch, Target, CheckCircle2, XCircle, AlertCircle,
   GripVertical, ArrowDownNarrowWide, Zap, Archive, Unlock, Edit2, FileText, Printer, PackagePlus, RotateCcw,
+  MoreHorizontal, Copy,
 } from 'lucide-react'
 import type { FormulationDetail, IngredientDetail, IngredientListRow, Nutrient, ProjectTarget } from '@/lib/types'
 import { categoryPath, onHandAlternatives } from '@/lib/ingredient-categories'
@@ -403,14 +404,13 @@ export function FormulationGrid({ id }: { id: string }) {
   const [showCompare, setShowCompare] = useState(false)
   const [showReverseWizard, setShowReverseWizard] = useState(false)
   const [confirmAction, setConfirmAction] = useState<'finalize' | 'unfinalize' | 'archive' | 'archive-iteration' | null>(null)
-  const [showArchiveMenu, setShowArchiveMenu] = useState(false)
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false)
   const [sidebarIngredientId, setSidebarIngredientId] = useState<string | null>(null)
   const [sidebarLineKey, setSidebarLineKey] = useState<string | null>(null)
   const [editingName, setEditingName] = useState(false)
   const [nameEdit, setNameEdit] = useState('')
   const [showNfpDialog, setShowNfpDialog] = useState(false)
   const [showPrintDialog, setShowPrintDialog] = useState(false)
-  const [showDuplicateMenu, setShowDuplicateMenu] = useState(false)
   const [showNewFormulation, setShowNewFormulation] = useState(false)
   const [newFormulationName, setNewFormulationName] = useState('')
   const [showCompleteBatch, setShowCompleteBatch] = useState(false)
@@ -1284,7 +1284,7 @@ export function FormulationGrid({ id }: { id: string }) {
                 }}
                 aria-label="Version"
                 data-tip="Opens another version of this formulation. Finalized versions show a padlock."
-                className="text-sm text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white
+                className="max-w-[16rem] truncate text-sm text-gray-500 border border-gray-200 rounded px-1.5 py-0.5 bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 print:hidden"
               >
                 {liveIterations.map(it => (
@@ -1314,9 +1314,6 @@ export function FormulationGrid({ id }: { id: string }) {
                 Compare
               </button>
             )}
-            {readOnly
-              ? data.iterationNote && <span className="text-sm text-gray-600">{data.iterationNote}</span>
-              : <IterationNote formulationId={id} note={data.iterationNote} />}
             <span className="capitalize">
               {data.mode === 'ground_up' ? <Term t="groundUp">Ground up</Term> : <Term t="reverse">Reverse</Term>}
             </span>
@@ -1331,9 +1328,16 @@ export function FormulationGrid({ id }: { id: string }) {
               </span>
             )}
           </div>
+          {readOnly
+            ? data.iterationNote && <div className="mt-2 text-sm text-gray-600">{data.iterationNote}</div>
+            : (
+              <div className="mt-2">
+                <IterationNote formulationId={id} note={data.iterationNote} />
+              </div>
+            )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 print:hidden">
           {isDirty && !isLocked && (
             <button
               onClick={() => saveMutation.mutate()}
@@ -1393,72 +1397,6 @@ export function FormulationGrid({ id }: { id: string }) {
               </button>
             )
           })()}
-          {!readOnly && <div className="relative">
-            <button
-              onClick={() => setShowDuplicateMenu(v => !v)}
-              disabled={iterateMutation.isPending || forkMutation.isPending}
-              aria-expanded={showDuplicateMenu}
-              data-tip="Copies the last saved version, as the next version (iteration) or as a new formulation"
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
-                         text-sm rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              <GitBranch size={13} />
-              {iterateMutation.isPending ? 'Creating…' : 'Duplicate'}
-              <ChevronDown size={12} />
-            </button>
-            {showDuplicateMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowDuplicateMenu(false)} />
-                <div className="absolute right-0 z-20 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg py-1">
-                  <button
-                    onClick={() => {
-                      setShowDuplicateMenu(false)
-                      if (requireSavedChanges()) iterateMutation.mutate()
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  >
-                    <div className="text-sm font-medium text-gray-800">New iteration</div>
-                    <div className="text-xs text-gray-400">
-                      Saves as v{(data.iterations[0]?.version ?? data.version) + 1} of this formulation
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDuplicateMenu(false)
-                      if (!requireSavedChanges()) return
-                      setNewFormulationName('')
-                      setShowNewFormulation(true)
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  >
-                    <div className="text-sm font-medium text-gray-800">New formulation</div>
-                    <div className="text-xs text-gray-400">
-                      Separate formulation under a new name, starting at v1
-                    </div>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>}
-          {readOnly ? null : isLocked ? (
-            <button
-              onClick={() => setConfirmAction('unfinalize')}
-              data-tip="Returns this version to draft so it can be edited (asks to confirm). A new iteration keeps the approved one intact."
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 text-amber-600
-                         text-sm rounded-md hover:bg-amber-50 transition-colors"
-            >
-              <Unlock size={13} /> Unlock
-            </button>
-          ) : (
-            <button
-              onClick={() => setConfirmAction('finalize')}
-              data-tip="Marks this version approved and locks it against changes (asks to confirm). You can still print, duplicate and record batches."
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
-                         text-sm rounded-md hover:bg-gray-50 transition-colors"
-            >
-              <Lock size={13} /> Finalize
-            </button>
-          )}
           {data.status === 'locked' && lines.length > 0 && (
             <button
               onClick={() => setShowSaveAsIngredient(true)}
@@ -1479,14 +1417,6 @@ export function FormulationGrid({ id }: { id: string }) {
               <FileText size={13} /> NFP
             </button>
           )}
-          <button
-            onClick={handlePrint}
-            data-tip="Opens a print-friendly sheet of the last saved version in a new tab. You choose the sections first."
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
-                       text-sm rounded-md hover:bg-gray-50 transition-colors"
-          >
-            <Printer size={13} /> Print
-          </button>
           {lines.length > 0 && !readOnly && (
             <button
               onClick={() => setShowCompleteBatch(true)}
@@ -1494,55 +1424,127 @@ export function FormulationGrid({ id }: { id: string }) {
               className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-200 text-emerald-700
                          text-sm rounded-md hover:bg-emerald-50 transition-colors"
             >
-              <CheckCircle2 size={13} /> Complete batch
+              <CheckCircle2 size={13} /> Log production
             </button>
           )}
-          {!readOnly && (canArchiveIteration ? (
-            <div className="relative">
-              <button
-                onClick={() => setShowArchiveMenu(v => !v)}
-                aria-haspopup="menu"
-                aria-expanded={showArchiveMenu}
-                data-tip="Archive just this version, or the whole formulation"
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500
-                           text-sm rounded-md hover:bg-gray-50 transition-colors"
-              >
-                <Archive size={13} /> Archive <ChevronDown size={12} />
-              </button>
-              {showArchiveMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowArchiveMenu(false)} />
-                  <div role="menu" className="absolute right-0 z-20 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg py-1">
+          <div className="relative">
+            <button
+              onClick={() => setShowOptionsMenu(v => !v)}
+              disabled={iterateMutation.isPending || forkMutation.isPending}
+              aria-haspopup="menu"
+              aria-expanded={showOptionsMenu}
+              data-tip={readOnly ? 'Print this version' : 'Duplicate, finalize, print or archive this formulation'}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600
+                         text-sm rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              <MoreHorizontal size={13} />
+              {iterateMutation.isPending ? 'Creating…' : 'Options'}
+              <ChevronDown size={12} />
+            </button>
+            {showOptionsMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowOptionsMenu(false)} />
+                <div role="menu" className="absolute right-0 z-20 mt-1 w-72 bg-white border border-gray-200 rounded-md shadow-lg py-1 divide-y divide-gray-100">
+                  {!readOnly && (
+                    <div className="pb-1">
+                      <div className="px-3 pt-1.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">Duplicate</div>
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setShowOptionsMenu(false)
+                          if (requireSavedChanges()) iterateMutation.mutate()
+                        }}
+                        className="w-full flex items-start gap-2 text-left px-3 py-2 hover:bg-gray-50"
+                      >
+                        <GitBranch size={13} className="mt-0.5 shrink-0 text-gray-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">New iteration</div>
+                          <div className="text-xs text-gray-400">
+                            Saves as v{(data.iterations[0]?.version ?? data.version) + 1} of this formulation
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setShowOptionsMenu(false)
+                          if (!requireSavedChanges()) return
+                          setNewFormulationName('')
+                          setShowNewFormulation(true)
+                        }}
+                        className="w-full flex items-start gap-2 text-left px-3 py-2 hover:bg-gray-50"
+                      >
+                        <Copy size={13} className="mt-0.5 shrink-0 text-gray-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">New formulation</div>
+                          <div className="text-xs text-gray-400">Separate formulation under a new name, starting at v1</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                  <div className="py-1">
+                    {readOnly ? null : isLocked ? (
+                      <button
+                        role="menuitem"
+                        onClick={() => { setShowOptionsMenu(false); setConfirmAction('unfinalize') }}
+                        data-tip="Returns this version to draft so it can be edited (asks to confirm). A new iteration keeps the approved one intact."
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-amber-700 hover:bg-amber-50"
+                      >
+                        <Unlock size={13} className="shrink-0" /> Unlock for editing
+                      </button>
+                    ) : (
+                      <button
+                        role="menuitem"
+                        onClick={() => { setShowOptionsMenu(false); setConfirmAction('finalize') }}
+                        data-tip="Marks this version approved and locks it against changes (asks to confirm). You can still print, duplicate and log production."
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-gray-800 hover:bg-gray-50"
+                      >
+                        <Lock size={13} className="shrink-0 text-gray-400" /> Finalize &amp; lock
+                      </button>
+                    )}
                     <button
                       role="menuitem"
-                      onClick={() => { setShowArchiveMenu(false); setConfirmAction('archive-iteration') }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                      onClick={() => { setShowOptionsMenu(false); handlePrint() }}
+                      data-tip="Opens a print-friendly sheet of the last saved version in a new tab. You choose the sections first."
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-gray-800 hover:bg-gray-50"
                     >
-                      <div className="text-sm font-medium text-gray-800">Archive v{data.version} only</div>
-                      <div className="text-xs text-gray-400">The other iterations stay live</div>
-                    </button>
-                    <button
-                      role="menuitem"
-                      onClick={() => { setShowArchiveMenu(false); setConfirmAction('archive') }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                    >
-                      <div className="text-sm font-medium text-gray-800">Archive whole formulation</div>
-                      <div className="text-xs text-gray-400">Hides every iteration from the project</div>
+                      <Printer size={13} className="shrink-0 text-gray-400" /> Print
                     </button>
                   </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmAction('archive')}
-              data-tip="Hides every version of this formulation from the project (asks to confirm). Restore it from the project’s Archived list."
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-500
-                         text-sm rounded-md hover:bg-gray-50 transition-colors"
-            >
-              <Archive size={13} /> Archive
-            </button>
-          ))}
+                  {!readOnly && (
+                    <div className="pt-1">
+                      {canArchiveIteration && (
+                        <button
+                          role="menuitem"
+                          onClick={() => { setShowOptionsMenu(false); setConfirmAction('archive-iteration') }}
+                          className="w-full flex items-start gap-2 text-left px-3 py-2 hover:bg-gray-50"
+                        >
+                          <Archive size={13} className="mt-0.5 shrink-0 text-gray-400" />
+                          <div>
+                            <div className="text-sm font-medium text-gray-800">Archive v{data.version} only</div>
+                            <div className="text-xs text-gray-400">The other iterations stay live</div>
+                          </div>
+                        </button>
+                      )}
+                      <button
+                        role="menuitem"
+                        onClick={() => { setShowOptionsMenu(false); setConfirmAction('archive') }}
+                        className="w-full flex items-start gap-2 text-left px-3 py-2 hover:bg-gray-50"
+                      >
+                        <Archive size={13} className="mt-0.5 shrink-0 text-gray-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">
+                            {canArchiveIteration ? 'Archive whole formulation' : 'Archive formulation'}
+                          </div>
+                          <div className="text-xs text-gray-400">Hides every iteration from the project</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
