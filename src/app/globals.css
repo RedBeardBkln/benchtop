@@ -331,6 +331,13 @@ input[type='radio'] {
     color: var(--color-gray-900);
   }
 
+  /* The open list of a <select> is drawn by the browser, and on Windows it stays white unless the
+     options carry their own colors, which left light text on white */
+  :root[data-theme='dark'] :is(option, optgroup) {
+    background-color: var(--color-white);
+    color: var(--color-gray-900);
+  }
+
   :root[data-theme='dark'] :is(input, textarea)::placeholder {
     color: var(--color-gray-500);
   }
