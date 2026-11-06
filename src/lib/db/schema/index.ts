@@ -21,6 +21,7 @@ export * from './time'
 export * from './sous-chef'
 export * from './admin'
 export * from './connections'
+export * from './invite-requests'
 
 // ---- Import tables for relations ----
 import { nutrients } from './nutrients'

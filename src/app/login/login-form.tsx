@@ -44,7 +44,10 @@ export default function LoginForm() {
           </h1>
           <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-700 mt-3">Formulation, from bench to label.</p>
         </div>
-        <p className="text-xs text-gray-500">Access is by invitation only.</p>
+        <p className="text-xs text-gray-500">
+          Access is by invitation only. No invitation yet?{' '}
+          <Link href="/request-invite" className="text-blue-600 hover:underline">Request one</Link>
+        </p>
       </div>
 
       {linkError && (

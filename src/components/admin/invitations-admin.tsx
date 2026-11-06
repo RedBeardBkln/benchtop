@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Copy } from 'lucide-react'
 import { readErrorMessage } from '@/lib/utils'
@@ -9,6 +9,7 @@ import {
   ACCOUNT_PLANS, describePlan, MAX_FREE_PERIOD_DAYS, MAX_USER_CAP, MIN_FREE_PERIOD_DAYS, PAID_TRIAL_DAYS, PLAN_LABELS, type AccountPlan,
 } from '@/lib/billing/plans'
 import { Term } from '@/components/term'
+import { InviteRequestsAdmin } from '@/components/admin/invite-requests-admin'
 
 const PLAN_HINTS: Record<AccountPlan, string> = {
   paid: `Starts with a ${PAID_TRIAL_DAYS}-day free trial, then needs a subscription.`,
@@ -53,6 +54,9 @@ export function InvitationsAdmin() {
   const [maxUsers, setMaxUsers] = useState('')
   const [creating, setCreating] = useState(false)
   const [link, setLink] = useState<{ email: string; url: string; plan: string } | null>(null)
+  // Bumped after each new invitation so the beta requests list picks up the ones now invited
+  const [requestsKey, setRequestsKey] = useState(0)
+  const emailRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/admin/invitations')
@@ -88,7 +92,16 @@ export function InvitationsAdmin() {
     setNote('')
     setPlan('paid')
     setMaxUsers('')
+    setRequestsKey(k => k + 1)
     load()
+  }
+
+  function prefill(requestEmail: string, requestNote: string) {
+    setEmail(requestEmail)
+    setNote(requestNote)
+    setLink(null)
+    emailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    emailRef.current?.focus({ preventScroll: true })
   }
 
   async function revoke(id: string) {
@@ -110,10 +123,12 @@ export function InvitationsAdmin() {
 
   return (
     <div className="space-y-6">
+      <InviteRequestsAdmin reloadKey={requestsKey} onInvite={prefill} />
+
       <Card title="Invite someone">
         <form onSubmit={create} className="space-y-3 max-w-lg">
           <Field label="Email" htmlFor="inviteEmail">
-            <input id="inviteEmail" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} />
+            <input ref={emailRef} id="inviteEmail" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} />
           </Field>
           <Field label="Note (optional, only visible to admins)" htmlFor="inviteNote">
             <input id="inviteNote" maxLength={500} value={note} onChange={e => setNote(e.target.value)} className={inputCls} />

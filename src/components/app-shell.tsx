@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
 import { UnreadFeedbackBanner, useUnreadFeedback } from '@/components/admin/unread-feedback'
+import { useNewInviteRequests } from '@/components/admin/invite-requests-admin'
 import { usePreferences } from '@/lib/use-preferences'
 import { AskSousChefButton, SousChefDock } from '@/components/sous-chef/sous-chef-dock'
 import { useSousChef } from '@/components/sous-chef/sous-chef-session'
@@ -54,7 +55,9 @@ export function AppShell({
     : NAV
   const nav = isPlatformAdmin ? [...base, ...ADMIN_NAV] : base
   const unreadFeedback = useUnreadFeedback(isPlatformAdmin)
-  const badge = (href: string) => (href === '/admin/feedback' && unreadFeedback > 0 ? unreadFeedback : 0)
+  const newInviteRequests = useNewInviteRequests(isPlatformAdmin)
+  const badge = (href: string) =>
+    href === '/admin/feedback' ? unreadFeedback : href === '/admin/invitations' ? newInviteRequests : 0
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   // Phones get the main sections in the bottom bar; everything else goes under More

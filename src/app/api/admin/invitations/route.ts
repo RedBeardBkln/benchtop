@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { and, desc, eq, gt, isNull } from 'drizzle-orm'
 import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
-import { invitations } from '@/lib/db/schema'
+import { invitations, inviteRequests } from '@/lib/db/schema'
 import { createInviteSchema } from '@/lib/account-schemas'
 import {
   DEFAULT_INVITE_EXPIRY_DAYS,
@@ -100,6 +100,12 @@ export async function POST(req: NextRequest) {
       expiresAt,
     })
     .returning({ id: invitations.id, email: invitations.email, expiresAt: invitations.expiresAt })
+
+  // A beta request from the same email has now been answered
+  await db
+    .update(inviteRequests)
+    .set({ status: 'invited', reviewedAt: now })
+    .where(and(eq(inviteRequests.email, email), eq(inviteRequests.status, 'new')))
 
   return NextResponse.json(
     { ...row, url: inviteUrl(getAppOrigin(req.nextUrl.origin), token) },

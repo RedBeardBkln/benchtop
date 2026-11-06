@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { LEGAL_DRAFT_NOTICE } from '@/lib/legal'
-import { Logo } from '@/components/logo'
+import { SiteLayout } from '@/components/site/site-layout'
 
-// Plain public layout for /legal/* (no AppShell, no session needed).
+// Public layout for /legal/* (no AppShell, no session needed), inside the public site's header and footer.
 export function LegalLayout({
   title,
   version,
@@ -15,19 +15,13 @@ export function LegalLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-gray-900">
-            <Logo variant="wordmark" height={18} />
-          </Link>
-          <nav className="flex gap-4 text-sm">
-            <Link href="/legal/terms" className="text-blue-600 hover:underline">Terms</Link>
-            <Link href="/legal/privacy" className="text-blue-600 hover:underline">Privacy</Link>
-          </nav>
-        </div>
-      </header>
-      <main className="max-w-3xl mx-auto px-4 py-8">
+    <SiteLayout>
+      <div className="max-w-3xl mx-auto px-4 py-10">
+        <nav className="mb-6 flex gap-4 text-sm">
+          <Link href="/legal/terms" className="text-blue-600 hover:underline">Terms</Link>
+          <Link href="/legal/privacy" className="text-blue-600 hover:underline">Privacy</Link>
+          <Link href="/trust" className="text-blue-600 hover:underline">Privacy in plain words</Link>
+        </nav>
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           {LEGAL_DRAFT_NOTICE}. This text is a working draft and has not been reviewed by a lawyer.
         </div>
@@ -38,7 +32,7 @@ export function LegalLayout({
         <div className="space-y-6 text-sm leading-6 text-gray-700 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-gray-900 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
           {children}
         </div>
-      </main>
-    </div>
+      </div>
+    </SiteLayout>
   )
 }

@@ -24,8 +24,13 @@ function walk(dir: string, filter: (file: string) => boolean, out: string[] = []
 
 describe('every API route is gated', () => {
   // Public on purpose: the webhook authenticates by Stripe signature, redeem by invite token,
-  // auth/confirm is Supabase's email-link callback (not under /api).
-  const PUBLIC_ROUTES = new Set(['src/app/api/stripe/webhook/route.ts', 'src/app/api/invitations/redeem/route.ts'])
+  // auth/confirm is Supabase's email-link callback (not under /api), invite-requests is the public
+  // site's beta request form (rate limited, write-only).
+  const PUBLIC_ROUTES = new Set([
+    'src/app/api/stripe/webhook/route.ts',
+    'src/app/api/invitations/redeem/route.ts',
+    'src/app/api/invite-requests/route.ts',
+  ])
   // The invoicing connection authenticates by key instead of a session
   const CONNECTION_ROUTES = (file: string) => file.startsWith('src/app/api/connect/')
   const routes = walk(path.join(ROOT, 'src/app/api'), f => f.endsWith('route.ts')).map(rel)
@@ -56,6 +61,7 @@ describe('every API route is gated', () => {
     expect(mw).toContain('/api/connect')
     expect(mw).toContain('/invite')
     expect(mw).toContain('/legal')
+    expect(mw).toContain('/api/invite-requests')
   })
 })
 
@@ -67,6 +73,12 @@ describe('every app page is gated', () => {
     'src/app/invite/[token]/page.tsx',
     'src/app/legal/terms/page.tsx',
     'src/app/legal/privacy/page.tsx',
+    // The public marketing site; the home page (page.tsx) still calls requirePage for signed-in people
+    'src/app/features/page.tsx',
+    'src/app/pricing/page.tsx',
+    'src/app/faq/page.tsx',
+    'src/app/trust/page.tsx',
+    'src/app/request-invite/page.tsx',
     'src/app/no-account/page.tsx', // uses getContext() itself; shown only to account-less users
     'src/app/suspended/page.tsx', // uses getContext() itself; shown only to suspended users
     'src/app/settings/page.tsx', // redirect-only; the settings layout is gated

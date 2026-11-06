@@ -39,7 +39,8 @@ export default function PrivacyPage() {
           <li><strong>Account and profile:</strong> your email address, password (stored only as a salted hash by our authentication provider), full name, company, job title, phone number and time zone (the last four are optional), and the versions and times at which you accepted the Terms and this Policy.</li>
           <li><strong>Workspace content you create:</strong> clients and their contacts, accounting and shipping details, projects, formulations, ingredient and nutrient data, inventory and stock levels, suppliers, equipment, process steps, batch records, and any documents, photos or labels you upload.</li>
           <li><strong>Billing:</strong> handled by Stripe. We store a Stripe customer ID and your subscription status, plan and renewal date. Your card number never reaches Benchtop.</li>
-          <li><strong>Technical data:</strong> session cookies needed to keep you signed in, and server logs.</li>
+          <li><strong>Technical data:</strong> session cookies needed to keep you signed in, and server logs. We do not use advertising cookies or third-party analytics.</li>
+          <li><strong>Beta invitation requests:</strong> if you request an invitation on our website, the name and email you give us and anything else you choose to add (company, role, type of business, team size, how you heard about us and what you would use Benchtop for), plus a one-way hash of your IP address and your browser type, used only to prevent spam. We do not store the IP address itself.</li>
         </ul>
       </section>
 
@@ -47,7 +48,8 @@ export default function PrivacyPage() {
         <h2>3. How we use it</h2>
         <p>
           To provide and secure the service, authenticate you, process your subscription, let you export or delete your
-          data, and communicate with you about your account. We never sell personal data or workspace data, including
+          data, and communicate with you about your account. Invitation requests are used only to review the request
+          and contact you about the beta. We never sell personal data or workspace data, including
           your clients&apos; data (see &quot;Our commitment&quot; above). TODO: confirm with the
           operator and the AI provider&apos;s terms what is stated here about use of content for model training.
         </p>
@@ -73,6 +75,8 @@ export default function PrivacyPage() {
           <li><strong>Anthropic</strong> &ndash; AI processing when you use features such as label and photo parsing, document parsing and formulation research. The content you submit to those features (for example an image or PDF, or ingredient and nutrition text) is sent to Anthropic to produce the result.</li>
           <li><strong>USDA FoodData Central</strong> &ndash; nutrient lookups. Search terms and food IDs you request are sent to the USDA service.</li>
           <li><strong>Brave Search</strong> &ndash; web lookups. Search queries you submit are sent to Brave.</li>
+          <li><strong>Vercel</strong> &ndash; hosting for the app and our website.</li>
+          <li><strong>Resend</strong> &ndash; delivery of account emails, such as password resets.</li>
         </ul>
       </section>
 
@@ -89,7 +93,8 @@ export default function PrivacyPage() {
       <section>
         <h2>7. Retention</h2>
         <p>
-          We keep your data while your account exists. When you delete your account, its workspace data, documents,
+          We keep your data while your account exists. We keep invitation requests while the beta runs, and delete one
+          sooner if you ask us to at {LEGAL_CONTACT_EMAIL}. When you delete your account, its workspace data, documents,
           profile and login are deleted. Records that payment processors or the law require them to keep (for example
           invoices held by Stripe) are retained by those parties under their own policies. Backups may retain deleted data
           for a limited period before they are overwritten.
