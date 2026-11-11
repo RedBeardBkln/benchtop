@@ -40,6 +40,7 @@ export default function PrivacyPage() {
           <li><strong>Workspace content you create:</strong> clients and their contacts, accounting and shipping details, projects, formulations, ingredient and nutrient data, inventory and stock levels, suppliers, equipment, process steps, batch records, and any documents, photos or labels you upload.</li>
           <li><strong>Billing:</strong> handled by Stripe. We store a Stripe customer ID and your subscription status, plan and renewal date. Your card number never reaches Benchtop.</li>
           <li><strong>Technical data:</strong> session cookies needed to keep you signed in, and server logs. We do not use advertising cookies or third-party analytics.</li>
+          <li><strong>Data export records:</strong> each time someone downloads a copy of an account&apos;s data (Settings &rarr; Privacy &amp; Terms &rarr; Download my data), we record who did it, when, which parts of the data and which file formats they chose, how large the download was, and whether it completed. The record does not contain the exported data itself.</li>
           <li><strong>Beta invitation requests:</strong> if you request an invitation on our website, the name and email you give us and anything else you choose to add (company, role, type of business, team size, how you heard about us and what you would use Benchtop for), plus a one-way hash of your IP address and your browser type, used only to prevent spam. We do not store the IP address itself.</li>
         </ul>
       </section>
@@ -48,7 +49,9 @@ export default function PrivacyPage() {
         <h2>3. How we use it</h2>
         <p>
           To provide and secure the service, authenticate you, process your subscription, let you export or delete your
-          data, and communicate with you about your account. Invitation requests are used only to review the request
+          data, and communicate with you about your account. We keep data export records so that downloads of an
+          account&apos;s data can be reviewed if a question arises about whether, when or by whom data was taken out of the
+          account; Benchtop staff look at them only to investigate such a concern or to support you. Invitation requests are used only to review the request
           and contact you about the beta. We never sell personal data or workspace data, including
           your clients&apos; data (see &quot;Our commitment&quot; above). TODO: confirm with the
           operator and the AI provider&apos;s terms what is stated here about use of content for model training.
@@ -70,7 +73,7 @@ export default function PrivacyPage() {
           to sell it or use it for their own purposes.
         </p>
         <ul>
-          <li><strong>Supabase</strong> &ndash; database hosting, authentication and file storage for uploaded documents.</li>
+          <li><strong>Supabase</strong> &ndash; database hosting, authentication and file storage for uploaded documents, and for data export files during the short time it takes to download them.</li>
           <li><strong>Stripe</strong> &ndash; payment processing and subscription management.</li>
           <li><strong>Anthropic</strong> &ndash; AI processing when you use features such as label and photo parsing, document parsing and formulation research. The content you submit to those features (for example an image or PDF, or ingredient and nutrition text) is sent to Anthropic to produce the result.</li>
           <li><strong>USDA FoodData Central</strong> &ndash; nutrient lookups. Search terms and food IDs you request are sent to the USDA service.</li>
@@ -83,7 +86,7 @@ export default function PrivacyPage() {
       <section>
         <h2>6. Your rights and controls</h2>
         <ul>
-          <li><strong>Access and portability:</strong> Settings &rarr; Privacy &amp; Terms &rarr; Download my data gives you a JSON export of your account&apos;s data.</li>
+          <li><strong>Access and portability:</strong> the account owner can download a copy of the account&apos;s data from Settings &rarr; Privacy &amp; Terms &rarr; Download my data: either one zip file of spreadsheets, documents and images (Excel, Word, PDF, JPEG or PNG, chosen for each part, with your uploaded documents in their original format), or one JSON file for importing into other software. Each download is recorded (see section 2).</li>
           <li><strong>Correction:</strong> edit your profile and account details in Settings.</li>
           <li><strong>Deletion:</strong> Settings &rarr; Privacy &amp; Terms &rarr; Delete account permanently removes your account&apos;s data, uploaded documents and your login, and cancels your subscription.</li>
           <li>You may also contact us at {LEGAL_CONTACT_EMAIL} to exercise these rights.</li>
@@ -94,8 +97,9 @@ export default function PrivacyPage() {
         <h2>7. Retention</h2>
         <p>
           We keep your data while your account exists. We keep invitation requests while the beta runs, and delete one
-          sooner if you ask us to at {LEGAL_CONTACT_EMAIL}. When you delete your account, its workspace data, documents,
-          profile and login are deleted. Records that payment processors or the law require them to keep (for example
+          sooner if you ask us to at {LEGAL_CONTACT_EMAIL}. A data export file is kept only until it has been downloaded,
+          and for no more than about an hour; data export records are kept while the account exists. When you delete your
+          account, its workspace data, documents, export records, profile and login are deleted. Records that payment processors or the law require them to keep (for example
           invoices held by Stripe) are retained by those parties under their own policies. Backups may retain deleted data
           for a limited period before they are overwritten.
         </p>
