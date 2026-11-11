@@ -207,23 +207,40 @@ export const settings: HelpSection = {
     {
       slug: 'download-data',
       title: 'Downloading all your data',
-      summary: 'The owner can download a full copy of everything in the account.',
+      summary: 'The owner can download a full copy of everything in the account as Excel, Word, PDF and image files.',
       blocks: [
         {
           type: 'steps',
           items: [
             'The account owner goes to [Settings → Privacy & Terms](/settings/privacy).',
             'In the **Your data** card, click `Download my data`.',
-            'A file named like `benchtop-export-2026-10-23.json` downloads to your computer.',
+            'Choose a format for each part, or keep the defaults: projects and clients, formulations, and suppliers and ingredients as **Excel**; Sous Chef and Nutrition Facts panels as **PDF**.',
+            'Click `Export`. Building the file can take a minute; the dialog shows its progress.',
+            'A file named like `Benchtop export 2026-11-11.zip` downloads to your computer.',
           ],
         },
         {
           type: 'p',
-          text: 'The file holds your projects, formulations and their versions, process steps, targets, batch records, nutrition panels, ingredients (with nutrients, allergens, certifications, sub-ingredients and supplier links), lab intake items, suppliers and contacts, equipment, clients and contacts, the team list, and feedback you have sent.',
+          text: 'The zip holds a **README** listing what is inside, and these parts, each in the format you chose:',
+        },
+        {
+          type: 'list',
+          items: [
+            '**Projects and clients** (Excel, Word or PDF): every project with its nutrition targets, every client with contacts, accounting and shipping details, all time entries, and the team list.',
+            '**Formulations** (Excel, Word or PDF): one file per formulation. In Excel each iteration has its own tab; in Word and PDF its own section. Each holds the ingredients (with costs, and any added after a process step), process steps, calculated nutrition, saved panels, targets, notes and the production log.',
+            '**Suppliers and ingredients** (Excel, Word or PDF): suppliers and their contacts, the ingredients each supplies, every ingredient with its nutrient values, allergens, certifications and costs, equipment and lab intake.',
+            '**Sous Chef** (PDF or Word): your own conversations (other people’s are private to them) and the team lab notebook.',
+            '**Nutrition Facts panels** (PDF, JPEG or PNG): every saved panel as you saved it, and a standard panel for each iteration that has nutrient data but no saved panel.',
+            '**Ingredient documents**: the spec sheets and COAs you uploaded, in their original format.',
+          ],
+        },
+        {
+          type: 'p',
+          text: 'For importing into other software, `Download as JSON` downloads the whole account as one JSON file instead. It lists uploaded documents but doesn’t include the files.',
         },
         {
           type: 'note',
-          text: 'The file is in **JSON** format, which is meant for computers rather than for reading like a spreadsheet. It does **not** include uploaded document files (such as spec sheet PDFs), only a list of them. Download any documents you need from each ingredient’s page. Exporting works even if the subscription has ended.',
+          text: 'Exporting works even if the subscription has ended.',
         },
       ],
     },

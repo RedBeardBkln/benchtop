@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Download } from 'lucide-react'
+import { Download, FileJson } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { readErrorMessage } from '@/lib/utils'
-import { btnDanger, btnSecondary, Card, Field, inputCls, Notice } from './ui'
+import { btnDanger, btnPrimary, btnSecondary, Card, Field, inputCls, Notice } from './ui'
+import { ExportDataDialog } from './export-data-dialog'
 
 export function PrivacyPanel({
   email,
@@ -20,6 +21,7 @@ export function PrivacyPanel({
   const router = useRouter()
   const [confirmEmail, setConfirmEmail] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   async function deleteAccount(e: React.FormEvent) {
     e.preventDefault()
@@ -41,17 +43,25 @@ export function PrivacyPanel({
 
   return (
     <>
-      <Card title="Your data" description="Download everything stored in your account as a JSON file: projects, formulations, ingredients and inventory, suppliers, equipment and your profile.">
+      <Card title="Your data" description="Download everything stored in your account as one zip file: projects and clients, formulations and their nutrition, Nutrition Facts panels, suppliers and ingredients with their documents, time, the team and Sous Chef, as Excel, Word, PDF or image files. A JSON copy for importing into other software is also available.">
         {isOwner ? (
-          <a href="/api/account/export" download className={btnSecondary}
-            data-tip="Downloads everything in this account as one JSON file">
-            <Download size={14} className="mr-2" />
-            Download my data
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setExportOpen(true)} className={btnPrimary}
+              data-tip="Choose Excel, Word, PDF or images for each part, then download everything as one zip file">
+              <Download size={14} className="mr-2" />
+              Download my data
+            </button>
+            <a href="/api/account/export" download className={btnSecondary}
+              data-tip="Downloads everything in this account as one JSON file, for importing into other software">
+              <FileJson size={14} className="mr-2" />
+              Download as JSON
+            </a>
+          </div>
         ) : (
           <p className="text-sm text-gray-500">Only the account owner can export the account data.</p>
         )}
       </Card>
+      {exportOpen && <ExportDataDialog onClose={() => setExportOpen(false)} />}
 
       <Card
         tone="danger"

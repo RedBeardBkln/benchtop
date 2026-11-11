@@ -354,23 +354,13 @@ export function NfpDialog({
       const { drawNfpToCanvas } = await import('./nfp-canvas')
       const canvas = drawNfpToCanvas({ model })
 
-      if (format === 'pdf') {
-        const { jsPDF } = await import('jspdf')
-        const imgData = canvas.toDataURL('image/png')
-        const pxToMm = 25.4 / (96 * 3)
-        const w = canvas.width * pxToMm
-        const h = canvas.height * pxToMm
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [w, h] })
-        pdf.addImage(imgData, 'PNG', 0, 0, w, h)
-        pdf.save(`${fileName}.pdf`)
-      } else {
-        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png'
-        const url = canvas.toDataURL(mime, format === 'jpg' ? 0.95 : undefined)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${fileName}.${format}`
-        a.click()
-      }
+      const { nfpCanvasToBlob } = await import('./nfp-export')
+      const href = URL.createObjectURL(await nfpCanvasToBlob(canvas, format))
+      const a = document.createElement('a')
+      a.href = href
+      a.download = `${fileName}.${format}`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(href), 60_000)
 
       toast.success('NFP panel downloaded')
     } catch (err) {

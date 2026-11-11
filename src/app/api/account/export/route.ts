@@ -1,6 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { requireApi } from '@/lib/auth/context'
+import { DOCS_BUCKET, getSupabaseAdmin } from '@/lib/supabase/admin'
+import { loadExportData } from '@/lib/export/data'
+import { makeClock } from '@/lib/export/build'
+import { buildExportArchive } from '@/lib/export/archive'
+import { EXPORT_CATEGORIES, type ExportChoices } from '@/lib/export/model'
+
 import { db } from '@/lib/db'
 import {
   accountMembers, batchRuns, feedback, formulationImports, clientContacts, clients, equipment, formulationLines, formulationNfpPanels, formulationNotes, formulations, formulationTargets,
@@ -8,6 +16,108 @@ import {
   ingredients, intakeItems, nutrients, processSteps, profiles, projects, reverseCandidates, reverseTargets,
   subIngredients, supplierContacts, suppliers, timeEntries,
 } from '@/lib/db/schema'
+
+// The account owner's data exports, both owner only and available without an active subscription
+// (people must be able to get their data out):
+//   GET    the whole account as one JSON file, for machines
+//   POST   a zip of Excel, Word, PDF and image files, a format chosen per part (see lib/export)
+//   DELETE the staged copy of that zip, once the browser has it
+//
+// The hosting platform rejects response bodies over ~4.5 MB, so the zip is staged in a private bucket only
+// the server can reach (it holds the owner's private Sous Chef conversations) and downloaded from a
+// short-lived signed URL. Anything left behind is swept after an hour.
+
+export const runtime = 'nodejs'
+export const maxDuration = 300
+
+const EXPORT_BUCKET = 'account-exports'
+const URL_SECONDS = 600
+const STALE_MS = 60 * 60 * 1000
+
+// One format per category, each limited to that category's options
+const choicesSchema = z.object(Object.fromEntries(
+  Object.entries(EXPORT_CATEGORIES).map(([k, c]) => [k, z.enum(c.options as unknown as [string, ...string[]])]),
+)) as unknown as z.ZodType<ExportChoices>
+const inputSchema = z.object({ choices: choicesSchema, timeZone: z.string().max(64).optional() })
+
+async function ensureExportBucket(admin: SupabaseClient) {
+  const { data } = await admin.storage.getBucket(EXPORT_BUCKET)
+  if (data) return
+  const { error } = await admin.storage.createBucket(EXPORT_BUCKET, { public: false })
+  if (error && !/exist|duplicate/i.test(error.message)) throw new Error(`Could not set up export storage: ${error.message}`)
+}
+
+/** Remove this folder's staged exports nobody collected: older than an hour, so never one still being downloaded */
+async function sweepStale(admin: SupabaseClient, folder: string) {
+  const storage = admin.storage.from(EXPORT_BUCKET)
+  const { data: files } = await storage.list(folder, { limit: 1000 })
+  const cutoff = Date.now() - STALE_MS
+  const stale = (files ?? []).filter(f => f.created_at && new Date(f.created_at).getTime() < cutoff)
+  if (stale.length) await storage.remove(stale.map(f => `${folder}/${f.name}`))
+}
+
+export async function POST(req: NextRequest) {
+  const auth = await requireApi({ allowUnentitled: true, role: 'owner' })
+  if (!auth.ok) return auth.res
+  const { ctx } = auth
+
+  const parsed = inputSchema.safeParse(await req.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: 'Choose a format for each part of the export.' }, { status: 400 })
+  const { choices, timeZone } = parsed.data
+
+  try {
+    const admin = getSupabaseAdmin()
+    await ensureExportBucket(admin)
+    await sweepStale(admin, ctx.account.id).catch(e => console.warn('[export] sweep failed', e))
+    // Staged under the account, so one account's files never share a folder with another's
+    const staging = admin.storage.from(EXPORT_BUCKET)
+
+    const data = await loadExportData(ctx)
+    const clock = makeClock(timeZone ?? ctx.profile?.timezone ?? undefined)
+    const archive = await buildExportArchive({
+      data,
+      choices,
+      clock,
+      dateStamp: clock.wall(data.generatedAt)!.toISOString().slice(0, 10),
+      // Only this account's documents reach here (loadExportData reads them through its ingredients)
+      fetchDoc: async path => {
+        const { data: blob, error } = await admin.storage.from(DOCS_BUCKET).download(path)
+        return error || !blob ? null : new Uint8Array(await blob.arrayBuffer())
+      },
+    })
+
+    const path = `${ctx.account.id}/${crypto.randomUUID()}.zip`
+    const { error: uploadError } = await staging.upload(path, archive.bytes, { contentType: 'application/zip', upsert: false })
+    if (uploadError) throw new Error(`Could not stage the export: ${uploadError.message}`)
+
+    const { data: signed, error: signError } = await staging.createSignedUrl(path, URL_SECONDS, { download: archive.fileName })
+    if (signError || !signed) {
+      await staging.remove([path])
+      throw new Error(`Could not prepare the download: ${signError?.message ?? 'no URL'}`)
+    }
+
+    return NextResponse.json({
+      url: signed.signedUrl, path, fileName: archive.fileName, root: archive.root, bytes: archive.bytes.length,
+      // Drawn by the browser with the editor's own panel code, then added to the zip
+      panels: { format: choices.nfp, jobs: archive.panels },
+    })
+  } catch (e) {
+    console.error('[export]', e)
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'The export failed' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const auth = await requireApi({ allowUnentitled: true, role: 'owner' })
+  if (!auth.ok) return auth.res
+  const path = req.nextUrl.searchParams.get('path') ?? ''
+  // Only this account's staged exports, and nothing that climbs out of the folder
+  if (!path.startsWith(`${auth.ctx.account.id}/`) || path.includes('..')) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+  await getSupabaseAdmin().storage.from(EXPORT_BUCKET).remove([path])
+  return new NextResponse(null, { status: 204 })
+}
 
 // Full JSON export of the caller's account. Owner only. Stays available without an active
 // subscription (people must be able to get their data out). Every query is anchored to the
