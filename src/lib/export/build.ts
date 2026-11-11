@@ -8,7 +8,7 @@ import { cToF, trimNumber } from '@/lib/step-measurements'
 import { TIME_ACTIVITIES } from '@/lib/time-tracking'
 import { buildNfpModel, nfpModelSchema } from '@/lib/nfp-model'
 import type { ExportClient, ExportData, ExportFormulation, ExportIngredient } from './data'
-import { FORMAT_LABEL } from './model'
+import { EXPORT_CATEGORIES, FORMAT_LABEL } from './model'
 import type { Block, Column, ExportChoices, ExportFile, PanelFormat, PanelJob, Report, Section, SectionSheet, Workbook } from './model'
 
 // ---------- Shared helpers ----------
@@ -484,7 +484,7 @@ function table(columns: Column[], rows: string[][], emptyText?: string): Block {
 const c = (label: string, width = 1, numeric = false): Column => ({ label, width, numeric })
 const c_ = c
 
-/** Every file of the export in the chosen formats (Nutrition Facts panels are drawn by the browser: see panelJobs) */
+/** Every file of the export in the chosen formats, skipped parts left out (Nutrition Facts panels are drawn by the browser: see panelJobs) */
 export function buildExportFiles(data: ExportData, clock: Clock, docPaths: Map<string, string>, choices: ExportChoices): ExportFile[] {
   const files: ExportFile[] = []
   const alloc = pathAllocator()
@@ -492,18 +492,19 @@ export function buildExportFiles(data: ExportData, clock: Clock, docPaths: Map<s
   const report = (format: 'docx' | 'pdf', r: Report): ExportFile => ({ kind: 'report', format, report: r })
 
   // Projects and clients
-  if (choices.projects === 'xlsx') files.push({ kind: 'workbook', book: projectsWorkbook(data, clock) })
+  if (choices.projects === 'skip') { /* left out */ }
+  else if (choices.projects === 'xlsx') files.push({ kind: 'workbook', book: projectsWorkbook(data, clock) })
   else files.push(report(choices.projects, { path: 'Projects and clients', title: 'Projects and clients', subtitle: stamp, blocks: projectsReport(data, clock) }))
 
   // One file per formulation, holding every iteration
-  for (const its of formulationFamilies(data)) {
+  for (const its of choices.formulations === 'skip' ? [] : formulationFamilies(data)) {
     const latest = its[its.length - 1]
     const client = clientOf(data, latest.projectId)
     const path = alloc(`Formulations/${safeName(latest.projectName)}/${safeName(latest.name)}`)
     if (choices.formulations === 'xlsx') {
       files.push({ kind: 'workbook', book: { path, sheets: its.map(f => iterationSheet(f, client, clock)) } })
     } else {
-      files.push(report(choices.formulations, {
+      files.push(report(choices.formulations as 'docx' | 'pdf', {
         path,
         title: latest.name,
         subtitle: [latest.projectName, client, `${its.length} iteration${its.length === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
@@ -517,12 +518,15 @@ export function buildExportFiles(data: ExportData, clock: Clock, docPaths: Map<s
   }
 
   // Suppliers with the ingredients they supply, and the whole ingredient library
-  if (choices.suppliers === 'xlsx') files.push({ kind: 'workbook', book: suppliersWorkbook(data, clock, docPaths) })
+  if (choices.suppliers === 'skip') { /* left out */ }
+  else if (choices.suppliers === 'xlsx') files.push({ kind: 'workbook', book: suppliersWorkbook(data, clock, docPaths) })
   else files.push(report(choices.suppliers, { path: 'Suppliers and ingredients', title: 'Suppliers and ingredients', subtitle: stamp, blocks: suppliersAndIngredientsReport(data, clock, docPaths) }))
 
   // Sous Chef
-  files.push(report(choices.sousChef, { path: 'Sous Chef/Conversations', title: 'Sous Chef conversations', subtitle: `Your own conversations. ${stamp}`, blocks: conversationsReport(data, clock) }))
-  files.push(report(choices.sousChef, { path: 'Sous Chef/Lab notebook', title: 'Sous Chef lab notebook', subtitle: stamp, blocks: notebookReport(data, clock) }))
+  if (choices.sousChef !== 'skip') {
+    files.push(report(choices.sousChef, { path: 'Sous Chef/Conversations', title: 'Sous Chef conversations', subtitle: `Your own conversations. ${stamp}`, blocks: conversationsReport(data, clock) }))
+    files.push(report(choices.sousChef, { path: 'Sous Chef/Lab notebook', title: 'Sous Chef lab notebook', subtitle: stamp, blocks: notebookReport(data, clock) }))
+  }
 
   return files
 }
@@ -890,6 +894,17 @@ export function buildReadme(opts: {
   const docs = data.ingredients.reduce((sum, i) => sum + i.docs.length, 0) - missingDocs.length - leftOutDocs.length
   const clients = clientRows(data).filter(c => c.client !== '(No client)').length
   const as = (k: keyof ExportChoices) => `(${FORMAT_LABEL[choices[k]]})`
+  const parts: Array<[keyof ExportChoices, string]> = [
+    ['projects', `- Projects and clients ${as('projects')}: ${plural(data.projects.length, 'project')} and ${plural(clients, 'client')} with contacts, nutrition targets,`
+      + ` ${plural(data.timeEntries.length, 'time entry', 'time entries')} and the team (${plural(data.members.length, 'person', 'people')})`],
+    ['formulations', `- Formulations ${as('formulations')}: ${plural(families, 'formulation')} with ${plural(data.formulations.length, 'iteration')}, one file per formulation`
+      + `${choices.formulations === 'xlsx' ? ' and one tab per iteration' : ' and a section per iteration'}: ingredients, process steps, calculated nutrition, notes and production log`],
+    ['suppliers', `- Suppliers and ingredients ${as('suppliers')}: ${plural(data.suppliers.length, 'supplier')}, the ingredients they supply, and all ${plural(data.ingredients.length, 'ingredient')} with nutrient values, allergens, certifications and costs; equipment; ${plural(data.intake.length, 'lab intake item')}`],
+    ['sousChef', `- Sous Chef ${as('sousChef')}: ${plural(data.conversations.length, 'of your own conversations', 'of your own conversations')} (other people's are private to them) and ${plural(data.notebook.length, 'lab notebook note')}`],
+    ['nfp', `- Nutrition Facts panels ${as('nfp')}: ${plural(panels, 'panel')}: each saved panel as saved, and a standard panel for each iteration with nutrient data but no saved panel. They are drawn and added by your browser as the zip downloads; if this zip has no Nutrition Facts folder, export again`],
+    ['documents', `- Ingredient documents: ${plural(docs, 'uploaded spec sheet or COA', 'uploaded spec sheets and COAs')}, in their original format`],
+  ]
+  const skipped = parts.filter(([k]) => choices[k] === 'skip').map(([k]) => `- ${EXPORT_CATEGORIES[k].label}`)
   const lines = [
     'Benchtop account export',
     '=======================',
@@ -899,14 +914,8 @@ export function buildReadme(opts: {
     '',
     'What is included',
     '----------------',
-    `- Projects and clients ${as('projects')}: ${plural(data.projects.length, 'project')} and ${plural(clients, 'client')} with contacts, nutrition targets,`
-      + ` ${plural(data.timeEntries.length, 'time entry', 'time entries')} and the team (${plural(data.members.length, 'person', 'people')})`,
-    `- Formulations ${as('formulations')}: ${plural(families, 'formulation')} with ${plural(data.formulations.length, 'iteration')}, one file per formulation`
-      + `${choices.formulations === 'xlsx' ? ' and one tab per iteration' : ' and a section per iteration'}: ingredients, process steps, calculated nutrition, notes and production log`,
-    `- Suppliers and ingredients ${as('suppliers')}: ${plural(data.suppliers.length, 'supplier')}, the ingredients they supply, and all ${plural(data.ingredients.length, 'ingredient')} with nutrient values, allergens, certifications and costs; equipment; ${plural(data.intake.length, 'lab intake item')}`,
-    `- Sous Chef ${as('sousChef')}: ${plural(data.conversations.length, 'of your own conversations', 'of your own conversations')} (other people's are private to them) and ${plural(data.notebook.length, 'lab notebook note')}`,
-    `- Nutrition Facts panels ${as('nfp')}: ${plural(panels, 'panel')}: each saved panel as saved, and a standard panel for each iteration with nutrient data but no saved panel. They are drawn and added by your browser as the zip downloads; if this zip has no Nutrition Facts folder, export again`,
-    `- Ingredient documents: ${plural(docs, 'uploaded spec sheet or COA', 'uploaded spec sheets and COAs')}, in their original format`,
+    ...parts.filter(([k]) => choices[k] !== 'skip').map(([, line]) => line),
+    ...(skipped.length ? ['', 'Skipped (not in this export)', '----------------------------', ...skipped] : []),
     '',
     "Nutrition for formulations is calculated from the ingredients' nutrient values after process losses and",
     "staged additions, and costs from each ingredient's formulation cost, the same way the formulation editor",

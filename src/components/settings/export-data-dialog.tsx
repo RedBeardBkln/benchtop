@@ -5,7 +5,7 @@ import { Download, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { btnPrimary, btnSecondary } from './ui'
 import {
-  DEFAULT_CHOICES, EXPORT_CATEGORIES, FORMAT_LABEL,
+  DEFAULT_CHOICES, EXPORT_CATEGORIES, FORMAT_LABEL, exportsAnything,
   type AnyFormat, type ExportCategory, type ExportChoices, type PanelFormat, type PanelJob,
 } from '@/lib/export/model'
 
@@ -61,6 +61,7 @@ export function ExportDataDialog({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const busy = status !== null
   const isDefault = CATEGORY_KEYS.every(k => choices[k] === DEFAULT_CHOICES[k])
+  const nothingChosen = !exportsAnything(choices)
 
   const choose = (key: ExportCategory, format: AnyFormat) => setChoices(prev => ({ ...prev, [key]: format }))
 
@@ -110,12 +111,12 @@ export function ExportDataDialog({ onClose }: { onClose: () => void }) {
       <form
         className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-5 space-y-4 max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
-        onSubmit={e => { e.preventDefault(); if (!busy) void run() }}
+        onSubmit={e => { e.preventDefault(); if (!busy && !nothingChosen) void run() }}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold text-gray-900">Export all data</h3>
-            <p className="text-sm text-gray-500 mt-0.5">Download everything in this account as one zip file. Choose a format for each part.</p>
+            <p className="text-sm text-gray-500 mt-0.5">Download everything in this account as one zip file. Choose a format for each part, or skip it.</p>
           </div>
           <button type="button" onClick={onClose} disabled={busy} aria-label="Close"
             className="p-1 -m-1 text-gray-400 hover:text-gray-600 disabled:opacity-40">
@@ -141,7 +142,7 @@ export function ExportDataDialog({ onClose }: { onClose: () => void }) {
                     return (
                       <label key={format}
                         className={`px-2.5 py-1 text-xs rounded cursor-pointer transition-colors ${
-                          on ? 'bg-white text-blue-700 font-medium shadow-sm ring-1 ring-blue-500' : 'text-gray-600 hover:text-gray-900'
+                          on ? (format === 'skip' ? 'bg-white text-gray-700 font-medium shadow-sm ring-1 ring-gray-400' : 'bg-white text-blue-700 font-medium shadow-sm ring-1 ring-blue-500') : 'text-gray-600 hover:text-gray-900'
                         }`}
                         title={i === 0 ? 'Default' : undefined}
                       >
@@ -157,8 +158,9 @@ export function ExportDataDialog({ onClose }: { onClose: () => void }) {
           })}
         </fieldset>
 
-        <p className="text-xs text-gray-500">Uploaded spec sheets and COAs are included in their original format. A README in the zip lists everything inside.</p>
+        <p className="text-xs text-gray-500">A README in the zip lists everything inside, and anything you skipped.</p>
 
+        {nothingChosen && <p className="text-sm text-gray-600">Every part is skipped. Choose at least one to export.</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex items-center justify-end gap-2 pt-1">
@@ -171,7 +173,7 @@ export function ExportDataDialog({ onClose }: { onClose: () => void }) {
           <button type="button" onClick={onClose} disabled={busy} className={btnSecondary}>
             Cancel
           </button>
-          <button type="submit" disabled={busy} className={`${btnPrimary} gap-1.5`}
+          <button type="submit" disabled={busy || nothingChosen} className={`${btnPrimary} gap-1.5`}
             data-tip="Builds the zip with the formats chosen above and downloads it">
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
             {busy ? 'Exporting…' : 'Export'}

@@ -11,6 +11,7 @@ import type { AccountUsage } from '@/lib/admin-actions'
 import { btnDanger, btnSecondary, Card, Field, formatDate, inputCls, Notice } from '@/components/settings/ui'
 import { EditPlan, planSummary, type PlanAccount } from './plan-editor'
 import { ActivityFeed, formatWhen, timeAgo } from './activity-feed'
+import { ExportLog } from './export-log'
 import { Badge, SubscriptionBadge, useSuspendUser } from './admin-console'
 
 // Platform admin: one account in full, with every action an admin can take on it
@@ -406,6 +407,9 @@ export function AccountAdminDetail({ id }: { id: string }) {
           <PeopleCard account={data} onChanged={refresh} />
           <Card title="Activity" description="Changes made in this account, and platform admin actions on it.">
             <ActivityFeed accountId={data.id} showAccount={false} />
+          </Card>
+          <Card title="Data exports" description="Every time someone in this account exported its data from Settings, and what they chose.">
+            <ExportLog accountId={data.id} showAccount={false} />
           </Card>
           <DangerCard account={data} onChanged={refresh} />
         </div>

@@ -1,7 +1,7 @@
 import { eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
-  accountMembers, accounts, activityLog, auditLog, clients, equipment, ingredientDocs, ingredients, intakeItems, invoicingConnections,
+  accountMembers, accounts, activityLog, auditLog, dataExports, clients, equipment, ingredientDocs, ingredients, intakeItems, invoicingConnections,
   profiles, projects, sousChefConversations, sousChefNotes, subscriptions, suppliers, timeEntries,
 } from '@/lib/db/schema'
 import { clearBranding } from '@/lib/logo-server'
@@ -9,6 +9,7 @@ import { clearStaging } from '@/lib/staged-upload'
 import { needsStripeCancel } from '@/lib/billing/entitlement'
 import { BillingNotConfiguredError, getStripe, isBillingConfigured } from '@/lib/billing/stripe'
 import { DOCS_BUCKET, getSupabaseAdmin, isAdminConfigured } from '@/lib/supabase/admin'
+import { clearStagedExports } from '@/lib/export/staging'
 
 // Permanently deletes an account and everything in it: the owner from Settings, or a platform
 // admin. Callers check who may do it and that it isn't the billing-exempt staff account.
@@ -72,6 +73,7 @@ export async function deleteAccount(accountId: string, subscription?: Sub | null
   // Uploads that were started but never attached to anything; best effort
   await clearStaging(accountId).catch(err => console.error('[account delete] staging cleanup failed:', err))
   await clearBranding(accountId).catch(err => console.error('[account delete] logo cleanup failed:', err))
+  await clearStagedExports(accountId).catch(err => console.error('[account delete] staged export cleanup failed:', err))
 
   // 3. Database rows, FK-safe, in one transaction.
   //    projects -> cascades formulations, lines, process steps, targets, batch runs, reverse targets
@@ -94,6 +96,7 @@ export async function deleteAccount(accountId: string, subscription?: Sub | null
     await tx.delete(equipment).where(eq(equipment.accountId, accountId))
     await tx.delete(auditLog).where(eq(auditLog.accountId, accountId))
     await tx.delete(activityLog).where(eq(activityLog.accountId, accountId))
+    await tx.delete(dataExports).where(eq(dataExports.accountId, accountId))
     await tx.delete(invoicingConnections).where(eq(invoicingConnections.accountId, accountId))
     await tx.delete(subscriptions).where(eq(subscriptions.accountId, accountId))
     await tx.delete(accountMembers).where(eq(accountMembers.accountId, accountId))

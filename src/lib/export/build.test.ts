@@ -258,3 +258,76 @@ describe('buildExportArchive', () => {
     expect(readme).toContain('- Whey: Spec Sheet')
   })
 })
+
+describe('skipping parts of the export', () => {
+  it('knows when nothing at all is chosen', async () => {
+    const { exportsAnything, EXPORT_CATEGORIES } = await import('./model')
+    const allSkipped = Object.fromEntries(Object.keys(EXPORT_CATEGORIES).map(k => [k, 'skip'])) as never
+    expect(exportsAnything(DEFAULT_CHOICES)).toBe(true)
+    expect(exportsAnything(allSkipped)).toBe(false)
+    expect(exportsAnything({ ...(allSkipped as object), documents: 'include' } as never)).toBe(true)
+  })
+
+  it('leaves skipped parts out of the files', () => {
+    const data = fixture()
+    const files = buildExportFiles(data, makeClock('UTC'), assignDocPaths(data.ingredients), { ...DEFAULT_CHOICES, formulations: 'skip', sousChef: 'skip' })
+    expect(files.map(f => (f.kind === 'workbook' ? f.book.path : f.report.path))).toEqual(['Projects and clients', 'Suppliers and ingredients'])
+  })
+
+  it('leaves skipped documents and panels out of the zip, and lists what was skipped in the README', async () => {
+    const { buildExportArchive } = await import('./archive')
+    const JSZip = (await import('jszip')).default
+    const choices = { ...DEFAULT_CHOICES, projects: 'skip', sousChef: 'docx', nfp: 'skip', documents: 'skip' } as const
+    const a = await buildExportArchive({
+      data: fixture(), choices, clock: makeClock('UTC'), dateStamp: '2026-11-11',
+      fetchDoc: async () => new Uint8Array(10),
+    })
+    const zip = await JSZip.loadAsync(a.bytes)
+    const names = Object.keys(zip.files).filter(f => !f.endsWith('/'))
+    expect(names.some(n => n.includes('Ingredient documents/'))).toBe(false)
+    expect(names.some(n => n.includes('Projects and clients'))).toBe(false)
+    expect(a.panels).toEqual([])
+    expect(a.summary).toMatchObject({ panels: 0, documents: 0, dataFiles: 4 })
+    const readme = await zip.file(`${a.root}/README.txt`)!.async('string')
+    expect(readme).toContain('Skipped (not in this export)')
+    expect(readme).toContain('- Projects and clients')
+    expect(readme).toContain('- Nutrition Facts panels')
+    expect(readme).toContain('- Ingredient documents')
+    expect(readme).not.toContain('Projects and clients (')
+    // Skipped documents aren't pointed to from the spreadsheets either
+    const { default: ExcelJS } = await import('exceljs')
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(await zip.file(`${a.root}/Suppliers and ingredients.xlsx`)!.async('nodebuffer') as never)
+    expect(wb.getWorksheet('Documents')!.getRow(2).getCell(3).value).toBeNull()
+  })
+})
+
+describe('documents left out for size', () => {
+  it("aren't listed with a path to a file the zip doesn't have", async () => {
+    const { buildExportArchive } = await import('./archive')
+    const JSZip = (await import('jszip')).default
+    const { default: ExcelJS } = await import('exceljs')
+    const sheetCell = async (budgetBytes: number) => {
+      const a = await buildExportArchive({
+        data: fixture(), choices: { ...DEFAULT_CHOICES, sousChef: 'docx' }, clock: makeClock('UTC'), dateStamp: '2026-11-11', budgetBytes,
+        fetchDoc: async () => new Uint8Array(1_000_000),
+      })
+      const zip = await JSZip.loadAsync(a.bytes)
+      const wb = new ExcelJS.Workbook()
+      await wb.xlsx.load(await zip.file(`${a.root}/Suppliers and ingredients.xlsx`)!.async('nodebuffer') as never)
+      return wb.getWorksheet('Documents')!.getRow(2).getCell(3).value
+    }
+    expect(await sheetCell(50_000_000)).toBe('Ingredient documents/Whey/Spec Sheet.pdf')
+    expect(await sheetCell(3_500_000)).toBeNull()
+  })
+})
+
+describe('errorSummary', () => {
+  it('keeps the first line and drops query parameters and email addresses', async () => {
+    const { errorSummary } = await import('./error-summary')
+    expect(errorSummary(new Error('Failed query: select * from projects where id = $1\nparams: abc,owner@acme.test'))).toBe('Failed query: select * from projects where id = $1')
+    expect(errorSummary(new Error('Failed query: x params: 1,2'))).toBe('Failed query: x')
+    expect(errorSummary('Could not reach pat@acme.test')).toBe('Could not reach <email>')
+    expect(errorSummary(null)).toBe('Unknown error')
+  })
+})

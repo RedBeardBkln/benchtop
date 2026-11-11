@@ -6,52 +6,67 @@ import type { NfpModel } from '@/lib/nfp-model'
 
 export type DocFormat = 'xlsx' | 'docx' | 'pdf'
 export type PanelFormat = 'pdf' | 'jpg' | 'png'
-export type AnyFormat = DocFormat | PanelFormat
+/** Leave the part out of the export */
+export type Skip = 'skip'
+export type AnyFormat = DocFormat | PanelFormat | 'include' | Skip
 
-export const FORMAT_LABEL: Record<AnyFormat, string> = { xlsx: 'Excel', docx: 'Word', pdf: 'PDF', jpg: 'JPEG', png: 'PNG' }
+export const FORMAT_LABEL: Record<AnyFormat, string> = {
+  xlsx: 'Excel', docx: 'Word', pdf: 'PDF', jpg: 'JPEG', png: 'PNG', include: 'Include', skip: 'Skip',
+}
 
-/** What each part of the export is saved as. The first option of each category is its default. */
+const SKIPPED = 'Not included in this export'
+
+/** What each part of the export is saved as, or skipped. The first option of each category is its default. */
 export const EXPORT_CATEGORIES = {
   projects: {
     label: 'Projects and clients',
-    options: ['xlsx', 'docx', 'pdf'],
+    options: ['xlsx', 'docx', 'pdf', 'skip'],
     hint: {
       xlsx: 'One workbook: projects, client records and contacts, nutrition targets, time entries and the team',
       docx: 'One document of every project and client',
       pdf: 'One document of every project and client',
+      skip: SKIPPED,
     },
   },
   formulations: {
     label: 'Formulations',
-    options: ['xlsx', 'docx', 'pdf'],
+    options: ['xlsx', 'docx', 'pdf', 'skip'],
     hint: {
       xlsx: 'One workbook per formulation, one tab per iteration',
       docx: 'One document per formulation, a section per iteration',
       pdf: 'One document per formulation, a section per iteration',
+      skip: SKIPPED,
     },
   },
   suppliers: {
     label: 'Suppliers and ingredients',
-    options: ['xlsx', 'docx', 'pdf'],
+    options: ['xlsx', 'docx', 'pdf', 'skip'],
     hint: {
       xlsx: 'One workbook: suppliers and contacts, the ingredients they supply, a tab of all ingredients, and lab intake',
       docx: 'One document: suppliers, then every ingredient',
       pdf: 'One document: suppliers, then every ingredient',
+      skip: SKIPPED,
     },
   },
   sousChef: {
     label: 'Sous Chef',
-    options: ['pdf', 'docx'],
-    hint: { pdf: 'Your conversations and the team lab notebook', docx: 'Your conversations and the team lab notebook' },
+    options: ['pdf', 'docx', 'skip'],
+    hint: { pdf: 'Your conversations and the team lab notebook', docx: 'Your conversations and the team lab notebook', skip: SKIPPED },
   },
   nfp: {
     label: 'Nutrition Facts panels',
-    options: ['pdf', 'jpg', 'png'],
+    options: ['pdf', 'jpg', 'png', 'skip'],
     hint: {
       pdf: 'Each saved panel, or a standard panel for iterations without one',
       jpg: 'Each saved panel, or a standard panel for iterations without one',
       png: 'Each saved panel, or a standard panel for iterations without one',
+      skip: SKIPPED,
     },
+  },
+  documents: {
+    label: 'Ingredient documents',
+    options: ['include', 'skip'],
+    hint: { include: 'The spec sheets and COAs you uploaded, in their original format', skip: SKIPPED },
   },
 } as const satisfies Record<string, { label: string; options: readonly AnyFormat[]; hint: Partial<Record<AnyFormat, string>> }>
 
@@ -61,6 +76,9 @@ export type ExportChoices = { [K in ExportCategory]: (typeof EXPORT_CATEGORIES)[
 export const DEFAULT_CHOICES = Object.fromEntries(
   Object.entries(EXPORT_CATEGORIES).map(([k, c]) => [k, c.options[0]]),
 ) as ExportChoices
+
+/** Whether the choices export anything at all */
+export const exportsAnything = (c: ExportChoices) => (Object.keys(EXPORT_CATEGORIES) as ExportCategory[]).some(k => c[k] !== 'skip')
 
 export type Cell = string | number | boolean | Date | null | undefined
 

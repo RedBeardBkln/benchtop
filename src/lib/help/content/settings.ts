@@ -214,14 +214,14 @@ export const settings: HelpSection = {
           items: [
             'The account owner goes to [Settings → Privacy & Terms](/settings/privacy).',
             'In the **Your data** card, click `Download my data`.',
-            'Choose a format for each part, or keep the defaults: projects and clients, formulations, and suppliers and ingredients as **Excel**; Sous Chef and Nutrition Facts panels as **PDF**.',
+            'Choose a format for each part, or keep the defaults: projects and clients, formulations, and suppliers and ingredients as **Excel**; Sous Chef and Nutrition Facts panels as **PDF**; uploaded documents included. Click `Skip` on any part you don’t want.',
             'Click `Export`. Building the file can take a minute; the dialog shows its progress.',
             'A file named like `Benchtop export 2026-11-11.zip` downloads to your computer.',
           ],
         },
         {
           type: 'p',
-          text: 'The zip holds a **README** listing what is inside, and these parts, each in the format you chose:',
+          text: 'The zip holds a **README** listing what is inside and what you skipped, and these parts, each in the format you chose:',
         },
         {
           type: 'list',
@@ -231,7 +231,7 @@ export const settings: HelpSection = {
             '**Suppliers and ingredients** (Excel, Word or PDF): suppliers and their contacts, the ingredients each supplies, every ingredient with its nutrient values, allergens, certifications and costs, equipment and lab intake.',
             '**Sous Chef** (PDF or Word): your own conversations (other people’s are private to them) and the team lab notebook.',
             '**Nutrition Facts panels** (PDF, JPEG or PNG): every saved panel as you saved it, and a standard panel for each iteration that has nutrient data but no saved panel.',
-            '**Ingredient documents**: the spec sheets and COAs you uploaded, in their original format.',
+            '**Ingredient documents** (include or skip): the spec sheets and COAs you uploaded, in their original format.',
           ],
         },
         {
@@ -240,7 +240,7 @@ export const settings: HelpSection = {
         },
         {
           type: 'note',
-          text: 'Exporting works even if the subscription has ended.',
+          text: 'Exporting works even if the subscription has ended. Each export (when, by whom and what was chosen) is recorded so Benchtop support can review it if needed.',
         },
       ],
     },

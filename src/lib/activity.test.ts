@@ -51,3 +51,11 @@ describe('describeAdminAction', () => {
     expect(describeAdminAction('something.new', {})).toBe('something.new')
   })
 })
+
+describe('account data exports', () => {
+  it('describes an export and leaves out removing its staged copy', () => {
+    expect(describeActivity('POST', '/api/account/export')).toBe('Requested an account data export')
+    expect(shouldLogActivity('POST', '/api/account/export')).toBe(true)
+    expect(shouldLogActivity('DELETE', '/api/account/export?path=a/b.zip')).toBe(false)
+  })
+})

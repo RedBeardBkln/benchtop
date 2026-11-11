@@ -15,6 +15,8 @@ const SKIPPED_PREFIXES = ['/api/admin', '/api/stripe', '/api/billing/sync']
 export function shouldLogActivity(method: string | null, path: string | null): boolean {
   if (!method || !path || !LOGGED_METHODS.has(method.toUpperCase())) return false
   if (!path.startsWith('/api/')) return false
+  // The browser removing a staged export zip it has downloaded: housekeeping, and the export itself is logged
+  if (method.toUpperCase() === 'DELETE' && path.split('?')[0] === '/api/account/export') return false
   return !SKIPPED_PREFIXES.some(p => path === p || path.startsWith(p + '/'))
 }
 
@@ -61,6 +63,9 @@ const VERBS: Record<string, string> = { POST: 'Created', PUT: 'Updated', PATCH: 
 /** A short human description, e.g. "Updated formulation", "Formulation: lines (updated)". */
 export function describeActivity(method: string, path: string): string {
   const { entity, detail } = parseActivityPath(path)
+  // Recorded before the request is checked, so it may not have gone ahead: the Data exports log (admin
+  // console) has what was exported and whether it worked
+  if (entity === 'account' && detail === 'export' && method.toUpperCase() === 'POST') return 'Requested an account data export'
   const noun = NOUNS[entity] ?? entity.replace(/-/g, ' ')
   const verb = VERBS[method.toUpperCase()] ?? method
   if (!detail) return `${verb} ${noun}`

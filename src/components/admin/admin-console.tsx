@@ -10,6 +10,7 @@ import { readErrorMessage } from '@/lib/utils'
 import { Card, formatDate } from '@/components/settings/ui'
 import { planSummary, type PlanAccount } from './plan-editor'
 import { ActivityFeed, formatWhen, timeAgo } from './activity-feed'
+import { ExportLog } from './export-log'
 import type { AccountUsage } from '@/lib/admin-actions'
 
 // Platform admin console: every account, every person, and the activity log
@@ -39,6 +40,7 @@ const TABS = [
   { key: 'accounts', label: 'Accounts' },
   { key: 'people', label: 'People' },
   { key: 'activity', label: 'Activity' },
+  { key: 'exports', label: 'Data exports' },
 ] as const
 type Tab = (typeof TABS)[number]['key']
 
@@ -286,6 +288,11 @@ export function AdminConsole() {
       {tab === 'activity' && (
         <Card title="Activity" description="Every change people make in the app, and everything platform admins do, newest first.">
           <ActivityFeed />
+        </Card>
+      )}
+      {tab === 'exports' && (
+        <Card title="Data exports" description="Every account data export from Settings, by any account: who exported, what they chose, and whether it worked. Newest first.">
+          <ExportLog />
         </Card>
       )}
     </div>
