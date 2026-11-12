@@ -4,6 +4,8 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { feedback } from '@/lib/db/schema'
 import { feedbackSchema, isProfileComplete } from '@/lib/feedback'
+import { notifyFeedback } from '@/lib/feedback-notify'
+import { getAppOrigin } from '@/lib/app-url'
 
 // Bug reports and feature requests. Open to every signed-in member, subscribed or not, once their
 // profile is complete (a full name), so there is someone to reply to.
@@ -69,7 +71,14 @@ export async function POST(req: NextRequest) {
       pagePath: d.pagePath ?? null,
       userAgent: req.headers.get('user-agent')?.slice(0, 500) ?? null,
     })
-    .returning({ id: feedback.id })
+    .returning()
 
-  return NextResponse.json(row, { status: 201 })
+  notifyFeedback({
+    ...row,
+    accountName: ctx.account.name,
+    accountPlan: ctx.account.plan,
+    role: ctx.role,
+  }, getAppOrigin(req.nextUrl.origin))
+
+  return NextResponse.json({ id: row.id }, { status: 201 })
 }

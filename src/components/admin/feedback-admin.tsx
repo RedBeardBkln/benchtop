@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Bug, Lightbulb, Mail, MessageCircleReply, Phone } from 'lucide-react'
-import { FEEDBACK_KIND_LABELS, type FeedbackKind } from '@/lib/feedback'
+import { Bug, ClipboardCopy, Lightbulb, Mail, MessageCircleReply, Phone } from 'lucide-react'
+import { FEEDBACK_KIND_LABELS, feedbackClaudePrompt, type FeedbackKind } from '@/lib/feedback'
 import { readErrorMessage } from '@/lib/utils'
 import { btnSecondary, Card, Notice } from '@/components/settings/ui'
 import { UNREAD_FEEDBACK_KEY } from '@/components/admin/unread-feedback'
@@ -24,6 +24,13 @@ type FeedbackRow = {
   resolvedAt: string | null
   createdAt: string
   accountName: string
+  accountId: string
+  userId: string
+}
+
+function copyForClaude(f: FeedbackRow) {
+  navigator.clipboard.writeText(feedbackClaudePrompt(f, window.location.origin))
+    .then(() => toast.success('Copied. Paste it into Claude Code'), () => toast.error('Could not copy'))
 }
 
 const FILTERS = [
@@ -161,6 +168,15 @@ export function FeedbackAdmin() {
                   </span>
                 )}
               </div>
+              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => copyForClaude(f)}
+                data-tip="Copies the full report, with page, browser and contact details, ready to paste into Claude Code"
+                className={`${btnSecondary} !py-1 !px-3 !text-xs inline-flex items-center gap-1.5`}
+              >
+                <ClipboardCopy size={13} /> Copy for Claude
+              </button>
               <button
                 type="button"
                 onClick={() => setResolved.mutate({ id: f.id, resolved: !f.resolvedAt })}
@@ -170,6 +186,7 @@ export function FeedbackAdmin() {
               >
                 {f.resolvedAt ? 'Reopen' : 'Mark resolved'}
               </button>
+              </div>
             </div>
 
             <p className="mt-3 text-sm text-gray-800 whitespace-pre-wrap break-words">{f.message}</p>

@@ -84,6 +84,8 @@ See `.env.example` for the full template. Real values go in `.env.local` (git-ig
 | `SUPABASE_SERVICE_ROLE_KEY` (server only, **never** `NEXT_PUBLIC_`) | Invite redemption, document storage, account deletion, `db:bootstrap` | Those operations return 503 (`signup_not_configured`, `storage_not_configured`, `admin_not_configured`); build and everything else unaffected |
 | `NEXT_PUBLIC_APP_URL` | Invite links and Stripe return URLs | Request origin is used |
 | `PLATFORM_ADMIN_EMAILS` | Who may create invitations (applied by `pnpm db:bootstrap --apply`) | Warning; no admins are created |
+| `RESEND_API_KEY` | Emailing platform admins about each new bug report / feature request (sender `noreply@benchtop.solutions`) | Email skipped and logged; the submission still saves |
+| `FEEDBACK_NOTIFY_EMAILS` | Who gets those emails (comma-separated) | Falls back to `PLATFORM_ADMIN_EMAILS` |
 | `STRIPE_SECRET_KEY`, `STRIPE_PLAN_PRICE_MONTHLY_ID`, `STRIPE_PLAN_PRICE_YEARLY_ID` | Checkout and Customer Portal | Billing endpoints return `503 {code: "billing_not_configured"}`; billing page shows a "not configured" notice; outside accounts without a subscription are **not** entitled (fails closed); the legacy account is unaffected |
 | `STRIPE_WEBHOOK_SECRET` | `/api/stripe/webhook` signature verification | Webhook returns 503 |
 | `STRIPE_SEAT_PRICE_MONTHLY_ID`, `STRIPE_SEAT_PRICE_YEARLY_ID` | Extra team seats ($10/month and $100/year prices) | Team invitations return `503 {code: "not_configured"}` for subscribed accounts; billing-exempt accounts are unaffected |
