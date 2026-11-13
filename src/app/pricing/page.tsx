@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Check } from 'lucide-react'
+import { Check, KeyRound, PlusCircle, Sparkles } from 'lucide-react'
 import { InviteCta, PageIntro, SiteLayout, siteBtnPrimary, siteBtnSecondary } from '@/components/site/site-layout'
 import { FaqList } from '@/components/site/faq-list'
-import { FAQ_GROUPS, PLAN_INCLUDES, PRICING } from '@/lib/site-content'
+import { AI_PLAN, FAQ_GROUPS, PLAN_INCLUDES, PRICING } from '@/lib/site-content'
 
 export const metadata: Metadata = {
   title: 'Pricing | Benchtop',
@@ -61,6 +61,8 @@ export default function PricingPage() {
           </div>
         </div>
 
+        <AiPlanSection />
+
         <p className="mt-6 text-sm text-gray-500">
           Prices are in US dollars. The account owner is included in the plan price; every other person on the team is
           one extra seat, billed on the same subscription.
@@ -78,6 +80,32 @@ export default function PricingPage() {
         text={`Request an invite. When you join, you get ${PRICING.trialDays} days with every feature before you decide.`}
       />
     </SiteLayout>
+  )
+}
+
+const AI_ICONS = { included: Sparkles, own: KeyRound, addon: PlusCircle } as const
+
+function AiPlanSection() {
+  return (
+    <div id="ai" className="mt-8 scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
+      <h2 className="text-xl font-semibold text-gray-900">{AI_PLAN.title}</h2>
+      <p className="mt-2 text-gray-600 max-w-3xl">{AI_PLAN.lead}</p>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {AI_PLAN.options.map(o => {
+          const Icon = AI_ICONS[o.key as keyof typeof AI_ICONS]
+          const own = o.key === 'own'
+          return (
+            <div key={o.key} className={`rounded-xl border-[1.5px] p-5 ${own ? 'lcd-panel border-ink-900 text-ink-900' : 'border-gray-200 bg-gray-50 text-gray-900'}`}>
+              <Icon size={20} className={own ? 'text-ink-900' : 'text-lcd-600'} />
+              <h3 className="mt-3 font-semibold">{o.title}</h3>
+              <p className={`font-mono text-sm mt-1 ${own ? 'text-ink-800' : 'text-tang-700'}`}>{o.price}</p>
+              <p className={`mt-2 text-sm leading-relaxed ${own ? 'text-ink-800' : 'text-gray-600'}`}>{o.text}</p>
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-5 text-sm text-gray-500 max-w-3xl">{AI_PLAN.note}</p>
+    </div>
   )
 }
 

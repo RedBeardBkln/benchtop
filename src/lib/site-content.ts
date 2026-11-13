@@ -76,6 +76,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       'Answers on texture, shelf life, sugar reduction, emulsions and more, with the reasons behind each suggestion.',
       'Ingredient swaps and strategies for hitting a target, in the context of the formulation you have open.',
       'A shared lab notebook of the team’s decisions and learnings, which Sous Chef applies in every later conversation.',
+      'Bring your own AI: run Sous Chef on your team’s own Claude or OpenAI account and model, with no limit from Benchtop. Everyday use is included.',
     ],
   },
   {
@@ -140,7 +141,7 @@ export const HOME_HIGHLIGHTS: { icon: SiteIcon; title: string; text: string }[] 
   { icon: 'flask', title: 'Formulate', text: 'Weights, percentages and batch size stay in step. Every iteration is kept.' },
   { icon: 'label', title: 'Label', text: 'Live nutrition, an FDA-style Nutrition Facts panel and the ingredient statement.' },
   { icon: 'library', title: 'Build your library', text: 'USDA imports, plus AI that reads packages, product pages and spec sheets.' },
-  { icon: 'chef', title: 'Ask Sous Chef', text: 'Food science answers and ingredient swaps, beside the recipe you have open.' },
+  { icon: 'chef', title: 'Ask Sous Chef', text: 'Food science answers and ingredient swaps, beside the recipe you have open, on your own Claude or OpenAI account if you like.' },
   { icon: 'coins', title: 'Cost it', text: 'Cost per batch, kilo, serving and package, and stock that updates with production.' },
   { icon: 'users', title: 'Work with clients', text: 'Client records, team roles and project-level permissions.' },
 ]
@@ -161,9 +162,37 @@ export const PRICING = {
   yearlySavings: PLAN_PRICE_USD.month * 12 - PLAN_PRICE_USD.year,
 }
 
+// How AI is paid for, said plainly: the included AI covers everyday tasks; heavy use runs on the
+// team's own provider account or an add-on. Shown on /pricing and reused in the FAQ.
+export const AI_PLAN = {
+  title: 'Your AI, your way',
+  lead: 'Benchtop works with the AI platform you already trust. Everyday AI tasks are included. For heavier work, connect your own Claude or OpenAI account, or add more AI to your plan.',
+  options: [
+    {
+      key: 'included',
+      title: 'Included every month',
+      price: `$${AI_INCLUDED_USD} of AI a month`,
+      text: 'Covers the everyday tasks: reading label photos, product pages and spec sheets, Lab Intake, and quick questions to Sous Chef. It resets on the 1st, and Settings shows how much is left.',
+    },
+    {
+      key: 'own',
+      title: 'Bring your own AI',
+      price: 'No Benchtop limit',
+      text: 'Connect your team’s own Claude or OpenAI account with an API key. Your AI runs under your agreement with your provider, on the model you choose, and you pay them directly at their rates, with no markup from us.',
+    },
+    {
+      key: 'addon',
+      title: 'Or add more AI',
+      price: `$${AI_ADDON.price.month}/month per add-on`,
+      text: `Each add-on gives your team $${AI_ADDON.usdPerUnit} more AI a month ($${AI_ADDON.price.year}/year on yearly plans). Add or remove add-ons in Settings at any time.`,
+    },
+  ],
+  note: 'Why it works this way: a quick label read costs about a cent, but a long Sous Chef session that reviews many formulations or searches the web can cost far more. Rather than raise everyone’s price or hide a limit, we include the everyday AI and let teams who lean on Sous Chef run it on their own account. A Claude key powers every AI feature; an OpenAI key powers Sous Chef, while label and photo reading keep using the included AI.',
+}
+
 export const PLAN_INCLUDES = [
   'Every feature, with no tiers',
-  'AI included every month, with more as an add-on or on your own Claude or OpenAI key',
+  `$${AI_INCLUDED_USD} of AI each month for everyday tasks, or bring your own Claude or OpenAI key`,
   'Unlimited projects, formulations and ingredients',
   'Nutrition Facts panels and ingredient statements',
   'Sous Chef AI assistant and the team lab notebook',
@@ -214,7 +243,11 @@ export const FAQ_GROUPS: SiteFaqGroup[] = [
       },
       {
         q: 'Is AI included?',
-        a: `Yes. Every account gets $${AI_INCLUDED_USD} of AI a month, measured from what each request actually costs, for Sous Chef, label and photo reading, lab intake and AI research. Need more? Add AI add-ons ($${AI_ADDON.usdPerUnit} more a month for $${AI_ADDON.price.month} a month each), or have an owner or admin add your team’s own Claude or OpenAI key for no limit at all.`,
+        a: `Yes. Every account gets $${AI_INCLUDED_USD} of AI a month, measured from what each request actually costs. That covers everyday tasks like reading label photos, product pages and spec sheets, Lab Intake and quick Sous Chef questions. Long Sous Chef sessions use much more, so teams that rely on Sous Chef connect their own Claude or OpenAI account, or add AI add-ons ($${AI_ADDON.usdPerUnit} more a month for $${AI_ADDON.price.month} a month each). If the included AI runs out, AI features pause until the 1st; everything else keeps working.`,
+      },
+      {
+        q: 'Why would I use my own AI key?',
+        a: 'You choose the AI. Connect your team’s Claude (Anthropic) or OpenAI account, pick the model, and use Sous Chef as much as you like with no limit from Benchtop. You pay your provider directly at their rates, with no markup from us, and your AI requests run under your own agreement with them, which many companies already have in place. An owner or admin adds the key in Settings › AI; it’s checked before saving, stored encrypted, and never shown again.',
       },
       {
         q: 'Is there a free trial?',
