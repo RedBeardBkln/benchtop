@@ -87,7 +87,7 @@ export function AccountSettings({
 
   return (
     <>
-      <Card title="Account" description="The workspace your projects, ingredients and inventory live in. Nothing in it is visible to other accounts.">
+      <Card tour="settings-account-workspace" title="Account" description="The workspace your projects, ingredients and inventory live in. Nothing in it is visible to other accounts.">
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm mb-5">
           <div>
             <dt className="text-gray-500">Your role</dt>
@@ -111,7 +111,7 @@ export function AccountSettings({
         </form>
       </Card>
 
-      <Card title="Sign-in email" description={`Currently ${email}`}>
+      <Card tour="settings-account-email" title="Sign-in email" description={`Currently ${email}`}>
         <form onSubmit={changeEmail} className="space-y-3 max-w-lg">
           <Field label="New email" htmlFor="newEmail">
             <input id="newEmail" type="email" required value={newEmail} onChange={e => setNewEmail(e.target.value)} className={inputCls} autoComplete="email" />
@@ -124,7 +124,7 @@ export function AccountSettings({
         </form>
       </Card>
 
-      <Card title="Password">
+      <Card tour="settings-account-password" title="Password">
         <form onSubmit={changePassword} className="space-y-3 max-w-lg">
           <Field label="New password" htmlFor="newPassword" hint={`At least ${PASSWORD_MIN_LENGTH} characters`}>
             <input id="newPassword" type="password" required minLength={PASSWORD_MIN_LENGTH} value={password} onChange={e => setPassword(e.target.value)} className={inputCls} autoComplete="new-password" />
@@ -139,7 +139,7 @@ export function AccountSettings({
         </form>
       </Card>
 
-      <Card title="Session">
+      <Card tour="settings-account-session" title="Session">
         <button onClick={signOut} className={btnSecondary}>
           <LogOut size={14} className="mr-2" />
           Sign out

@@ -109,11 +109,11 @@ export function SousChefWorkspace({ initialConversationId, initialLink }: {
 
   return (
     <div className="flex h-[calc(100dvh-9rem)] sm:h-[calc(100dvh-3.5rem)] bg-white border-b border-gray-200">
-      <aside className="hidden lg:block w-64 shrink-0 border-r border-gray-200 bg-gray-50/60">{conversationList}</aside>
+      <aside data-tour="souschef-conversations" className="hidden lg:block w-64 shrink-0 border-r border-gray-200 bg-gray-50/60">{conversationList}</aside>
 
       <section className="flex-1 min-w-0 flex flex-col">
         <header className="flex items-center gap-2 px-4 sm:px-6 py-3 border-b border-gray-200">
-          <button onClick={() => setListOpen(true)} className="lg:hidden p-1.5 rounded-md text-gray-600 hover:bg-gray-100" aria-label="Conversations">
+          <button onClick={() => setListOpen(true)} data-tour="souschef-conversations" className="lg:hidden p-1.5 rounded-md text-gray-600 hover:bg-gray-100" aria-label="Conversations">
             <MessageSquare size={18} />
           </button>
           <ChefHat size={20} className="text-gray-700 shrink-0" />
@@ -123,6 +123,7 @@ export function SousChefWorkspace({ initialConversationId, initialLink }: {
           </div>
           <button
             onClick={() => setNotebookOpen(o => !o)}
+            data-tour="souschef-notebook"
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md ${notebookOpen ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-100'}`}
             aria-pressed={notebookOpen}
           >
@@ -144,7 +145,7 @@ export function SousChefWorkspace({ initialConversationId, initialLink }: {
                     your projects, formulations and ingredient library, search the web, and records decisions in the team’s
                     lab notebook so they carry into future projects.
                   </p>
-                  <div className="grid sm:grid-cols-2 gap-2">
+                  <div data-tour="souschef-starters" className="grid sm:grid-cols-2 gap-2">
                     {starterPrompts(link, STARTERS).map(p => (
                       <button key={p} onClick={() => session.send(p)} className="text-left text-sm p-3 rounded-md border border-gray-200 hover:border-blue-300 hover:bg-blue-50/40 text-gray-700">
                         {p}

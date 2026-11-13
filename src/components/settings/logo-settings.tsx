@@ -59,6 +59,7 @@ export function LogoSettings() {
 
   return (
     <Card
+      tour="settings-profile-logo"
       title="Company logo"
       description="Shown at the top of formulation printouts and PDFs and on time reports. PNG, JPEG or WEBP, up to 2 MB; a wide logo on a transparent or white background prints best."
     >

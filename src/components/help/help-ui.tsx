@@ -12,7 +12,7 @@ import { HELP_ICONS } from './help-icons'
 export function HelpNav() {
   const pathname = usePathname()
   return (
-    <nav aria-label="Help sections" className="flex lg:flex-col gap-1 overflow-x-auto lg:w-56 shrink-0 -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0">
+    <nav data-tour="help-nav" aria-label="Help sections" className="flex lg:flex-col gap-1 overflow-x-auto lg:w-56 shrink-0 -mx-4 px-4 lg:mx-0 lg:px-0 pb-1 lg:pb-0">
       <Link
         href="/help"
         className={`whitespace-nowrap flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
@@ -51,7 +51,7 @@ export function HelpSearch({ autoFocus = false }: { autoFocus?: boolean }) {
   useEffect(() => { setQ('') }, [pathname])
 
   return (
-    <div className="relative">
+    <div data-tour="help-search" className="relative">
       <div className="relative">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input

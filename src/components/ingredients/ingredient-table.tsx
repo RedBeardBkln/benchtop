@@ -271,7 +271,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
 
       {/* Toolbar */}
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 sm:max-w-sm">
+        <div data-tour="ingredients-search" className="relative flex-1 sm:max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={globalFilter}
@@ -286,6 +286,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
           <div className="flex gap-2 flex-wrap">
             <Link
               href="/ingredients/intake"
+              data-tour="ingredients-intake"
               data-tip="Add many ingredients at once from typed names, a pasted list or photos of container labels."
               className="flex items-center gap-1.5 px-3 py-2 text-sm border border-emerald-200
                          rounded-md bg-white hover:bg-emerald-50 text-emerald-700 transition-colors"
@@ -295,6 +296,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
             </Link>
             <button
               onClick={() => setUsdaOpen(true)}
+              data-tour="ingredients-usda"
               data-tip="Imports an ingredient with complete nutrition from the USDA database. Arrives verified."
               className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200
                          rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
@@ -313,6 +315,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
             </button>
             <button
               onClick={() => setAddOpen(true)}
+              data-tour="ingredients-add"
               data-tip="Adds an ingredient by typing it in, or from a supplier’s product web page."
               className="flex items-center gap-1.5 px-3 py-2 text-sm bg-blue-600
                          text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -323,7 +326,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div data-tour="ingredients-filters" className="flex flex-wrap items-center gap-2 mb-4">
         <select
           value={categoryFilter}
           onChange={e => setCategoryFilter(e.target.value)}
@@ -342,7 +345,7 @@ export function IngredientTable({ canEdit }: { canEdit: boolean }) {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div data-tour="ingredients-list" className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-sm text-gray-400">Loading…</div>
         ) : ingredients.length === 0 ? (

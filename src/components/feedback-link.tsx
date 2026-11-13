@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { HelpCircle, MessageSquarePlus, X } from 'lucide-react'
+import { HelpCircle, MessageSquarePlus, StickyNote, X } from 'lucide-react'
+import { tourForPath } from '@/lib/tours'
+import { startPageTour } from '@/components/tour/page-tour'
 import { FEEDBACK_KIND_LABELS, FEEDBACK_KINDS, FEEDBACK_MESSAGE_MAX, type FeedbackKind } from '@/lib/feedback'
 import { readErrorMessage } from '@/lib/utils'
 import { btnPrimary, btnSecondary, Field, inputCls } from '@/components/settings/ui'
@@ -37,6 +39,7 @@ export function FeedbackLink() {
         <HelpCircle size={14} />
         Help & FAQ
       </Link>
+      <PageTourLink />
       {data?.eligible && (
         <button
           type="button"
@@ -50,6 +53,24 @@ export function FeedbackLink() {
       )}
       {open && data && <FeedbackDialog contact={data.contact} onClose={() => setOpen(false)} />}
     </footer>
+  )
+}
+
+// Replays the tour for this page, when it has one
+function PageTourLink() {
+  const pathname = usePathname()
+  if (!tourForPath(pathname)) return null
+  return (
+    <button
+      type="button"
+      data-tour="tour-replay"
+      onClick={startPageTour}
+      data-tip="A short, step-by-step tour of what this page does"
+      className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+    >
+      <StickyNote size={14} />
+      Page tour
+    </button>
   )
 }
 

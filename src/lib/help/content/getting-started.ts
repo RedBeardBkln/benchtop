@@ -130,7 +130,12 @@ export const gettingStarted: HelpSection = {
         },
         {
           type: 'p',
-          text: 'The menu item for the page you are on is highlighted. At the very bottom of every page there are two small links: **Help & FAQ**, and **Report a bug or request a feature**.',
+          text: 'The menu item for the page you are on is highlighted. At the very bottom of every page there are small links: **Help & FAQ**, **Page tour** (on pages that have one), and **Report a bug or request a feature**.',
+        },
+        { type: 'h', text: 'Page tours' },
+        {
+          type: 'p',
+          text: 'The first time you open a page, a short tour may start: a few lime post-it notes, up to six, each pointing at one part of the page and numbered “1 of 6”, “2 of 6” and so on. Choose **Next** to move on, or **Dismiss tutorial** to close it. Either way it won’t start by itself on that page again. Choose **Page tour** at the foot of the page to replay it, and turn automatic tours off (or show them all again) in [Settings › Preferences](/settings/preferences).',
         },
         {
           type: 'p',

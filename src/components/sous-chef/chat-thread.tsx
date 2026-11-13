@@ -82,6 +82,7 @@ export function ChatComposer({ compact = false }: { compact?: boolean }) {
 
   return (
     <form
+      data-tour="souschef-composer"
       className={`border-t border-gray-200 ${compact ? 'px-3 py-2.5' : 'px-4 sm:px-6 py-3'}`}
       onSubmit={e => { e.preventDefault(); send(input) }}
     >

@@ -132,7 +132,7 @@ export function BillingPanel(props: Props) {
         </Notice>
       )}
 
-      <Card title="Subscription">
+      <Card tour="settings-billing-subscription" title="Subscription">
         {props.billingExempt ? (
           <Notice tone="success">This is an internal account. It is billing exempt and never needs a subscription.</Notice>
         ) : props.plan === 'free_lifetime' ? (
@@ -169,7 +169,7 @@ export function BillingPanel(props: Props) {
               <Notice tone="info">Developer bypass is on (BILLING_DEV_BYPASS), so this account has access without a subscription. This has no effect in production.</Notice>
             )}
 
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <dl data-tour="settings-billing-status" className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
               <div>
                 <dt className="text-gray-500">Status</dt>
                 <dd>
@@ -242,7 +242,7 @@ export function BillingPanel(props: Props) {
             )}
 
             {props.isOwner && props.configured && (!sub || !props.entitled) && (
-              <fieldset>
+              <fieldset data-tour="settings-billing-interval">
                 <legend className="text-sm text-gray-500 mb-2">Billing</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(['month', 'year'] as const).map(i => (
@@ -272,7 +272,7 @@ export function BillingPanel(props: Props) {
             )}
 
             {props.isOwner && props.configured && (
-              <div className="flex flex-wrap gap-3">
+              <div data-tour="settings-billing-actions" className="flex flex-wrap gap-3">
                 {(!sub || !props.entitled) && (
                   <button className={btnPrimary} disabled={busy !== null} onClick={() => go('checkout')}
                     data-tip={props.freeAccess

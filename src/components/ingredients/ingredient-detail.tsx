@@ -557,7 +557,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
         record={{ id: data.id, name: data.name, archivedAt: data.archivedAt ? String(data.archivedAt) : null }} />
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div data-tour="ingredient-header" className="flex items-start justify-between mb-6">
         <div className="flex-1 min-w-0">
           {/* Editable ingredient name */}
           {editingName ? (
@@ -780,7 +780,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           {data.notes && <p className="mt-2 text-sm text-gray-500">{data.notes}</p>}
         </div>
 
-        {canEdit && <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
+        {canEdit && <div data-tour="ingredient-actions" className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
         <button
           onClick={() => setEditingDetails(toEditable(data))}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
@@ -808,7 +808,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
 
       {/* Tabs */}
       <div className="overflow-x-auto mb-6">
-      <div className="flex border-b border-gray-200 min-w-max">
+      <div data-tour="ingredient-tabs" className="flex border-b border-gray-200 min-w-max">
         {([
           ['nutrients', `Nutrients (${data.nutrients.length})`],
           ['allergens', `Allergens (${data.allergens.length})`],
@@ -823,6 +823,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
+            data-tour={tab === 'suppliers' ? 'ingredient-tab-suppliers' : undefined}
             className={`px-4 py-2.5 text-sm border-b-2 transition-colors ${
               activeTab === tab
                 ? 'border-blue-500 text-blue-600 font-medium'
@@ -844,6 +845,7 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               {canEdit && <div className="flex justify-end">
                 <button
                   onClick={() => setEditingNutrients(true)}
+                  data-tour="ingredient-edit-nutrients"
                   data-tip="Type values in per 100 g, or read them from an uploaded spec sheet. Changes apply wherever this ingredient is used."
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                 >

@@ -7,6 +7,7 @@ import { Building2, ChefHat, Clock, FolderOpen, FlaskConical, HelpCircle, LogOut
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 import { FeedbackLink } from '@/components/feedback-link'
+import { PageTour } from '@/components/tour/page-tour'
 import { UnreadFeedbackBanner, useUnreadFeedback } from '@/components/admin/unread-feedback'
 import { useNewInviteRequests } from '@/components/admin/invite-requests-admin'
 import { usePreferences } from '@/lib/use-preferences'
@@ -89,7 +90,7 @@ export function AppShell({
           <Logo variant="wordmark" height={24} className="text-lcd-300" />
         </div>
 
-        <nav className="flex-1 px-3 pb-4 space-y-1">
+        <nav data-tour="nav" className="flex-1 px-3 pb-4 space-y-1">
           {nav.map(({ href, label, icon: Icon, tip }) => {
             const active = isActive(href)
             return (
@@ -141,11 +142,12 @@ export function AppShell({
         <div className="flex-1 min-w-0">{children}</div>
         <FeedbackLink />
       </main>
+      <PageTour />
 
       {sousChefAside && (sousChef.dockOpen ? <SousChefDock /> : <AskSousChefButton />)}
 
       {/* Bottom nav — mobile only. Four main sections plus More, which holds the rest. */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-ink-900 border-t border-ink-700 flex pb-[env(safe-area-inset-bottom)] print:hidden">
+      <nav data-tour="nav" className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-ink-900 border-t border-ink-700 flex pb-[env(safe-area-inset-bottom)] print:hidden">
         {primary.map(({ href, label, icon: Icon }) => {
           const active = isActive(href)
           return (

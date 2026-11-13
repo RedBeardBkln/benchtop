@@ -128,6 +128,7 @@ export function TimeReportView() {
         {unbilled.length > 0 && (
           <button
             onClick={() => markBilled.mutate()}
+            data-tour="timereport-mark-billed"
             disabled={markBilled.isPending}
             data-tip="Once you’ve sent this report or invoiced the time, mark it billed so it isn’t billed again."
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 bg-white rounded-md hover:bg-gray-50 disabled:opacity-50"
@@ -137,6 +138,7 @@ export function TimeReportView() {
         )}
         <button
           onClick={downloadCsv}
+          data-tour="timereport-csv"
           disabled={rows.length === 0}
           data-tip="Downloads these entries as a spreadsheet (CSV) that opens in Excel, Numbers or Google Sheets."
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 bg-white rounded-md hover:bg-gray-50 disabled:opacity-50"
@@ -145,6 +147,7 @@ export function TimeReportView() {
         </button>
         <button
           onClick={() => window.print()}
+          data-tour="timereport-print"
           data-tip="Opens the print dialog. Choose “Save as PDF” as the printer to get a PDF to send."
           className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
         >
@@ -160,7 +163,7 @@ export function TimeReportView() {
         )}
 
         {/* Header */}
-        <div className="flex flex-wrap justify-between gap-6 pb-4 mb-6 border-b-2 border-gray-800">
+        <div data-tour="timereport-header" className="flex flex-wrap justify-between gap-6 pb-4 mb-6 border-b-2 border-gray-800">
           <div>
             <CompanyLogo className="max-h-16 max-w-[220px] mb-2" />
             <div className="text-lg font-semibold text-gray-900">{data.from.company}</div>
@@ -175,7 +178,7 @@ export function TimeReportView() {
         </div>
 
         <div className="flex flex-wrap gap-x-12 gap-y-4 mb-6 text-sm">
-          <div>
+          <div data-tour="timereport-client">
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide block">Prepared for</span>
             <div className="font-medium text-gray-900">{billTo}</div>
             {billTo !== data.client.name && <div className="text-gray-700">{data.client.name}</div>}

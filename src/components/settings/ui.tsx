@@ -44,15 +44,19 @@ export function Card({
   description,
   children,
   tone = 'default',
+  tour,
 }: {
   title?: string
   description?: string
   children: ReactNode
   tone?: 'default' | 'danger' | 'highlight'
+  /** data-tour value, for pinning a page-tour note to this card */
+  tour?: string
 }) {
   const border = tone === 'danger' ? 'border-red-200' : tone === 'highlight' ? 'border-amber-400 ring-2 ring-amber-200' : 'border-gray-200'
   return (
     <section
+      data-tour={tour}
       className={`bg-white rounded-lg border p-5 sm:p-6 ${border}`}
     >
       {title && <h2 className="text-base font-semibold text-gray-900">{title}</h2>}

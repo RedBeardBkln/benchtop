@@ -18,7 +18,7 @@ export default async function HelpHome() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div data-tour="help-sections" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {HELP_SECTIONS.map(s => {
           const Icon = HELP_ICONS[s.icon]
           return (
@@ -42,7 +42,7 @@ export default async function HelpHome() {
       </div>
 
       {popular.length > 0 && (
-        <section>
+        <section data-tour="help-popular">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Popular questions</h2>
           <ul className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
             {popular.map(p => (
@@ -57,7 +57,7 @@ export default async function HelpHome() {
         </section>
       )}
 
-      <p className="text-sm text-gray-500">
+      <p data-tour="help-feedback" className="text-sm text-gray-500">
         Can’t find what you need? Use <strong className="text-gray-700">Report a bug or request a feature</strong> at the
         bottom of any page and the Benchtop team will help.
       </p>

@@ -199,7 +199,7 @@ export function TeamSettings() {
 
   return (
     <>
-      <Card title="Team seats" description={`Your plan includes you. Each additional user is ${PRICE_TEXT}.`}>
+      <Card tour="settings-team-seats" title="Team seats" description={`Your plan includes you. Each additional user is ${PRICE_TEXT}.`}>
         <div className="space-y-3 text-sm">
           {seats.state === 'exempt' && (
             <Notice tone="success">This is an internal account, so additional users are free.</Notice>
@@ -261,7 +261,7 @@ export function TeamSettings() {
         </div>
       </Card>
 
-      <Card title="Invite a teammate">
+      <Card tour="settings-team-invite" title="Invite a teammate">
         <form onSubmit={invite} className="space-y-4">
           <Field label="Email" htmlFor="teamInviteEmail">
             <input id="teamInviteEmail" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} disabled={!canInvite}
@@ -310,7 +310,7 @@ export function TeamSettings() {
         )}
       </Card>
 
-      <Card title="Members">
+      <Card tour="settings-team-members" title="Members">
         <ul className="divide-y divide-gray-100">
           {team.members.map(m => {
             const isEditing = editing?.userId === m.userId
@@ -412,6 +412,7 @@ export function TeamSettings() {
 
       {team.members.find(m => m.userId === team.me)?.role === 'owner' && team.members.length > 1 && (
         <Card
+          tour="settings-team-transfer"
           title="Transfer ownership"
           description="Hand the account to another team member, for example when you leave the company. You become an admin."
         >

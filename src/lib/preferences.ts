@@ -18,6 +18,10 @@ export const userPreferencesSchema = z.object({
   cogsMassUnit: z.enum(COST_UNITS).optional(),
   /** Show Time in the menu, for logging billable time against clients */
   timeTracking: z.boolean().optional(),
+  /** Start each page's tour automatically the first time the page is opened */
+  pageTours: z.boolean().optional(),
+  /** Ids of page tours finished or dismissed (see lib/tours) */
+  toursSeen: z.array(z.string().max(60)).max(200).optional(),
 })
 export type UserPreferences = z.infer<typeof userPreferencesSchema>
 
@@ -27,6 +31,8 @@ export function resolvePreferences(p: UserPreferences | null | undefined) {
     cogsFigures: p?.cogsFigures ?? (['batch', 'perMass', 'serving'] as CogsFigure[]),
     cogsMassUnit: p?.cogsMassUnit ?? ('kg' as CostUnit),
     timeTracking: p?.timeTracking ?? false,
+    pageTours: p?.pageTours ?? true,
+    toursSeen: p?.toursSeen ?? ([] as string[]),
   }
 }
 export type ResolvedPreferences = ReturnType<typeof resolvePreferences>

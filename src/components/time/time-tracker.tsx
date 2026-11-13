@@ -173,6 +173,7 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setReportOpen(true)}
+            data-tour="time-report"
             data-tip="Builds a report of one client’s time that you can save as a PDF or download as a spreadsheet."
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 bg-white rounded-md hover:bg-gray-50"
           >
@@ -181,6 +182,7 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
           <button
             onClick={() => setDialog({ kind: 'timer', clientId: clientId || null })}
             disabled={!!running}
+            data-tour="time-timer"
             data-tip={running ? 'You already have a timer running. Stop it first.' : 'Starts a clock now; stop it when you finish and the time is logged.'}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-50"
           >
@@ -188,6 +190,7 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
           </button>
           <button
             onClick={() => setDialog({ kind: 'log', clientId: clientId || null })}
+            data-tour="time-log"
             data-tip="Enter time you’ve already spent, with its start and end."
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
           >
@@ -199,7 +202,7 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
       {running && <RunningTimer entry={running} onEdit={() => setDialog({ kind: 'edit', entry: running })} />}
 
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-2 mb-4">
+      <div data-tour="time-filters" className="flex flex-wrap items-end gap-2 mb-4">
         <select aria-label="Client" value={clientId} onChange={e => { setClientId(e.target.value); setProjectId('') }} className={smallSelect}>
           <option value="">All clients</option>
           {(options?.clients ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -238,7 +241,7 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
       </div>
 
       {/* Totals */}
-      <div className="flex flex-wrap gap-x-8 gap-y-2 mb-4 text-sm">
+      <div data-tour="time-totals" className="flex flex-wrap gap-x-8 gap-y-2 mb-4 text-sm">
         <div>
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wide block">Total</span>
           <span className="font-medium text-gray-900 tabular-nums">{formatDuration(totals.totalMinutes)} <span className="text-gray-400 font-normal">({formatHours(totals.totalMinutes)} h)</span></span>
@@ -279,7 +282,7 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
       ) : isError ? (
         <p className="text-sm text-red-500">Could not load your time.</p>
       ) : entries.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">
+        <div data-tour="time-entries" className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">
           <Clock size={28} className="mx-auto text-gray-300 mb-2" />
           <p className="text-sm text-gray-500">No time logged for these filters.</p>
           <button onClick={() => setDialog({ kind: 'log', clientId: clientId || null })} className="mt-2 text-sm text-blue-600 hover:underline">
@@ -287,7 +290,7 @@ export function TimeTracker({ isTeamAdmin }: { isTeamAdmin: boolean }) {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        <div data-tour="time-entries" className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
               <tr>

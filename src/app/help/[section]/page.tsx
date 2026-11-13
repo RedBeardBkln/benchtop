@@ -28,7 +28,7 @@ export default async function HelpSectionPage({ params }: Props) {
   return (
     <div className="space-y-8">
       <OpenFaqFromHash />
-      <header>
+      <header data-tour="help-section-intro">
         <div className="flex items-center gap-2">
           <Icon size={22} className="text-gray-500" />
           <h2 className="text-xl font-semibold text-gray-900">{sec.title}</h2>
@@ -37,7 +37,7 @@ export default async function HelpSectionPage({ params }: Props) {
       </header>
 
       {/* On this page */}
-      <nav aria-label="On this page" className="rounded-lg border border-gray-200 bg-white p-4">
+      <nav data-tour="help-section-toc" aria-label="On this page" className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">On this page</h3>
         <ol className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
           {sec.articles.map(a => (
@@ -52,7 +52,7 @@ export default async function HelpSectionPage({ params }: Props) {
       </nav>
 
       {sec.articles.map(a => (
-        <article key={a.slug} id={a.slug} className="scroll-mt-6 rounded-lg border border-gray-200 bg-white p-5 sm:p-6">
+        <article key={a.slug} id={a.slug} data-tour="help-section-article" className="scroll-mt-6 rounded-lg border border-gray-200 bg-white p-5 sm:p-6">
           <h3 className="group flex items-center gap-2 text-lg font-semibold text-gray-900">
             {a.title}
             <a href={`#${a.slug}`} aria-label="Link to this guide" className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600">
@@ -65,7 +65,7 @@ export default async function HelpSectionPage({ params }: Props) {
       ))}
 
       {sec.faqs.length > 0 && (
-        <section id="faq" className="scroll-mt-6">
+        <section id="faq" data-tour="help-section-faq" className="scroll-mt-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Frequently asked questions</h3>
           <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
             {sec.faqs.map((f, i) => (

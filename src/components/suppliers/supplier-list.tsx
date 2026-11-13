@@ -173,6 +173,7 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
         {canEdit && (
           <button
             onClick={() => setDialogOpen(true)}
+            data-tour="suppliers-new"
             data-tip="Add a company you buy ingredients from, with its contacts and terms"
             className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shrink-0"
           >
@@ -184,7 +185,7 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
       {isLoading ? (
         <p className="text-sm text-gray-400">Loading…</p>
       ) : !data?.length ? (
-        <div className="rounded-lg border border-dashed border-gray-200 bg-white p-12 text-center">
+        <div data-tour="suppliers-list" className="rounded-lg border border-dashed border-gray-200 bg-white p-12 text-center">
           <Truck size={28} className="mx-auto text-gray-300 mb-2" />
           <p className="text-sm text-gray-400">No suppliers yet.</p>
           {canEdit && (
@@ -195,7 +196,7 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
         </div>
       ) : (
         <>
-          <div className="relative mb-3 max-w-sm">
+          <div data-tour="suppliers-search" className="relative mb-3 max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={query}
@@ -206,7 +207,7 @@ export function SupplierList({ canEdit }: { canEdit: boolean }) {
               className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div data-tour="suppliers-list" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">

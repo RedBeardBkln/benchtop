@@ -198,7 +198,7 @@ export function LabIntake() {
     <div className="flex flex-col gap-5">
       {/* Quick entry */}
       <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <form onSubmit={addTyped} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <form onSubmit={addTyped} data-tour="intake-type" className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             ref={nameRef}
             autoFocus
@@ -241,6 +241,7 @@ export function LabIntake() {
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button
             onClick={() => cameraRef.current?.click()}
+            data-tour="intake-photos"
             data-tip="Take or choose photos of container labels (up to 10 at a time). AI reads each name and amount and adds it to the list."
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-orange-200 rounded-md bg-white hover:bg-orange-50 text-orange-600 transition-colors"
           >
@@ -258,6 +259,7 @@ export function LabIntake() {
           />
           <button
             onClick={() => setBulkOpen(v => !v)}
+            data-tour="intake-paste"
             data-tip="Opens a box to paste many items at once, one per line. A quantity at the end of a line is picked up."
             className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-200 rounded-md bg-white hover:bg-gray-50 text-gray-700 transition-colors"
           >
@@ -304,6 +306,7 @@ export function LabIntake() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={identifyAll}
+            data-tour="intake-identify"
             disabled={pending.length === 0 || busy}
             data-tip={pending.length === 0
               ? 'Nothing waiting to be identified.'
@@ -314,6 +317,7 @@ export function LabIntake() {
             {progress ? `Identifying ${progress.done}/${progress.total}…` : `Identify & categorize${pending.length ? ` (${pending.length})` : ''}`}
           </button>
           <button
+            data-tour="intake-upload"
             onClick={() => {
               if (confirm(`Upload ${identified.length} identified item${identified.length === 1 ? '' : 's'} to the ingredient library?`)) importMutation.mutate()
             }}
@@ -330,7 +334,7 @@ export function LabIntake() {
       </div>
 
       {/* List */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div data-tour="intake-list" className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-sm text-gray-400">Loading…</div>
         ) : items.length === 0 ? (

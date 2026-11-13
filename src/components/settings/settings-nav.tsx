@@ -16,7 +16,7 @@ const SECTIONS = [
 export function SettingsNav({ isTeamAdmin, showConnection }: { isTeamAdmin: boolean; showConnection: boolean }) {
   const pathname = usePathname()
   return (
-    <nav className="flex sm:flex-col gap-1 overflow-x-auto sm:w-48 shrink-0" aria-label="Settings sections">
+    <nav data-tour="settings-nav" className="flex sm:flex-col gap-1 overflow-x-auto sm:w-48 shrink-0" aria-label="Settings sections">
       {SECTIONS.filter(s => (!s.teamAdminOnly || isTeamAdmin) && (!s.connectionOnly || showConnection)).map(({ href, label }) => {
         const active = pathname === href
         return (

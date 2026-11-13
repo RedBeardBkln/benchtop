@@ -110,13 +110,14 @@ export function ClientList() {
   return (
     <div className="px-4 sm:px-8 py-6 sm:py-8 max-w-5xl">
       <div className="flex items-center justify-between gap-4 mb-6">
-        <div>
+        <div data-tour="clients-header">
           <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
           <p className="text-sm text-gray-500 mt-0.5">Contacts, accounting and shipping details for the people you formulate for.</p>
         </div>
         {data?.canAdd && (
           <button
             onClick={() => setDialogOpen(true)}
+            data-tour="clients-new"
             data-tip="Add a customer you formulate for. Link projects to them from each project’s page."
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors shrink-0"
           >
@@ -144,7 +145,7 @@ export function ClientList() {
       ) : isError ? (
         <p className="text-sm text-red-500">Could not load clients.</p>
       ) : (data?.clients.length ?? 0) === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">
+        <div data-tour="clients-list" className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">
           <Building2 size={28} className="mx-auto text-gray-300 mb-2" />
           <p className="text-sm text-gray-500">No clients yet.</p>
           {data?.canAdd && (
@@ -154,7 +155,7 @@ export function ClientList() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div data-tour="clients-list" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
               <tr>

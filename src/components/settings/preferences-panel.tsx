@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card } from '@/components/settings/ui'
 import { usePreferences } from '@/lib/use-preferences'
 import { readThemePref, setThemePref, type ThemePref } from '@/lib/theme'
@@ -24,6 +25,7 @@ function AppearanceCard() {
 
   return (
     <Card
+      tour="settings-prefs-appearance"
       title="Appearance"
       description="Show Benchtop light or dark, or set it to Auto to follow your device. Printed pages and downloads are always light."
     >
@@ -60,6 +62,7 @@ export function PreferencesPanel() {
       <AppearanceCard />
 
       <Card
+        tour="settings-prefs-cogs"
         title="Raw material costing (COGS)"
         description="Adds a COGS tab to formulations showing raw material cost per batch, per kg or lb, per serving and per unit, with each ingredient's share. You can record ingredient costs either way; this only controls whether formulations show them."
       >
@@ -79,6 +82,7 @@ export function PreferencesPanel() {
       </Card>
 
       <Card
+        tour="settings-prefs-time"
         title="Billable time tracking"
         description="Adds Time to the menu, where you log time against your clients (and optionally a project): the task, the type of work, start and end times, and whether it has been billed. From there you can prepare a time report to send a client as a PDF or spreadsheet."
       >
@@ -95,6 +99,35 @@ export function PreferencesPanel() {
           Track billable time
         </label>
         <p className="text-xs text-gray-500 mt-2">This setting is just for you; teammates choose their own.</p>
+      </Card>
+
+      <Card
+        tour="settings-prefs-tours"
+        title="Page tours"
+        description="A few post-it notes that walk you through a page the first time you open it. Replay any page's tour with “Page tour” at the foot of the page."
+      >
+        <label className="flex items-center gap-3 text-sm text-gray-800 cursor-pointer w-fit"
+          data-tip="When on, each page’s tour starts by itself the first time you open that page">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.pageTours}
+            disabled={isLoading}
+            onChange={e => setPrefs({ pageTours: e.target.checked })}
+            className="h-4 w-4 accent-blue-600"
+          />
+          Show page tours automatically
+        </label>
+        {prefs.toursSeen.length > 0 && (
+          <button
+            type="button"
+            onClick={() => { setPrefs({ toursSeen: [], pageTours: true }); toast.success('Tours will show again on each page') }}
+            data-tip="Forgets which tours you’ve finished or dismissed, so each shows again on its page"
+            className="mt-3 text-sm text-blue-600 hover:underline"
+          >
+            Show all tours again
+          </button>
+        )}
       </Card>
     </div>
   )

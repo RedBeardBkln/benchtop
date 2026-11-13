@@ -51,7 +51,7 @@ export function ProfileForm({ email, initial }: { email: string; initial: Values
   const browserTz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : ''
 
   return (
-    <Card title="Personal details" description="Used on your account and in communications about it.">
+    <Card tour="settings-profile-details" title="Personal details" description="Used on your account and in communications about it.">
       <form onSubmit={save} className="space-y-4 max-w-lg">
         <Field label="Email" htmlFor="email" hint="Change your sign-in email on the Account tab.">
           <input id="email" value={email} disabled readOnly className={inputCls} />

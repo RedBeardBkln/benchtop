@@ -45,6 +45,7 @@ export function InvoicingConnectionPanel() {
 
   return (
     <Card
+      tour="settings-connection-card"
       title="Invoicing connection"
       description="Lets your invoicing app read your unbilled time for a client, then mark it billed with the invoice number when the invoice is issued (and unbilled again if it's voided). It sees exactly the time you can see here."
     >
@@ -79,7 +80,7 @@ export function InvoicingConnectionPanel() {
             <p className="text-sm text-gray-700">No key yet.</p>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div data-tour="settings-connection-key" className="flex flex-wrap gap-2">
             <button type="button" className={btnPrimary} disabled={busy} onClick={create}>
               {connection ? 'Make a new key' : 'Make a key'}
             </button>

@@ -32,6 +32,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
           <div className="flex flex-wrap justify-end gap-2">
             <Link
               href="/formulations/import"
+              data-tour="projects-import"
               data-tip="Build a formulation from an Excel or CSV file. You choose its project and review it before it’s created."
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm
                          font-medium rounded-md hover:bg-gray-50 transition-colors"
@@ -41,6 +42,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
             {canCreate && (
               <button
                 onClick={() => setDialogOpen(true)}
+                data-tour="projects-new"
                 data-tip="Create a folder for a new product idea, to hold its formulations and nutrition targets"
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm
                            font-medium rounded-md hover:bg-blue-700 transition-colors"
@@ -65,7 +67,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
         {isLoading ? (
           <div className="text-sm text-gray-400">Loading…</div>
         ) : !projects?.length ? (
-          <div className="rounded-lg border border-dashed border-gray-200 bg-white p-12 text-center">
+          <div data-tour="projects-list" className="rounded-lg border border-dashed border-gray-200 bg-white p-12 text-center">
             <FolderOpen size={32} className="mx-auto text-gray-300 mb-3" />
             <p className="text-sm text-gray-400">
               {canCreate ? 'No projects yet.' : 'No projects have been shared with you yet.'}
@@ -80,7 +82,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div data-tour="projects-list" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
                 <tr>

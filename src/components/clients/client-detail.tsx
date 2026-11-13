@@ -152,7 +152,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
         </p>
       )}
       {/* A disabled fieldset makes every field and button inside it read-only */}
-      <fieldset disabled={readOnly} className="min-w-0">
+      <fieldset disabled={readOnly} data-tour="client-details" className="min-w-0">
       <Section title="Details">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Client name (DBA) *" htmlFor="client-name"
@@ -188,7 +188,7 @@ function ClientForm({ client }: { client: ClientDetailData }) {
         }}
       />
 
-      <fieldset disabled={readOnly} className="min-w-0 space-y-5">
+      <fieldset disabled={readOnly} data-tour="client-billing" className="min-w-0 space-y-5">
       <Section title="Accounting" description="How this client is billed.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Tax ID / EIN" htmlFor="client-tax" tip="The client’s tax number (in the US, their Employer Identification Number), for invoices and records.">
@@ -305,13 +305,13 @@ function ClientForm({ client }: { client: ClientDetailData }) {
 
       <Section title="Projects">
         {client.projects.length === 0 ? (
-          <p className="text-sm text-gray-400">
+          <p data-tour="client-projects" className="text-sm text-gray-400">
             {client.hasProjects
               ? 'This client’s projects aren’t shared with you.'
               : 'No projects for this client yet. Pick this client when you create or edit a project.'}
           </p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul data-tour="client-projects" className="divide-y divide-gray-100">
             {client.projects.map(p => (
               <li key={p.id} className="flex items-center justify-between py-2 text-sm">
                 <Link href={`/projects/${p.id}`} className="text-gray-900 hover:text-blue-700 hover:underline">{p.name}</Link>

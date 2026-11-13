@@ -248,7 +248,7 @@ export function ProjectDetail({ id }: { id: string }) {
         </button>
 
         <div className="flex items-start justify-between mb-8">
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" data-tour="project-detail-header">
             {editingName ? (
               <form
                 className="flex items-center gap-2 mb-1"
@@ -437,6 +437,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   {canEdit && (
                     <Link
                       href={`/formulations/import?project=${id}`}
+                      data-tour="project-detail-import"
                       data-tip="Build a formulation in this project from an Excel or CSV file. You review it before it’s created."
                       className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
                     >
@@ -446,6 +447,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   {canEdit && (
                     <button
                       onClick={() => setDialogOpen(true)}
+                      data-tour="project-detail-new"
                       data-tip="Start a new formulation in this project, built from ingredients or matched to a label"
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                     >
@@ -483,7 +485,7 @@ export function ProjectDetail({ id }: { id: string }) {
               )}
 
               {active.length === 0 && !showArchived ? (
-                <div className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center">
+                <div className="rounded-lg border border-dashed border-gray-200 bg-white p-10 text-center" data-tour="project-detail-formulations">
                   <FlaskConical size={28} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-sm text-gray-400">No formulations yet.</p>
                   {canEdit && (
@@ -493,7 +495,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   )}
                 </div>
               ) : (
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" data-tour="project-detail-formulations">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                     <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
@@ -578,7 +580,7 @@ export function ProjectDetail({ id }: { id: string }) {
           )
         })()}
         {/* Nutritional targets */}
-        <div className="mt-10">
+        <div className="mt-10" data-tour="project-detail-targets">
           <div className="flex items-center gap-2 mb-4">
             <Target size={15} className="text-gray-400" />
             <h2 className="text-base font-semibold text-gray-700">Nutritional <Term t="target">targets</Term></h2>

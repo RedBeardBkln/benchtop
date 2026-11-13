@@ -62,11 +62,11 @@ function Ingredients({ items }: { items: SupplierIngredient[] }) {
       description="Library ingredients sourced from this supplier, or that name it in their Supplier field."
     >
       {items.length === 0 ? (
-        <p className="text-sm text-gray-400">
+        <p data-tour="supplier-ingredients" className="text-sm text-gray-400">
           No ingredients yet. Link one from an ingredient&apos;s Suppliers section, or enter this supplier&apos;s name in its Supplier field.
         </p>
       ) : (
-        <div className="overflow-x-auto -mx-4 sm:-mx-5">
+        <div data-tour="supplier-ingredients" className="overflow-x-auto -mx-4 sm:-mx-5">
           <table className="w-full text-sm">
             <thead className="text-xs text-gray-500 border-y border-gray-100 bg-gray-50">
               <tr>
@@ -172,7 +172,7 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
     // Not a <form>: the contact editor inside is one, and forms can't nest
     <div className="space-y-5 pb-20">
       <Section title="Details">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div data-tour="supplier-details" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Supplier name *" htmlFor="supplier-name" hint={ro ? undefined : 'Renaming also updates the Supplier text on ingredients that use the old name.'}>
             <input id="supplier-name" value={form.name} onChange={text('name')} disabled={ro} className={inputCls} />
           </Field>
@@ -211,6 +211,8 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
         </div>
       </Section>
 
+      {/* Wrapper only carries the tour target; Contacts is shared and takes no extra props */}
+      <div data-tour="supplier-contacts">
       <Contacts
         endpoint={`/api/suppliers/${supplier.id}/contacts`}
         contacts={supplier.contacts}
@@ -221,6 +223,7 @@ function SupplierForm({ supplier, canEdit }: { supplier: SupplierDetailData; can
           queryClient.invalidateQueries({ queryKey: ['suppliers'] })
         }}
       />
+      </div>
 
       <Ingredients items={supplier.ingredients} />
 

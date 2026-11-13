@@ -43,7 +43,7 @@ export function PrivacyPanel({
 
   return (
     <>
-      <Card title="Your data" description="Download everything stored in your account as one zip file: projects and clients, formulations and their nutrition, Nutrition Facts panels, suppliers and ingredients with their documents, time, the team and Sous Chef, as Excel, Word, PDF or image files. A JSON copy for importing into other software is also available.">
+      <Card tour="settings-privacy-export" title="Your data" description="Download everything stored in your account as one zip file: projects and clients, formulations and their nutrition, Nutrition Facts panels, suppliers and ingredients with their documents, time, the team and Sous Chef, as Excel, Word, PDF or image files. A JSON copy for importing into other software is also available.">
         {isOwner ? (
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setExportOpen(true)} className={btnPrimary}
@@ -64,6 +64,7 @@ export function PrivacyPanel({
       {exportOpen && <ExportDataDialog onClose={() => setExportOpen(false)} />}
 
       <Card
+        tour="settings-privacy-delete"
         tone="danger"
         title="Delete account"
         description="Permanently deletes your account, all of its data and your login, and cancels your subscription. This cannot be undone."

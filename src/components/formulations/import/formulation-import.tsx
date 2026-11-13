@@ -152,6 +152,7 @@ export function FormulationImport({ projectId, draftId, canEditLibrary, canCreat
         </div>
       ) : (
         <label
+          data-tour="import-upload"
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={e => {
@@ -189,7 +190,7 @@ export function FormulationImport({ projectId, draftId, canEditLibrary, canCreat
       )}
 
       {drafts.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-8" data-tour="import-drafts">
           <h2 className="text-sm font-semibold text-gray-900 mb-2">Unfinished imports (<Term t="importDraft">drafts</Term>)</h2>
           <p className="text-xs text-gray-500 mb-3">
             Saved as drafts because something was still missing. They aren’t formulations yet; finish them to add them to your account.

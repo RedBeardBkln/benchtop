@@ -1337,7 +1337,7 @@ export function FormulationGrid({ id }: { id: string }) {
             )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 print:hidden" data-tour="formulation-actions">
           {isDirty && !isLocked && (
             <button
               onClick={() => saveMutation.mutate()}
@@ -1567,7 +1567,7 @@ export function FormulationGrid({ id }: { id: string }) {
       )}
 
       {/* Settings bar */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm print:hidden">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 px-4 py-3 bg-gray-50 rounded-lg border border-gray-100 text-sm print:hidden" data-tour="formulation-settings">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-gray-500"><Term t="batchSize">Batch (g)</Term></span>
           <WeightInput
@@ -1701,7 +1701,7 @@ export function FormulationGrid({ id }: { id: string }) {
       {/* Sized to its columns, so extra nutrient columns scroll sideways; the ingredient column stays pinned,
           and the sideways scrollbar stays at the bottom of the screen while the grid is in view */}
       <StickyXScroll className="rounded-lg border border-gray-200">
-        <table className="w-max min-w-full text-sm border-collapse">
+        <table className="w-max min-w-full text-sm border-collapse" data-tour="formulation-grid">
           <thead className="bg-gray-50 text-xs text-gray-500">
             <tr>
               <th className="px-2 py-2.5 w-6 print:hidden" />
@@ -2036,6 +2036,7 @@ export function FormulationGrid({ id }: { id: string }) {
           ) : (
             <button
               onClick={() => setShowAddRow(true)}
+              data-tour="formulation-add-ingredient"
               data-tip="Search your ingredient library, or add a new one by hand or from USDA"
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600
                          hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
@@ -2047,7 +2048,7 @@ export function FormulationGrid({ id }: { id: string }) {
       )}
 
       {/* Process steps */}
-      <div className="mt-6">
+      <div className="mt-6" data-tour="formulation-process-steps">
         <ProcessStepsPanel
           formulationId={id}
           steps={data.processSteps ?? []}
