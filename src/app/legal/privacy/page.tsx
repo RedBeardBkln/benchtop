@@ -75,7 +75,8 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Supabase</strong> &ndash; database hosting, authentication and file storage for uploaded documents, and for data export files during the short time it takes to download them.</li>
           <li><strong>Stripe</strong> &ndash; payment processing and subscription management.</li>
-          <li><strong>Anthropic</strong> &ndash; AI processing when you use features such as label and photo parsing, document parsing and formulation research. The content you submit to those features (for example an image or PDF, or ingredient and nutrition text) is sent to Anthropic to produce the result.</li>
+          <li><strong>Anthropic</strong> &ndash; AI processing when you use features such as Sous Chef, label and photo parsing, document parsing and formulation research. The content you submit to those features (for example an image or PDF, ingredient and nutrition text, or a question and the workspace data it needs) is sent to Anthropic to produce the result. We record how much AI each account uses (the feature, model and amount, not the content) to apply its monthly AI allowance.</li>
+          <li><strong>Your own AI provider, if you add a key</strong> &ndash; an owner or admin may add the account&apos;s own Anthropic or OpenAI API key in Settings &rarr; AI. The key is stored encrypted. While it is set, the content of the AI features it runs is sent to that provider under your account with them and their terms, instead of under ours. With an OpenAI key, that is Sous Chef.</li>
           <li><strong>USDA FoodData Central</strong> &ndash; nutrient lookups. Search terms and food IDs you request are sent to the USDA service.</li>
           <li><strong>Brave Search</strong> &ndash; web lookups. Search queries you submit are sent to Brave.</li>
           <li><strong>Vercel</strong> &ndash; hosting for the app and our website.</li>

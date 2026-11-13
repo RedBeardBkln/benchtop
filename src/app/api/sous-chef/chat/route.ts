@@ -5,17 +5,16 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { sousChefConversations, sousChefMessages } from '@/lib/db/schema'
 import { AI_MODEL } from '@/lib/ai-json'
+import { getAi } from '@/lib/ai/access'
 import {
-  buildContextPrompt, chatInputSchema, HISTORY_TURNS, SOUS_CHEF_PERSONA, titleFromMessage, type SousChefEvent,
+  buildContextPrompt, chatInputSchema, HISTORY_TURNS, MAX_ROUNDS, SOUS_CHEF_PERSONA, titleFromMessage, type SousChefEvent,
 } from '@/lib/sous-chef'
 import {
   describeLinkForPrompt, loadPromptNotes, resolveConversationLink, runSousChefTool, SOUS_CHEF_TOOLS, type SousChefScope,
 } from '@/lib/sous-chef-server'
+import { openAiErrorMessage, runOpenAiConversation } from '@/lib/sous-chef-openai'
 
 export const maxDuration = 300
-
-// Model calls in one turn (each tool round trip is one); stops a runaway loop
-const MAX_ROUNDS = 12
 
 // POST: send a message, get Sous Chef's reply as newline-delimited JSON events (SousChefEvent)
 export async function POST(req: NextRequest) {
@@ -24,12 +23,14 @@ export async function POST(req: NextRequest) {
   const { ctx } = auth
   const scope: SousChefScope = { account: ctx.account, access: ctx.access, user: ctx.user }
 
-  if (!process.env.ANTHROPIC_API_KEY)
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not configured' }, { status: 503 })
-
   const parsed = chatInputSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   const input = parsed.data
+
+  // Before anything is saved, so a refused request (out of included AI, no key) leaves nothing behind
+  const grant = await getAi(ctx, 'sous_chef', { openai: true })
+  if (!grant.ok) return grant.res
+  const ai = grant.ai
 
   let conversation: typeof sousChefConversations.$inferSelect
   let isNew = false
@@ -64,18 +65,15 @@ export async function POST(req: NextRequest) {
   ])
   const turns = history.reverse()
   while (turns.length > 0 && turns[0].role !== 'user') turns.shift()
-  const messages: Anthropic.Beta.BetaMessageParam[] = turns.map(t => ({ role: t.role as 'user' | 'assistant', content: t.content }))
+  const chatTurns = turns.map(t => ({ role: t.role as 'user' | 'assistant', content: t.content }))
+  const messages: Anthropic.Beta.BetaMessageParam[] = chatTurns.map(t => ({ ...t }))
 
+  const contextPrompt = buildContextPrompt({ accountName: ctx.account.name, today: new Date().toISOString().slice(0, 10), notes, focus })
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
     { type: 'text', text: SOUS_CHEF_PERSONA },
-    {
-      type: 'text',
-      text: buildContextPrompt({ accountName: ctx.account.name, today: new Date().toISOString().slice(0, 10), notes, focus }),
-      cache_control: { type: 'ephemeral' },
-    },
+    { type: 'text', text: contextPrompt, cache_control: { type: 'ephemeral' } },
   ]
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const encoder = new TextEncoder()
 
   const body = new ReadableStream<Uint8Array>({
@@ -92,14 +90,25 @@ export async function POST(req: NextRequest) {
         activity.push(label)
         send({ type: 'activity', label })
       }
+      const runTool = (block: { id: string; name: string; input: unknown }) => runSousChefTool(block, {
+        scope,
+        conversationId: conversation.id,
+        onNote: note => send({ type: 'note', ...note }),
+      })
 
       if (isNew) send({ type: 'conversation', id: conversation.id, title: conversation.title })
 
       try {
-        for (let round = 0; round < MAX_ROUNDS; round++) {
+        if (ai.provider === 'openai') {
+          // A team's own OpenAI key: the same conversation on the Responses API
+          await runOpenAiConversation({
+            ai, instructions: `${SOUS_CHEF_PERSONA}\n\n${contextPrompt}`, history: chatTurns,
+            tools: SOUS_CHEF_TOOLS, runTool, send, logActivity, parts,
+          })
+        } else for (let round = 0; round < MAX_ROUNDS; round++) {
           // Keep separate rounds' text apart in the chat
           let first = true
-          const stream = client.beta.messages.stream({
+          const stream = ai.client.beta.messages.stream({
             model: AI_MODEL,
             max_tokens: 64000,
             betas: ['server-side-fallback-2026-06-01'],
@@ -121,6 +130,7 @@ export async function POST(req: NextRequest) {
             }
           })
           const message = await stream.finalMessage()
+          await ai.record(message.model, message.usage)
 
           const text = message.content.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('')
           if (text) parts.push(text)
@@ -145,13 +155,7 @@ export async function POST(req: NextRequest) {
           // One at a time: a dozen formulation reads at once put more queries in flight than the database
           // client has connections, and through the pooler some then stall until the statement timeout
           const results: Awaited<ReturnType<typeof runSousChefTool>>[] = []
-          for (const b of toolUses) {
-            results.push(await runSousChefTool(b, {
-              scope,
-              conversationId: conversation.id,
-              onNote: note => send({ type: 'note', ...note }),
-            }))
-          }
+          for (const b of toolUses) results.push(await runTool(b))
           for (const r of results) if (r.label) logActivity(r.label)
           messages.push({ role: 'user', content: results.map(r => r.result) })
         }
@@ -159,7 +163,7 @@ export async function POST(req: NextRequest) {
         console.error('[sous-chef]', err)
         const error = err instanceof Anthropic.RateLimitError
           ? 'Sous Chef is busy right now. Try again in a minute.'
-          : 'Sous Chef ran into a problem. Try again.'
+          : openAiErrorMessage(err) ?? 'Sous Chef ran into a problem. Try again.'
         send({ type: 'error', error })
       }
 

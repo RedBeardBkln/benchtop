@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { AdminNotConfiguredError } from '@/lib/supabase/admin'
 import { isOwnStagedPath, readStaged, removeStaged, stagedFileName } from '@/lib/staged-upload'
 import { DocParseError, docMediaType, extractNutrientsFromDoc } from '@/lib/doc-nutrients'
+import { getClaude } from '@/lib/ai/access'
 
 // Reads nutrition per 100 g from an uploaded spec sheet or COA, for an ingredient that isn't saved yet.
 // Returns [{ nutrientId, name, unit, amountPer100g }] in each nutrient's own unit.
@@ -26,6 +27,10 @@ export async function POST(req: NextRequest) {
   const { stagedPath, keep } = parsed.data
   if (!isOwnStagedPath(ctx.account.id, stagedPath)) return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
 
+  // Before reading the upload, which removes it from staging
+  const grant = await getClaude(ctx, 'doc_nutrients')
+  if (!grant.ok) return grant.res
+
   let file: Awaited<ReturnType<typeof readStaged>>
   try {
     file = await readStaged(stagedPath)
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { nutrients, unconvertible } = await extractNutrientsFromDoc(file.bytes, mediaType)
+    const { nutrients, unconvertible } = await extractNutrientsFromDoc(file.bytes, mediaType, grant.ai)
     if (nutrients.length === 0) {
       const error = unconvertible.length > 0
         ? `No nutrient could be read in a usable unit: ${unconvertible.join(', ')}`

@@ -14,7 +14,7 @@ import { timeTour } from './time'
 import { timeReportTour } from './time-report'
 import { sousChefTour } from './sous-chef'
 import {
-  settingsAccountTour, settingsBillingTour, settingsInvoicingConnectionTour, settingsPreferencesTour,
+  settingsAccountTour, settingsAiTour, settingsBillingTour, settingsInvoicingConnectionTour, settingsPreferencesTour,
   settingsPrivacyTour, settingsProfileTour, settingsTeamTour,
 } from './settings'
 import { helpSectionTour, helpTour } from './help'
@@ -30,7 +30,7 @@ export const TOURS: Tour[] = [
   timeTour, timeReportTour,
   sousChefTour,
   settingsProfileTour, settingsPreferencesTour, settingsAccountTour, settingsTeamTour,
-  settingsBillingTour, settingsInvoicingConnectionTour, settingsPrivacyTour,
+  settingsBillingTour, settingsAiTour, settingsInvoicingConnectionTour, settingsPrivacyTour,
   helpTour, helpSectionTour,
 ]
 

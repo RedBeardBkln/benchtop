@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 import { DocParseError, docMediaType, extractNutrientsFromDoc } from '@/lib/doc-nutrients'
+import { getClaude } from '@/lib/ai/access'
 import { AdminNotConfiguredError, DOCS_BUCKET, getSupabaseAdmin } from '@/lib/supabase/admin'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -38,6 +39,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     )
   }
 
+  const grant = await getClaude(ctx, 'doc_nutrients')
+  if (!grant.ok) return grant.res
+
   let dl: { data: Blob | null; error: unknown }
   try {
     dl = await getSupabaseAdmin().storage.from(DOCS_BUCKET).download(doc.filePath)
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   let found
   try {
-    found = await extractNutrientsFromDoc(Buffer.from(await blob.arrayBuffer()), mediaType)
+    found = await extractNutrientsFromDoc(Buffer.from(await blob.arrayBuffer()), mediaType, grant.ai)
   } catch (err) {
     if (err instanceof DocParseError) return NextResponse.json({ error: err.message }, { status: 500 })
     throw err

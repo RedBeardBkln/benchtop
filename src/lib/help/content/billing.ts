@@ -1,4 +1,5 @@
 import type { HelpSection } from '../types'
+import { AI_ADDON, AI_INCLUDED_USD } from '@/lib/ai/allowance'
 
 export const billing: HelpSection = {
   slug: 'billing',
@@ -128,6 +129,32 @@ export const billing: HelpSection = {
             'Admins can still manage the team, but can’t invite new people.',
             '**Only the owner can subscribe.** If you’re an admin or member, ask your owner.',
           ],
+        },
+      ],
+    },
+    {
+      slug: 'ai',
+      title: 'AI included each month, and using your own key',
+      summary: 'How much AI your plan includes, what happens when it runs out, and how to add more.',
+      blocks: [
+        {
+          type: 'p',
+          text: `Sous Chef, label and photo reading, lab intake and AI research all use AI. Every account includes **$${AI_INCLUDED_USD} of AI each month**, measured from what each request actually costs. A quick question costs about a cent; a long Sous Chef answer that looks up many formulations or searches the web can cost much more. See how much is used on [Settings → AI](/settings/ai). It resets on the 1st of each month.`,
+        },
+        {
+          type: 'p',
+          text: 'When it runs out, AI features stop with a message saying so until the 1st. Everything else in Benchtop keeps working. To keep going, there are two choices:',
+        },
+        {
+          type: 'list',
+          items: [
+            `**Add AI add-ons** (owner only, on a subscription): each adds $${AI_ADDON.usdPerUnit} of AI a month for $${AI_ADDON.price.month} a month or $${AI_ADDON.price.year} a year. Stripe prorates the change on your next invoice.`,
+            '**Use your own key** (owners and admins): add your team’s Claude (Anthropic) or OpenAI API key. Your team’s AI then runs on your account with that provider, with no limit in Benchtop, and you pay the provider directly. A Claude key runs every AI feature; an OpenAI key runs Sous Chef, while the other AI features keep using your included AI.',
+          ],
+        },
+        {
+          type: 'tip',
+          text: 'Your key is checked with the provider before it’s saved, stored encrypted, and never shown again. Everyone on the team uses it, but only owners and admins can replace or remove it.',
         },
       ],
     },

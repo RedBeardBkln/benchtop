@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
-import Anthropic from '@anthropic-ai/sdk'
+import { getClaude } from '@/lib/ai/access'
 import { z } from 'zod'
 import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 import { and, eq, isNull } from 'drizzle-orm'
@@ -71,11 +71,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params
   if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
-  if (!process.env.ANTHROPIC_API_KEY)
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not configured' }, { status: 503 })
-
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+  const grant = await getClaude(ctx, 'formulation_research')
+  if (!grant.ok) return grant.res
+  const { ai } = grant
 
   const onHand: OnHand[] = (await db
     .select({
@@ -86,14 +87,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     .where(and(eq(ingredients.accountId, ctx.account.id), eq(ingredients.onHand, true), isNull(ingredients.archivedAt)))
   ).map(i => ({ id: i.id, name: i.name, path: categoryPath(i) }))
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   try {
-    const message = await client.messages.create({
+    const message = await ai.client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 8192,
       messages: [{ role: 'user', content: buildPrompt(parsed.data, onHand) }],
     })
+    await ai.record(message.model, message.usage)
 
     if (message.stop_reason === 'max_tokens') {
       console.error('[ai-research] Response truncated at max_tokens')

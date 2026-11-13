@@ -116,6 +116,8 @@ export const subscriptions = pgTable('subscriptions', {
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   // Quantity of the extra-team-seat item on the subscription (0 when it has none)
   seatQuantity: integer('seat_quantity').notNull().default(0),
+  // Units of the AI add-on item on the subscription (0 when it has none); see lib/ai/allowance.ts
+  aiAddonQuantity: integer('ai_addon_quantity').notNull().default(0),
   // Stripe `event.created` (unix seconds) of the newest event applied; older events are ignored
   lastEventCreated: bigint('last_event_created', { mode: 'number' }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

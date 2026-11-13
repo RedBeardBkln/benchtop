@@ -179,3 +179,25 @@ export const settingsPrivacyTour: Tour = {
     },
   ],
 }
+
+export const settingsAiTour: Tour = {
+  id: 'settings-ai-v1',
+  paths: ['/settings/ai'],
+  steps: [
+    {
+      target: 'settings-ai-usage',
+      title: 'Your AI this month',
+      body: 'Sous Chef, label reading, lab intake and AI research all use AI. This meter shows how much of your team’s included AI is used. It resets on the 1st.',
+    },
+    {
+      target: 'settings-ai-key',
+      title: 'Bring your own key',
+      body: 'Owners and admins can add the team’s own Claude or OpenAI key. Your AI then runs on your provider account, with no limit here.',
+    },
+    {
+      target: 'settings-ai-addon',
+      title: 'Or add more AI',
+      body: 'The owner can add AI add-ons to the subscription to raise the monthly allowance.',
+    },
+  ],
+}

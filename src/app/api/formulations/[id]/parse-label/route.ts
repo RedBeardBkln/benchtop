@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApi } from '@/lib/auth/context'
-import Anthropic from '@anthropic-ai/sdk'
+import { getClaude } from '@/lib/ai/access'
 import { getOwnedFormulation, notFoundResponse } from '@/lib/tenancy'
 import { VITAMIN_UNIT_RULES } from '@/lib/vitamin-units-prompt'
 
@@ -52,10 +52,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { id } = await params
   if (!(await getOwnedFormulation(ctx, id))) return notFoundResponse()
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY is not configured in .env.local' }, { status: 503 })
-  }
-
   const formData = await req.formData().catch(() => null)
   if (!formData) return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
 
@@ -69,6 +65,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (file.size > 12 * 1024 * 1024)
       return NextResponse.json({ error: `${file.name} must be under 12 MB` }, { status: 400 })
   }
+
+  const grant = await getClaude(ctx, 'label_parse')
+  if (!grant.ok) return grant.res
+  const { ai } = grant
 
   type MediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
   const toMediaType = (mime: string): MediaType =>
@@ -85,10 +85,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     }
   }))
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   try {
-    const message = await client.messages.create({
+    const message = await ai.client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       messages: [{
@@ -99,6 +97,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         ],
       }],
     })
+    await ai.record(message.model, message.usage)
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
     // Strip any accidental markdown fencing

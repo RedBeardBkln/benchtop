@@ -1,4 +1,5 @@
 import { PLAN_PRICE_USD, SEAT_PRICE_USD } from '@/lib/billing/seats'
+import { AI_ADDON, AI_INCLUDED_USD } from '@/lib/ai/allowance'
 import { PAID_TRIAL_DAYS } from '@/lib/billing/plans'
 
 // Copy for the public site. Prices and the trial length come from the billing rules, so the site
@@ -161,7 +162,8 @@ export const PRICING = {
 }
 
 export const PLAN_INCLUDES = [
-  'Every feature, with no tiers or add-ons',
+  'Every feature, with no tiers',
+  'AI included every month, with more as an add-on or on your own Claude or OpenAI key',
   'Unlimited projects, formulations and ingredients',
   'Nutrition Facts panels and ingredient statements',
   'Sous Chef AI assistant and the team lab notebook',
@@ -211,6 +213,10 @@ export const FAQ_GROUPS: SiteFaqGroup[] = [
         a: `$${PLAN_PRICE_USD.month} a month or $${PLAN_PRICE_USD.year} a year, which includes the account owner. Each extra person on your team is $${SEAT_PRICE_USD.month} a month or $${SEAT_PRICE_USD.year} a year.`,
       },
       {
+        q: 'Is AI included?',
+        a: `Yes. Every account gets $${AI_INCLUDED_USD} of AI a month, measured from what each request actually costs, for Sous Chef, label and photo reading, lab intake and AI research. Need more? Add AI add-ons ($${AI_ADDON.usdPerUnit} more a month for $${AI_ADDON.price.month} a month each), or have an owner or admin add your team’s own Claude or OpenAI key for no limit at all.`,
+      },
+      {
         q: 'Is there a free trial?',
         a: `Yes. New accounts start with a ${PAID_TRIAL_DAYS}-day free trial with every feature. You don’t need a card to start.`,
       },
@@ -245,7 +251,7 @@ export const FAQ_GROUPS: SiteFaqGroup[] = [
       },
       {
         q: 'What happens to what I send to the AI features?',
-        a: 'When you use an AI feature, such as reading a label photo or asking Sous Chef a question, the content you submit is sent to our AI provider, Anthropic, to produce the result. It is used to answer you, not sold or shared.',
+        a: 'When you use an AI feature, such as reading a label photo or asking Sous Chef a question, the content you submit is sent to our AI provider, Anthropic, to produce the result. It is used to answer you, not sold or shared. If your team adds its own Claude or OpenAI key, those features run on your account with that provider instead.',
       },
       {
         q: 'Can I get my data out?',

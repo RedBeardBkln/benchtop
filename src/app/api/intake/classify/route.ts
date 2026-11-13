@@ -6,6 +6,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredients, intakeItems } from '@/lib/db/schema'
 import { AiRefusalError, claudeJson } from '@/lib/ai-json'
+import { getClaude } from '@/lib/ai/access'
 import {
   INGREDIENT_CATEGORIES, SUBCATEGORY_EXAMPLES, categoryOptions, categoryPath,
 } from '@/lib/ingredient-categories'
@@ -58,9 +59,6 @@ export async function POST(request: NextRequest) {
   const { ctx } = auth
   const accountId = ctx.account.id
 
-  if (!process.env.ANTHROPIC_API_KEY)
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })
-
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
   const { ids } = parsed.data
@@ -75,6 +73,10 @@ export async function POST(request: NextRequest) {
     .orderBy(intakeItems.createdAt)
     .limit(BATCH)
   if (batch.length === 0) return NextResponse.json({ classified: 0, remaining: 0 })
+
+  const grant = await getClaude(ctx, 'intake_classify')
+  if (!grant.ok) return grant.res
+  const { ai } = grant
 
   // The library (to spot materials already in it) and the subcategories already in use (to stay consistent)
   const [library, usedPaths] = await Promise.all([
@@ -132,7 +134,7 @@ ${batch.map(b => `${b.id} | ${b.rawName}`).join('\n')}
 Return one entry per item, using its id.`
 
   try {
-    const result = await claudeJson<{ items: Classified[] }>({ content: prompt, schema: responseSchema(categories), effort: 'medium' })
+    const result = await claudeJson<{ items: Classified[] }>({ ai, content: prompt, schema: responseSchema(categories), effort: 'medium' })
 
     const batchIds = new Set(batch.map(b => b.id))
     const libraryIds = new Set(library.map(l => l.id))

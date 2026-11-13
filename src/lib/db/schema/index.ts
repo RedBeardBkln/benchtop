@@ -22,6 +22,7 @@ export * from './sous-chef'
 export * from './admin'
 export * from './connections'
 export * from './invite-requests'
+export * from './ai'
 
 // ---- Import tables for relations ----
 import { nutrients } from './nutrients'

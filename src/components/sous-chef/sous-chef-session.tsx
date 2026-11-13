@@ -20,6 +20,8 @@ export type ChatMessage = {
   /** Still streaming in */
   pending?: boolean
   error?: string
+  /** The error was the team running out of included AI, so point to Settings › AI */
+  aiLimit?: boolean
 }
 
 export type ConversationSummary = {
@@ -110,6 +112,8 @@ export function useSousChef() {
 }
 
 // The open conversation and panel are remembered for the browser tab, so a reload brings them back
+// Matches AI_LIMIT_CODE in lib/ai/access.ts (server-only)
+const AI_LIMIT_CODE = 'ai_limit_reached'
 const STORAGE_KEY = 'sous-chef-session'
 
 export function SousChefProvider({ children }: { children: React.ReactNode }) {
@@ -193,7 +197,15 @@ export function SousChefProvider({ children }: { children: React.ReactNode }) {
           link: !conversationId && draftLink ? { scope: draftLink.scope, id: draftLink.id } : null,
         }),
       })
-      if (!r.ok || !r.body) throw new Error(await readErrorMessage(r, 'Sous Chef could not answer'))
+      if (!r.ok || !r.body) {
+        // Show the server's own words (e.g. the team is out of included AI), not a generic failure
+        const text = await r.text().catch(() => '')
+        let data: { error?: unknown; code?: unknown } | null = null
+        try { data = JSON.parse(text) } catch {}
+        const error = typeof data?.error === 'string' ? data.error : `Sous Chef could not answer (${r.status})`
+        patchLast(m => ({ ...m, pending: false, error, aiLimit: data?.code === AI_LIMIT_CODE }))
+        return
+      }
 
       const reader = r.body.getReader()
       const decoder = new TextDecoder()

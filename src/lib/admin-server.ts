@@ -54,6 +54,11 @@ export async function getAccountUsage(accountId?: string): Promise<Map<string, A
       (select count(*) from ingredient_docs d join ingredients i on i.id = d.ingredient_id where i.account_id = a.id) as documents,
       (select count(*) from activity_log x where x.account_id = a.id and x.at > now() - interval '30 days') as changes_30d,
       (select count(*) from activity_log x where x.account_id = a.id and x.at > now() - interval '7 days') as changes_7d,
+      (select coalesce(sum(x.cost_micros), 0) from ai_usage x where x.account_id = a.id and x.own_key = false
+        and x.created_at >= date_trunc('month', now() at time zone 'utc') at time zone 'utc') as ai_cost_month,
+      (select coalesce(sum(x.cost_micros), 0) from ai_usage x where x.account_id = a.id and x.own_key = false
+        and x.created_at > now() - interval '30 days') as ai_cost_30d,
+      (select k.provider from ai_keys k where k.account_id = a.id) as ai_own_key,
       (select max(p.last_seen_at) from profiles p join account_members m on m.user_id = p.user_id where m.account_id = a.id) as last_seen_at
     from accounts a
     where a.deleted_at is null ${where}
@@ -73,6 +78,9 @@ export async function getAccountUsage(accountId?: string): Promise<Map<string, A
       documents: n(r.documents),
       changes30d: n(r.changes_30d),
       changes7d: n(r.changes_7d),
+      aiCostMonthUsd: n(r.ai_cost_month) / 1_000_000,
+      aiCost30dUsd: n(r.ai_cost_30d) / 1_000_000,
+      aiOwnKey: r.ai_own_key ? String(r.ai_own_key) : null,
       lastSeenAt: r.last_seen_at ? new Date(r.last_seen_at as string).toISOString() : null,
     })
   }

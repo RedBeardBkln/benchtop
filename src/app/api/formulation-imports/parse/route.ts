@@ -6,6 +6,7 @@ import { AdminNotConfiguredError } from '@/lib/supabase/admin'
 import { isOwnStagedPath, readStaged, removeStaged, stagedFileName } from '@/lib/staged-upload'
 import { MAX_SHEET_TEXT, SpreadsheetError, spreadsheetToText } from '@/lib/spreadsheet-text'
 import { buildDrafts, extractFormulations } from '@/lib/formulation-import-server'
+import { getClaude } from '@/lib/ai/access'
 
 // Reading a large workbook can take a minute or two
 export const maxDuration = 300
@@ -28,6 +29,10 @@ export async function POST(req: NextRequest) {
   if (!isOwnStagedPath(ctx.account.id, stagedPath)) return NextResponse.json({ error: 'Upload not found' }, { status: 404 })
   const fileName = stagedFileName(stagedPath)
 
+  // Before reading the upload, which deletes it
+  const grant = await getClaude(ctx, 'formulation_import')
+  if (!grant.ok) return grant.res
+
   let file: Awaited<ReturnType<typeof readStaged>>
   try {
     file = await readStaged(stagedPath)
@@ -48,7 +53,7 @@ export async function POST(req: NextRequest) {
         { status: 422 },
       )
     }
-    const found = await extractFormulations(sheets, fileName)
+    const found = await extractFormulations(sheets, fileName, grant.ai)
     if (found.length === 0) {
       return NextResponse.json({ error: 'No formulation was found in that file. Check it lists ingredients with amounts.' }, { status: 422 })
     }

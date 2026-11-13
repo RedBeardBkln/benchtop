@@ -48,7 +48,12 @@ export function ChatThread({ empty }: { empty: React.ReactNode }) {
                 <Loader2 size={13} className="animate-spin" /> {m.content ? 'Writing…' : 'Thinking…'}
               </p>
             )}
-            {m.error && <p className="text-sm text-red-600">{m.error}</p>}
+            {m.error && (
+              <p className="text-sm text-red-600">
+                {m.error}
+                {m.aiLimit && <> <Link href="/settings/ai" className="font-medium underline">Go to Settings › AI</Link></>}
+              </p>
+            )}
           </div>
         </div>
       ))}

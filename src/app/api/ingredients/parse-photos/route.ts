@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { nutrients } from '@/lib/db/schema'
 import { convertToUnit } from '@/lib/units'
 import { VITAMIN_UNIT_RULES } from '@/lib/vitamin-units-prompt'
-import Anthropic from '@anthropic-ai/sdk'
+import { getClaude } from '@/lib/ai/access'
 
 type MediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 
@@ -18,9 +18,6 @@ function toMediaType(mime: string): MediaType {
 export async function POST(req: NextRequest) {
   const auth = await requireApi({ libraryEdit: true })
   if (!auth.ok) return auth.res
-
-  if (!process.env.ANTHROPIC_API_KEY)
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })
 
   const formData = await req.formData().catch(() => null)
   if (!formData) return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
@@ -43,6 +40,10 @@ export async function POST(req: NextRequest) {
 
   if (imageBlocks.length === 0)
     return NextResponse.json({ error: 'At least one photo is required' }, { status: 400 })
+
+  const grant = await getClaude(auth.ctx, 'ingredient_photos')
+  if (!grant.ok) return grant.res
+  const { ai } = grant
 
   const allNutrients = await db
     .select({ id: nutrients.id, name: nutrients.name, unit: nutrients.unit })
@@ -86,10 +87,8 @@ ${VITAMIN_UNIT_RULES}
 NUTRIENT LIST (match nutrientId exactly — use UUID only, never the name):
 ${nutrientList}`
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   try {
-    const message = await client.messages.create({
+    const message = await ai.client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       messages: [{
@@ -100,6 +99,7 @@ ${nutrientList}`
         ],
       }],
     })
+    await ai.record(message.model, message.usage)
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
     const json = raw.replace(/^```[a-z]*\n?/m, '').replace(/\n?```\s*$/m, '').trim()

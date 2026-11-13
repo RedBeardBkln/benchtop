@@ -14,6 +14,12 @@ export type AccountUsage = {
   documents: number
   changes30d: number
   changes7d: number
+  /** Platform AI cost this calendar month (UTC), in USD */
+  aiCostMonthUsd: number
+  /** Platform AI cost in the last 30 days, in USD */
+  aiCost30dUsd: number
+  /** 'anthropic' | 'openai' when the team uses its own key */
+  aiOwnKey: string | null
   lastSeenAt: string | null
 }
 

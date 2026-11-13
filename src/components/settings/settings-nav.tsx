@@ -9,6 +9,7 @@ const SECTIONS = [
   { href: '/settings/account', label: 'Account' },
   { href: '/settings/team', label: 'Team', teamAdminOnly: true },
   { href: '/settings/billing', label: 'Billing' },
+  { href: '/settings/ai', label: 'AI' },
   { href: '/settings/invoicing-connection', label: 'Invoicing connection', connectionOnly: true },
   { href: '/settings/privacy', label: 'Privacy & Terms' },
 ]

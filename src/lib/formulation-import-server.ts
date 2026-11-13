@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { clients, ingredients, projects } from '@/lib/db/schema'
 import { claudeJson } from '@/lib/ai-json'
+import type { AnthropicAi } from '@/lib/ai/access'
 import type { AuthContext } from '@/lib/auth/context'
 import { projectLevel } from '@/lib/tenancy'
 import { canCreateProject } from '@/lib/team-access'
@@ -96,9 +97,11 @@ const blank = (s: string, max = 255) => (s.trim() ? s.trim().slice(0, max) : nul
 const MAX_LINES = 300
 const MAX_STEPS = 100
 
-export async function extractFormulations(sheets: SheetText[], fileName: string): Promise<Extracted['formulations']> {
+/** `ai` comes from getClaude(ctx, 'formulation_import') */
+export async function extractFormulations(sheets: SheetText[], fileName: string, ai: AnthropicAi): Promise<Extracted['formulations']> {
   const body = sheets.map(s => `### Sheet: ${s.name}\n${s.text}`).join('\n\n')
   const out = await claudeJson<Extracted>({
+    ai,
     content: `${INSTRUCTIONS}\n\nFile name: ${fileName}\n\n${body}`,
     schema: EXTRACT_SCHEMA,
     effort: 'medium',

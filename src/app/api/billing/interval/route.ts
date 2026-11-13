@@ -3,8 +3,8 @@ import { z } from 'zod'
 import type Stripe from 'stripe'
 import { requireApi } from '@/lib/auth/context'
 import {
-  billingNotConfiguredResponse, getPlanPriceId, getSeatPriceId, getSeatPriceIds, getStripe, isBillingConfigured,
-  isSeatBillingConfigured, planIntervalForPrice,
+  billingNotConfiguredResponse, getAddonPriceIds, getAiPriceId, getAiPriceIds, getPlanPriceId, getSeatPriceId,
+  getSeatPriceIds, getStripe, isAiAddonConfigured, isBillingConfigured, isSeatBillingConfigured, planIntervalForPrice,
 } from '@/lib/billing/stripe'
 import { ENTITLED_STATUSES } from '@/lib/billing/entitlement'
 import { applySubscription } from '@/lib/billing/sync'
@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
     const stripe = getStripe()
     const current = await stripe.subscriptions.retrieve(subId)
     const seatPriceIds = getSeatPriceIds()
-    const planItem = current.items.data.find(i => !seatPriceIds.includes(i.price.id)) ?? current.items.data[0]
+    const addonPriceIds = getAddonPriceIds()
+    const planItem = current.items.data.find(i => !addonPriceIds.includes(i.price.id)) ?? current.items.data[0]
     if (!planItem) return NextResponse.json({ error: 'The subscription has no plan' }, { status: 409 })
     if (planIntervalForPrice(planItem.price.id) === interval) {
       return NextResponse.json({ error: `You're already billed ${interval === 'year' ? 'annually' : 'monthly'}` }, { status: 409 })
@@ -43,9 +44,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Team seat billing is not configured' }, { status: 503 })
     }
 
+    const aiPriceIds = getAiPriceIds()
+    const aiItems = current.items.data.filter(i => aiPriceIds.includes(i.price.id))
+    if (aiItems.length > 0 && !isAiAddonConfigured()) {
+      return NextResponse.json({ error: 'AI add-on billing is not configured' }, { status: 503 })
+    }
+
     const items: Stripe.SubscriptionUpdateParams.Item[] = [
       { id: planItem.id, price: getPlanPriceId(interval) },
       ...seatItems.map(i => ({ id: i.id, price: getSeatPriceId(interval), quantity: i.quantity ?? 0 })),
+      ...aiItems.map(i => ({ id: i.id, price: getAiPriceId(interval), quantity: i.quantity ?? 0 })),
     ]
     const updated = await stripe.subscriptions.update(subId, {
       items,

@@ -34,6 +34,8 @@ export const notePatchSchema = z.object({
 export const MESSAGE_MAX_CHARS = 20000
 // Earlier turns resent with each request; older ones are dropped from what the model sees (they stay saved)
 export const HISTORY_TURNS = 40
+// Model calls in one turn (each tool round trip is one); stops a runaway loop
+export const MAX_ROUNDS = 12
 
 // What a conversation is about: one iteration, a whole formulation (every iteration; the id is its
 // family id) or a project. Stored as the project, family and iteration ids filled in down to that level.

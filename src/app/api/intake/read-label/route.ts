@@ -4,6 +4,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { intakeItems } from '@/lib/db/schema'
 import { AiRefusalError, claudeJson } from '@/lib/ai-json'
+import { getClaude } from '@/lib/ai/access'
 import { INTAKE_UNITS, normalizeUnit } from '@/lib/ingredient-categories'
 
 export const maxDuration = 120
@@ -48,15 +49,16 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.res
   const { ctx } = auth
 
-  if (!process.env.ANTHROPIC_API_KEY)
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })
-
   const formData = await req.formData().catch(() => null)
   if (!formData) return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
 
   const files = formData.getAll('photo').filter((f): f is File => f instanceof File && f.type.startsWith('image/'))
   if (files.length === 0) return NextResponse.json({ error: 'Attach at least one photo' }, { status: 400 })
   if (files.length > MAX_PHOTOS) return NextResponse.json({ error: `At most ${MAX_PHOTOS} photos at a time` }, { status: 400 })
+
+  const grant = await getClaude(ctx, 'intake_label')
+  if (!grant.ok) return grant.res
+  const { ai } = grant
 
   const content: Anthropic.Beta.BetaContentBlockParam[] = []
   for (const [i, file] of files.entries()) {
@@ -76,7 +78,7 @@ For each container label you can see, return the material name exactly as writte
 
   try {
     const result = await claudeJson<{ labels: Array<{ photo: number; name: string; quantity: number; unit: string }> }>({
-      content, schema, maxTokens: 4000, effort: 'low',
+      ai, content, schema, maxTokens: 4000, effort: 'low',
     })
     const values = result.labels
       .filter(l => l.name.trim())

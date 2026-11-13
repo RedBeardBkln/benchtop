@@ -84,6 +84,11 @@ function UsageCard({ usage }: { usage: AccountUsage | null }) {
         <Stat label="Sous Chef questions (30 days)" value={usage.sousChefMessages30d} tip="Messages people sent Sous Chef in the last 30 days" />
         <Stat label="Changes (7 days)" value={usage.changes7d} tip="Changes made in the app in the last 7 days (logged since the activity log started)" />
         <Stat label="Changes (30 days)" value={usage.changes30d} />
+        <Stat label="AI cost this month" value={`$${usage.aiCostMonthUsd.toFixed(2)}`}
+          tip="What this account’s AI has cost on the platform key since the 1st (UTC), at list prices" />
+        <Stat label="AI cost (30 days)" value={`$${usage.aiCost30dUsd.toFixed(2)}`} />
+        <Stat label="Own AI key" value={usage.aiOwnKey === 'anthropic' ? 'Claude' : usage.aiOwnKey === 'openai' ? 'OpenAI' : 'None'}
+          tip="Whether the team runs AI on its own provider key (Settings › AI)" />
       </div>
       <p className="mt-3 text-xs text-gray-500">Last active {timeAgo(usage.lastSeenAt).toLowerCase()}.</p>
     </Card>

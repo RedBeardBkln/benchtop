@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { canonicalNutrientName } from '@/lib/nutrient-names'
 import { requireApi } from '@/lib/auth/context'
-import Anthropic from '@anthropic-ai/sdk'
+import { getClaude } from '@/lib/ai/access'
 import { z } from 'zod'
 import { safeFetch, readTextCapped, UnsafeUrlError } from '@/lib/safe-fetch'
 import { VITAMIN_UNIT_RULES } from '@/lib/vitamin-units-prompt'
@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const { url, ingredientName } = parsed.data
+
+  const grant = await getClaude(auth.ctx, 'ingredient_url')
+  if (!grant.ok) return grant.res
+  const { ai } = grant
 
   // Fetch page server-side to bypass CORS. safeFetch is the SSRF guard: public http(s) hosts only (DNS-resolved,
   // redirects followed manually and re-validated on every hop; see lib/safe-fetch).
@@ -63,8 +67,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const anthropic = new Anthropic()
-  const completion = await anthropic.messages.create({
+  const completion = await ai.client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: 'You are a nutrition data extraction assistant. Extract nutrition facts from web page text and return strict JSON. No markdown, no prose — only the JSON object.',
@@ -88,6 +91,7 @@ Page text:
 ${pageText}`,
     }],
   })
+  await ai.record(completion.model, completion.usage)
 
   const content = completion.content[0]
   if (content.type !== 'text') {

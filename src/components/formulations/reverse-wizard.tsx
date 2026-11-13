@@ -962,7 +962,7 @@ export function ReverseWizard({
       setImpliedConstraints((data.impliedConstraints ?? []).map((c: { constraint: string }) => c.constraint))
       toast.success('Label parsed successfully')
     } catch (err) {
-      toast.error(String(err))
+      toast.error(err instanceof Error ? err.message : String(err))
     } finally {
       setIsParsing(false)
     }
@@ -1169,7 +1169,7 @@ export function ReverseWizard({
       updateLinkState(deckItemId, { fetchedNutrients: data.nutrients, isFetchingUrl: false })
       warnUnconvertible(data.unconvertible)
     } catch (err) {
-      updateLinkState(deckItemId, { fetchError: String(err), isFetchingUrl: false })
+      updateLinkState(deckItemId, { fetchError: err instanceof Error ? err.message : String(err), isFetchingUrl: false })
     }
   }
 
@@ -1189,7 +1189,7 @@ export function ReverseWizard({
       updateLinkState(deckItemId, { parsedDocNutrients: data.nutrients, isParsingDoc: false })
       warnUnconvertible(data.unconvertible)
     } catch (err) {
-      updateLinkState(deckItemId, { docParseError: String(err), isParsingDoc: false })
+      updateLinkState(deckItemId, { docParseError: err instanceof Error ? err.message : String(err), isParsingDoc: false })
     }
   }
 
@@ -1266,10 +1266,8 @@ export function ReverseWizard({
       })
       const data = await r.json()
       if (!r.ok) {
-        const msg = typeof data.error === 'string'
-          ? data.error
-          : JSON.stringify(data.error ?? data)
-        throw new Error(`${r.status} — ${msg}`)
+        // A plain message from the server (e.g. the monthly AI allowance is used up) is shown as is
+        throw new Error(typeof data.error === 'string' ? data.error : `${r.status} — ${JSON.stringify(data.error ?? data)}`)
       }
       setResearchResult(data)
       setIsResearching(false)
@@ -1358,7 +1356,7 @@ export function ReverseWizard({
         })
       }
     } catch (err) {
-      const msg = String(err)
+      const msg = err instanceof Error ? err.message : String(err)
       setResearchError(msg)
       toast.error(msg)
       setIsResearching(false)

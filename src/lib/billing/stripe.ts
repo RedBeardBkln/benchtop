@@ -58,6 +58,26 @@ export function getSeatPriceId(interval: 'month' | 'year', env: Env = process.en
   return id
 }
 
+// The AI add-on (more monthly AI, see lib/ai/allowance.ts): one price per interval, like seats
+export function isAiAddonConfigured(env: Env = process.env): boolean {
+  return isBillingConfigured(env) && Boolean(env.STRIPE_AI_PRICE_MONTHLY_ID && env.STRIPE_AI_PRICE_YEARLY_ID)
+}
+
+export function getAiPriceIds(env: Env = process.env): string[] {
+  return [env.STRIPE_AI_PRICE_MONTHLY_ID, env.STRIPE_AI_PRICE_YEARLY_ID].filter((v): v is string => Boolean(v))
+}
+
+export function getAiPriceId(interval: 'month' | 'year', env: Env = process.env): string {
+  const id = interval === 'year' ? env.STRIPE_AI_PRICE_YEARLY_ID : env.STRIPE_AI_PRICE_MONTHLY_ID
+  if (!id) throw new BillingNotConfiguredError()
+  return id
+}
+
+/** Every add-on price (seats and AI): any item on a subscription that isn't one of these is the plan */
+export function getAddonPriceIds(env: Env = process.env): string[] {
+  return [...getSeatPriceIds(env), ...getAiPriceIds(env)]
+}
+
 export function billingNotConfiguredResponse() {
   return NextResponse.json(
     { error: 'Billing is not configured in this environment', code: 'billing_not_configured' },

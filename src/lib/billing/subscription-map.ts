@@ -28,15 +28,22 @@ export type MappedSubscription = {
   currentPeriodEnd: Date | null
   cancelAtPeriodEnd: boolean
   seatQuantity: number
+  aiAddonQuantity: number
 }
 
-// A subscription has the plan item plus, once the account has team members, one extra-seat item
-// (identified by its price being one of `seatPriceIds`). Plan fields come from the plan item.
-export function mapSubscription(sub: StripeSubscriptionLike, seatPriceIds: readonly string[] = []): MappedSubscription {
+// A subscription has the plan item plus, optionally, an extra-seat item (price in `seatPriceIds`)
+// and an AI add-on item (price in `aiPriceIds`). Plan fields come from the plan item.
+export function mapSubscription(
+  sub: StripeSubscriptionLike,
+  seatPriceIds: readonly string[] = [],
+  aiPriceIds: readonly string[] = [],
+): MappedSubscription {
   const items = sub.items?.data ?? []
   const isSeat = (i: (typeof items)[number]) => Boolean(i.price && seatPriceIds.includes(i.price.id))
-  const item = items.find(i => !isSeat(i)) ?? items[0]
+  const isAi = (i: (typeof items)[number]) => Boolean(i.price && aiPriceIds.includes(i.price.id))
+  const item = items.find(i => !isSeat(i) && !isAi(i)) ?? items[0]
   const seatItem = items.find(isSeat)
+  const aiItem = items.find(isAi)
   const periodEndUnix = item?.current_period_end ?? sub.current_period_end ?? null
   return {
     stripeSubscriptionId: sub.id,
@@ -45,6 +52,7 @@ export function mapSubscription(sub: StripeSubscriptionLike, seatPriceIds: reado
     currentPeriodEnd: periodEndUnix != null ? new Date(periodEndUnix * 1000) : null,
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
     seatQuantity: seatItem?.quantity ?? 0,
+    aiAddonQuantity: aiItem?.quantity ?? 0,
   }
 }
 

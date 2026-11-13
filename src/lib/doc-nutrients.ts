@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import type { AnthropicAi } from '@/lib/ai/access'
 import { db } from '@/lib/db'
 import { nutrients } from '@/lib/db/schema'
 import { convertToUnit } from '@/lib/units'
@@ -29,10 +29,12 @@ export class DocParseError extends Error {}
 /**
  * Nutrients read from the document, and `unconvertible`: values left out because their unit can't be
  * converted to the nutrient's own (e.g. vitamin E in IU with no form stated), as "Vitamin E (IU → mg)".
+ * `ai` comes from getClaude(ctx, 'doc_nutrients'); the call's usage is recorded against the team's allowance.
  */
 export async function extractNutrientsFromDoc(
   bytes: Buffer,
   mediaType: DocMediaType,
+  ai: AnthropicAi,
 ): Promise<{ nutrients: DocNutrient[]; unconvertible: string[] }> {
   const base64 = bytes.toString('base64')
   const allNutrients = await db
@@ -41,8 +43,6 @@ export async function extractNutrientsFromDoc(
     .orderBy(nutrients.displayOrder)
 
   const nutrientList = allNutrients.map(n => `${n.id}|${n.name}|${n.unit}`).join('\n')
-
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   const docContent = mediaType === 'application/pdf'
     ? ({
@@ -54,7 +54,7 @@ export async function extractNutrientsFromDoc(
         source: { type: 'base64' as const, media_type: mediaType, data: base64 },
       })
 
-  const message = await anthropic.messages.create({
+  const message = await ai.client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     messages: [
@@ -89,6 +89,7 @@ ${VITAMIN_UNIT_RULES}`,
       },
     ],
   })
+  await ai.record(message.model, message.usage)
 
   const raw = message.content[0]?.type === 'text' ? message.content[0].text.trim() : ''
 

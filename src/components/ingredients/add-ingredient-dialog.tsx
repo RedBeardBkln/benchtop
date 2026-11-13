@@ -134,7 +134,7 @@ export function AddIngredientDialog({
       const data = await r.json().catch(() => ({}))
       if (docRun.current !== run) return
       if (!r.ok) {
-        const why = typeof data.error === 'string' ? data.error : 'Could not read the document'
+        const why = typeof data.error === 'string' ? data.error.replace(/\.\s*$/, '') : 'Could not read the document'
         update({ status: 'read', message: `${why}. It will still be attached.` })
         return
       }

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { accountMembers, accounts, subscriptions } from '@/lib/db/schema'
 import { ENTITLED_STATUSES, isDevBypassActive } from './entitlement'
-import { getSeatPriceId, getSeatPriceIds, getStripe, isSeatBillingConfigured } from './stripe'
+import { getAddonPriceIds, getSeatPriceId, getSeatPriceIds, getStripe, isSeatBillingConfigured } from './stripe'
 import { billableSeats, seatInterval, seatItemChanges } from './seats'
 import { hasFreeAccess } from './plans'
 
@@ -74,7 +74,8 @@ export async function syncSeats(accountId: string): Promise<SeatSyncResult> {
     const stripe = getStripe()
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId)
     const seatPriceIds = getSeatPriceIds()
-    const planItem = stripeSub.items.data.find(i => !seatPriceIds.includes(i.price.id)) ?? stripeSub.items.data[0]
+    const addonPriceIds = getAddonPriceIds()
+    const planItem = stripeSub.items.data.find(i => !addonPriceIds.includes(i.price.id)) ?? stripeSub.items.data[0]
     const seatPriceId = getSeatPriceId(seatInterval(planItem?.price.recurring?.interval))
     const changes = seatItemChanges(stripeSub.items.data, seatPriceIds, seatPriceId, seats)
     if (changes.length > 0) {

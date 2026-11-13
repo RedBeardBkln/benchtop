@@ -16,7 +16,21 @@ describe('mapSubscription', () => {
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
       cancelAtPeriodEnd: false,
       seatQuantity: 0,
+      aiAddonQuantity: 0,
     })
+  })
+
+  it('reads the AI add-on and seat items apart from the plan item, whatever their order', () => {
+    const m = mapSubscription({
+      id: 'sub_ai',
+      status: 'active',
+      items: { data: [
+        { quantity: 2, price: { id: 'price_ai_m' } },
+        { quantity: 3, price: { id: 'price_seat_m' } },
+        { quantity: 1, current_period_end: 1_800_000_000, price: { id: 'price_plan' } },
+      ] },
+    }, ['price_seat_m'], ['price_ai_m'])
+    expect(m).toMatchObject({ priceId: 'price_plan', seatQuantity: 3, aiAddonQuantity: 2 })
   })
 
   it('falls back to the legacy subscription-level current_period_end', () => {
