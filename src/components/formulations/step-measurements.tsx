@@ -6,6 +6,7 @@ import type { Equipment, ProcessStepDetail } from '@/lib/types'
 import {
   cToF, fToC, normalizeTime, stepTime, trimNumber, type StepParams,
 } from '@/lib/step-measurements'
+import { TimeSelect } from '@/components/time/time-select'
 
 const INPUT =
   'w-full px-1.5 py-1 text-xs border border-gray-200 rounded bg-white tabular-nums ' +
@@ -72,6 +73,26 @@ function MeasureField({
         aria-label={label}
         data-tip={disabled ? undefined : tip}
         className={INPUT}
+      />
+    </Field>
+  )
+}
+
+/** A time of day from hour / minute / AM-PM dropdowns; saves each complete pick, or clears on "--". */
+function ClockField({ label, saved, disabled, onCommit, tip }: {
+  label: string
+  saved: string
+  disabled: boolean
+  onCommit: (next: string | null) => void
+  tip?: string
+}) {
+  // Stored values may carry seconds ("09:30:00"); compare on hours and minutes only
+  const savedHm = saved.slice(0, 5)
+  return (
+    <Field label={label} className="w-40">
+      <TimeSelect
+        label={label} size="sm" value={savedHm} disabled={disabled} tip={tip}
+        onChange={v => { if (v !== savedHm) onCommit(v || null) }}
       />
     </Field>
   )
@@ -253,8 +274,8 @@ export function StepMeasurements({
 
   return (
     <>
-      <MeasureField label="Start" type="time" className="w-28" saved={p.start_time ?? ''} disabled={disabled} onCommit={one('start_time')} tip="Time of day this step started. Saves when you click away." />
-      <MeasureField label="End" type="time" className="w-28" saved={p.end_time ?? ''} disabled={disabled} onCommit={one('end_time')} tip="Time of day this step finished. Saves when you click away." />
+      <ClockField label="Start" saved={p.start_time ?? ''} disabled={disabled} onCommit={one('start_time')} tip="Time of day this step started. Saves as you pick." />
+      <ClockField label="End" saved={p.end_time ?? ''} disabled={disabled} onCommit={one('end_time')} tip="Time of day this step finished. Saves as you pick." />
       <MeasureField label="pH" type="number" step="0.01" min="0" max="14" className="w-16" saved={p.ph ?? ''} disabled={disabled} normalize={phNormalize} onCommit={one('ph')} tip="pH measured at this step, 0 to 14" />
       <TempFields savedC={p.temp_c ?? ''} disabled={disabled} onCommit={one('temp_c')} />
       <MeasureField

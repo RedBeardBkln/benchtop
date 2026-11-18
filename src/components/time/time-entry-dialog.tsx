@@ -10,6 +10,7 @@ import {
   splitLocal, type TimeActivity,
 } from '@/lib/time-tracking'
 import { fieldCls, labelCls, useTimeOptions, type TimeEntryRow } from './use-time'
+import { TimeSelect } from './time-select'
 
 // Logs time by hand, starts a timer, or edits an entry. Times are entered in the browser's time zone:
 // a date, a start and an end time (an end before the start runs into the next day), with the duration
@@ -181,20 +182,20 @@ export function TimeEntryDialog({ mode, onClose }: { mode: EntryDialogMode; onCl
           </div>
 
           {showTimes && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="col-span-2 sm:col-span-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
                 <label htmlFor="te-date" className={labelCls}>Date <span className="text-red-400">*</span></label>
                 <input id="te-date" type="date" value={date} onChange={e => setDate(e.target.value)} className={fieldCls} />
               </div>
               <div>
                 <label htmlFor="te-start" className={labelCls}>Start <span className="text-red-400">*</span></label>
-                <input id="te-start" type="time" value={startTime} onChange={e => onStartTime(e.target.value)} className={fieldCls} />
+                <TimeSelect id="te-start" label="Start" value={startTime} onChange={onStartTime} />
               </div>
               <div>
                 <label htmlFor="te-end" className={labelCls}>End {!running && <span className="text-red-400">*</span>}</label>
-                <input id="te-end" type="time" value={endTime} onChange={e => onEndTime(e.target.value)} className={fieldCls} />
+                <TimeSelect id="te-end" label="End" value={endTime} onChange={onEndTime} />
               </div>
-              <div className="col-span-2 sm:col-span-1">
+              <div>
                 <label htmlFor="te-duration" className={labelCls}>Duration</label>
                 <input
                   id="te-duration"
