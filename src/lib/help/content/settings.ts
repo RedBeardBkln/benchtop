@@ -141,6 +141,25 @@ export const settings: HelpSection = {
       ],
     },
     {
+      slug: 'sign-in-with-google',
+      title: 'Signing in with Google',
+      summary: 'Use your Google account instead of typing a password.',
+      blocks: [
+        {
+          type: 'steps',
+          items: [
+            'On the sign-in page, click `Continue with Google`.',
+            'Choose the Google account whose email address is your Benchtop sign-in email.',
+            'You’re signed in. Your password keeps working too.',
+          ],
+        },
+        {
+          type: 'note',
+          text: 'Benchtop is invitation only, so Google sign-in works only for a Google account with the same email as your Benchtop login. If your Google email is different, sign in with your password. Signing in with Google doesn’t connect your calendar; do that in [Settings → Calendar](/settings/calendar).',
+        },
+      ],
+    },
+    {
       slug: 'reset-password',
       title: 'Resetting a forgotten password',
       summary: 'Get a reset link by email when you can’t sign in.',

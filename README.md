@@ -91,6 +91,8 @@ See `.env.example` for the full template. Real values go in `.env.local` (git-ig
 | `STRIPE_SEAT_PRICE_MONTHLY_ID`, `STRIPE_SEAT_PRICE_YEARLY_ID` | Extra team seats ($10/month and $100/year prices) | Team invitations return `503 {code: "not_configured"}` for subscribed accounts; billing-exempt accounts are unaffected |
 | `BILLING_DEV_BYPASS` | Dev only: `true` lets outside accounts in without a subscription | Off. **Ignored when `NODE_ENV=production`** |
 | `AI_KEY_SECRET` (server only) | Encrypting teams’ own AI keys (Settings › AI) | Teams can’t save their own key; everything else works |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (server only) | Google Calendar in the time log (Settings › Calendar); also needs `AI_KEY_SECRET`, which encrypts the stored tokens | Settings › Calendar and the time log's meeting list are hidden |
+| `NEXT_PUBLIC_GOOGLE_SIGN_IN` | `true` shows "Continue with Google" on the login page, once the Google provider is on in Supabase | The button is hidden; password sign-in only |
 | `STRIPE_AI_PRICE_MONTHLY_ID`, `STRIPE_AI_PRICE_YEARLY_ID` | The AI add-on ($15/month and $150/year prices) that raises a team’s monthly AI allowance | The add-on isn’t offered |
 | `ANTHROPIC_API_KEY`, `USDA_FDC_API_KEY`, `BRAVE_SEARCH_API_KEY` | AI parsing / research, USDA and web lookups | Existing behaviour (routes return 503 or an error) |
 

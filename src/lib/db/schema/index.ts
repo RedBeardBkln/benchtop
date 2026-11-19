@@ -23,6 +23,7 @@ export * from './admin'
 export * from './connections'
 export * from './invite-requests'
 export * from './ai'
+export * from './calendar'
 
 // ---- Import tables for relations ----
 import { nutrients } from './nutrients'

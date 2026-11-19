@@ -10,6 +10,7 @@ import { needsStripeCancel } from '@/lib/billing/entitlement'
 import { BillingNotConfiguredError, getStripe, isBillingConfigured } from '@/lib/billing/stripe'
 import { DOCS_BUCKET, getSupabaseAdmin, isAdminConfigured } from '@/lib/supabase/admin'
 import { clearStagedExports } from '@/lib/export/staging'
+import { disconnectAll } from '@/lib/calendar/google'
 
 // Permanently deletes an account and everything in it: the owner from Settings, or a platform
 // admin. Callers check who may do it and that it isn't the billing-exempt staff account.
@@ -74,6 +75,8 @@ export async function deleteAccount(accountId: string, subscription?: Sub | null
   await clearStaging(accountId).catch(err => console.error('[account delete] staging cleanup failed:', err))
   await clearBranding(accountId).catch(err => console.error('[account delete] logo cleanup failed:', err))
   await clearStagedExports(accountId).catch(err => console.error('[account delete] staged export cleanup failed:', err))
+  // Connected calendars: revoke Google's grants (the rows would also go with the account)
+  await disconnectAll(accountId).catch(err => console.error('[account delete] calendar disconnect failed:', err))
 
   // 3. Database rows, FK-safe, in one transaction.
   //    projects -> cascades formulations, lines, process steps, targets, batch runs, reverse targets

@@ -10,15 +10,16 @@ const SECTIONS = [
   { href: '/settings/team', label: 'Team', teamAdminOnly: true },
   { href: '/settings/billing', label: 'Billing' },
   { href: '/settings/ai', label: 'AI' },
+  { href: '/settings/calendar', label: 'Calendar', calendarOnly: true },
   { href: '/settings/invoicing-connection', label: 'Invoicing connection', connectionOnly: true },
   { href: '/settings/privacy', label: 'Privacy & Terms' },
 ]
 
-export function SettingsNav({ isTeamAdmin, showConnection }: { isTeamAdmin: boolean; showConnection: boolean }) {
+export function SettingsNav({ isTeamAdmin, showConnection, showCalendar }: { isTeamAdmin: boolean; showConnection: boolean; showCalendar: boolean }) {
   const pathname = usePathname()
   return (
     <nav data-tour="settings-nav" className="flex sm:flex-col gap-1 overflow-x-auto sm:w-48 shrink-0" aria-label="Settings sections">
-      {SECTIONS.filter(s => (!s.teamAdminOnly || isTeamAdmin) && (!s.connectionOnly || showConnection)).map(({ href, label }) => {
+      {SECTIONS.filter(s => (!s.teamAdminOnly || isTeamAdmin) && (!s.connectionOnly || showConnection) && (!s.calendarOnly || showCalendar)).map(({ href, label }) => {
         const active = pathname === href
         return (
           <Link

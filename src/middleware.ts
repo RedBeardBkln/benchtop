@@ -56,6 +56,7 @@ export async function middleware(request: NextRequest) {
     || pathname.startsWith('/forgot-password')
     || pathname.startsWith('/reset-password')
     || pathname.startsWith('/auth/confirm')
+    || pathname.startsWith('/auth/callback')
   const isPublicAsset = pathname.startsWith('/_next')
     || pathname.startsWith('/favicon')
     || pathname === '/manifest.webmanifest'

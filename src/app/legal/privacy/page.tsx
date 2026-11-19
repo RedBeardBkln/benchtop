@@ -36,7 +36,8 @@ export default function PrivacyPage() {
       <section>
         <h2>2. What we collect</h2>
         <ul>
-          <li><strong>Account and profile:</strong> your email address, password (stored only as a salted hash by our authentication provider), full name, company, job title, phone number and time zone (the last four are optional), and the versions and times at which you accepted the Terms and this Policy.</li>
+          <li><strong>Account and profile:</strong> your email address, password (stored only as a salted hash by our authentication provider), full name, company, job title, phone number and time zone (the last four are optional), and the versions and times at which you accepted the Terms and this Policy. If you sign in with Google, Google tells our authentication provider your Google account&apos;s email address, name and profile picture; we do not receive your Google password.</li>
+          <li><strong>Google Calendar, if you connect it:</strong> you may connect your own Google Calendar in Settings &rarr; Calendar, with read-only access to its events. We store an encrypted access token and the connected Google account&apos;s email address. Each time you open the time log, we read that day&apos;s events (titles, times, locations, video-call links and the email addresses of the people invited) to show you your meetings, and use the invitees&apos; email domains to suggest which client a meeting is for. Event details are not stored, except for what you choose to save in a time entry (for example a meeting&apos;s title and times). Only you see your calendar; your teammates do not.</li>
           <li><strong>Workspace content you create:</strong> clients and their contacts, accounting and shipping details, projects, formulations, ingredient and nutrient data, inventory and stock levels, suppliers, equipment, process steps, batch records, and any documents, photos or labels you upload.</li>
           <li><strong>Billing:</strong> handled by Stripe. We store a Stripe customer ID and your subscription status, plan and renewal date. Your card number never reaches Benchtop.</li>
           <li><strong>Technical data:</strong> session cookies needed to keep you signed in, and server logs. We do not use advertising cookies or third-party analytics.</li>
@@ -51,7 +52,7 @@ export default function PrivacyPage() {
           To provide and secure the service, authenticate you, process your subscription, let you export or delete your
           data, and communicate with you about your account. We keep data export records so that downloads of an
           account&apos;s data can be reviewed if a question arises about whether, when or by whom data was taken out of the
-          account; Benchtop staff look at them only to investigate such a concern or to support you. Invitation requests are used only to review the request
+          account; Benchtop staff look at them only to investigate such a concern or to support you. Information from your Google Calendar is used only to show you your own meetings in the time log and help you log time for them. Benchtop&apos;s use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements: it is not used for advertising, not sold, not used to train AI models, and not read by people except with your permission, for security, or as the law requires. Invitation requests are used only to review the request
           and contact you about the beta. We never sell personal data or workspace data, including
           your clients&apos; data (see &quot;Our commitment&quot; above). TODO: confirm with the
           operator and the AI provider&apos;s terms what is stated here about use of content for model training.
@@ -81,6 +82,7 @@ export default function PrivacyPage() {
           <li><strong>Brave Search</strong> &ndash; web lookups. Search queries you submit are sent to Brave.</li>
           <li><strong>Vercel</strong> &ndash; hosting for the app and our website.</li>
           <li><strong>Resend</strong> &ndash; delivery of account emails, such as password resets.</li>
+          <li><strong>Google</strong> &ndash; sign-in with Google, if you use it, and reading your calendar events, if you connect Google Calendar. Google processes this under its own privacy policy.</li>
         </ul>
       </section>
 
@@ -89,6 +91,7 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Access and portability:</strong> the account owner can download a copy of the account&apos;s data from Settings &rarr; Privacy &amp; Terms &rarr; Download my data: either one zip file of spreadsheets, documents and images (Excel, Word, PDF, JPEG or PNG, chosen for each part, with your uploaded documents in their original format), or one JSON file for importing into other software. Each download is recorded (see section 2).</li>
           <li><strong>Correction:</strong> edit your profile and account details in Settings.</li>
+          <li><strong>Calendar access:</strong> disconnect Google Calendar at any time in Settings &rarr; Calendar, which deletes the stored token and revokes Benchtop&apos;s access with Google. You can also remove Benchtop from your Google Account&apos;s third-party connections.</li>
           <li><strong>Deletion:</strong> Settings &rarr; Privacy &amp; Terms &rarr; Delete account permanently removes your account&apos;s data, uploaded documents and your login, and cancels your subscription.</li>
           <li>You may also contact us at {LEGAL_CONTACT_EMAIL} to exercise these rights.</li>
         </ul>
@@ -100,7 +103,7 @@ export default function PrivacyPage() {
           We keep your data while your account exists. We keep invitation requests while the beta runs, and delete one
           sooner if you ask us to at {LEGAL_CONTACT_EMAIL}. A data export file is kept only until it has been downloaded,
           and for no more than about an hour; data export records are kept while the account exists. When you delete your
-          account, its workspace data, documents, export records, profile and login are deleted. Records that payment processors or the law require them to keep (for example
+          account, its workspace data, documents, export records, calendar connections, profile and login are deleted. A calendar connection is also deleted when you disconnect it or are removed from a team. Records that payment processors or the law require them to keep (for example
           invoices held by Stripe) are retained by those parties under their own policies. Backups may retain deleted data
           for a limited period before they are overwritten.
         </p>

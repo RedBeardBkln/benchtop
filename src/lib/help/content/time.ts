@@ -61,6 +61,35 @@ export const time: HelpSection = {
       ],
     },
     {
+      slug: 'calendar',
+      title: 'Logging meetings from your Google Calendar',
+      summary: 'Connect your calendar and log a meeting with one click.',
+      blocks: [
+        {
+          type: 'steps',
+          items: [
+            'Go to [Settings → Calendar](/settings/calendar) and click `Connect Google Calendar`.',
+            'Choose your Google account and allow Benchtop to see your calendar events. Benchtop only reads them; it never changes your calendar.',
+            'Open [Time](/time) and click `Log time`. Under **Meetings this day** you’ll see the meetings on the chosen date.',
+            'Click a meeting. Its **Start**, **End** and **Duration** fill in, and its title becomes the **Task** if you hadn’t written one.',
+            'Check the **Client** and **Type**, adjust the task so it reads well for the client, and click `Log time`.',
+          ],
+        },
+        {
+          type: 'terms',
+          items: [
+            { term: 'Client', text: 'Filled in when one of your clients clearly matches: a guest’s email shares the domain of the client’s website, billing email or a contact, or the client’s name is in the meeting title. Always check it.' },
+            { term: 'Type', text: 'Video call when the meeting has a call link, In-person meeting when it has a place. Otherwise choose it yourself.' },
+            { term: 'Which meetings', text: 'Timed events on your main Google calendar. All-day events, out-of-office blocks and meetings you declined are left out.' },
+          ],
+        },
+        {
+          type: 'note',
+          text: 'Your calendar is yours alone: teammates, owners and admins can’t see it. To stop, click `Disconnect` in Settings → Calendar. Time you already logged stays.',
+        },
+      ],
+    },
+    {
       slug: 'timer',
       title: 'Using the timer',
       summary: 'Start a clock when you begin and stop it when you finish.',

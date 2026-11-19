@@ -11,6 +11,7 @@ import {
 } from '@/lib/time-tracking'
 import { fieldCls, labelCls, useTimeOptions, type TimeEntryRow } from './use-time'
 import { TimeSelect } from './time-select'
+import { CalendarMeetings, type CalendarMeeting } from './calendar-meetings'
 
 // Logs time by hand, starts a timer, or edits an entry. Times are entered in the browser's time zone:
 // a date, a start and an end time (an end before the start runs into the next day), with the duration
@@ -41,6 +42,8 @@ export function TimeEntryDialog({ mode, onClose }: { mode: EntryDialogMode; onCl
     entry?.endedAt ? formatDuration(durationMinutes(entry.startedAt, entry.endedAt)) : '',
   )
   const [billed, setBilled] = useState(entry?.billed ?? false)
+  // The calendar meeting picked last, so picking another can replace what it filled in
+  const [meeting, setMeeting] = useState<CalendarMeeting | null>(null)
 
   // The entry's own client and project stay choosable even if since archived
   const clients = [...(options?.clients ?? [])]
@@ -64,6 +67,23 @@ export function TimeEntryDialog({ mode, onClose }: { mode: EntryDialogMode; onCl
     const s = combineLocal(date, v)
     const e = s && endTime ? endFromClock(s, endTime) : null
     if (s && e) setDurationText(formatDuration(durationMinutes(s, e)))
+  }
+  // A meeting from the calendar sets the times. The task, type and client only when still empty
+  // or still as the previously picked meeting filled them in.
+  function onMeeting(m: CalendarMeeting) {
+    const s = splitLocal(new Date(m.start))
+    const prev = meeting
+    setMeeting(m)
+    setDate(s.date)
+    setStartTime(s.time)
+    setEndTime(splitLocal(new Date(m.end)).time)
+    setDurationText(formatDuration(durationMinutes(m.start, m.end)))
+    if (!task.trim() || task === prev?.title) setTask(m.title)
+    if (m.activity && (!activity || activity === prev?.activity)) setActivity(m.activity)
+    if ((!clientId || clientId === prev?.suggestedClientId) && m.suggestedClientId && clients.some(c => c.id === m.suggestedClientId)) {
+      setClientId(m.suggestedClientId)
+      setProjectId('')
+    }
   }
   // Typing a duration moves the end time
   function onDuration(v: string) {
@@ -211,6 +231,7 @@ export function TimeEntryDialog({ mode, onClose }: { mode: EntryDialogMode; onCl
             </div>
           )}
           {nextDay && <p className="-mt-2 text-xs text-gray-500">Ends the next day.</p>}
+          {showTimes && !running && <CalendarMeetings date={date} selectedId={meeting?.id ?? null} onPick={onMeeting} />}
           {running && <p className="-mt-2 text-xs text-gray-500">This timer is still running. Leave the end empty to keep it running, or enter one to stop it.</p>}
           {mode.kind === 'timer' && <p className="text-xs text-gray-500">The timer starts now. Stop it from the Time page when you’re done.</p>}
 

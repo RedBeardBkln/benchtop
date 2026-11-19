@@ -4,6 +4,7 @@ import { accountMembers, profiles, projects } from '@/lib/db/schema'
 import { getAuthEmails, getSupabaseAdmin, isAdminConfigured } from '@/lib/supabase/admin'
 import { isAccountLogoPath } from '@/lib/logo'
 import { removeLogo } from '@/lib/logo-server'
+import { disconnectAll } from '@/lib/calendar/google'
 import { accessForRole, type MemberAccess, type MemberRole } from '@/lib/team-access'
 
 // Server helpers for team management (DB access). Pure rules live in team-access.ts.
@@ -69,6 +70,8 @@ export async function removeMember(accountId: string, userId: string): Promise<{
       .where(and(eq(accountMembers.accountId, accountId), eq(accountMembers.userId, userId)))
     await tx.delete(profiles).where(eq(profiles.userId, userId))
   })
+  // Their calendar was connected for their own use; forget it and revoke Google's grant
+  await disconnectAll(accountId, userId).catch(err => console.error('[team] calendar disconnect failed:', err))
   if (!isAdminConfigured()) return { loginRemoved: false }
   if (isAccountLogoPath(accountId, profile?.logoPath)) await removeLogo(profile.logoPath)
   const { error } = await getSupabaseAdmin().auth.admin.deleteUser(userId)

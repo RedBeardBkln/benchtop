@@ -33,6 +33,12 @@ describe('every API route is gated', () => {
   ])
   // The invoicing connection authenticates by key instead of a session
   const CONNECTION_ROUTES = (file: string) => file.startsWith('src/app/api/connect/')
+  // Browser navigations to and from Google's consent screen: they need a session but answer with
+  // redirects (to /login when signed out), so they call getContext and check it themselves
+  const NAVIGATION_ROUTES = new Set([
+    'src/app/api/calendar/google/connect/route.ts',
+    'src/app/api/calendar/google/callback/route.ts',
+  ])
   const routes = walk(path.join(ROOT, 'src/app/api'), f => f.endsWith('route.ts')).map(rel)
 
   it('finds the routes', () => {
@@ -47,6 +53,11 @@ describe('every API route is gated', () => {
     }
     if (CONNECTION_ROUTES(file)) {
       expect(src).toMatch(/requireConnection\(req\)/)
+      return
+    }
+    if (NAVIGATION_ROUTES.has(file)) {
+      expect(src).toMatch(/await getContext\(\)/)
+      expect(src).toMatch(/if \(!ctx\) return NextResponse\.redirect\(/)
       return
     }
     expect(src).toMatch(/requireApi\(/)

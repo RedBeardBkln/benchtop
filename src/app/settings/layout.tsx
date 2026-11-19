@@ -3,6 +3,7 @@ import { SettingsNav } from '@/components/settings/settings-nav'
 import { requirePage } from '@/lib/auth/context'
 import { isTeamAdmin } from '@/lib/team-access'
 import { canUseInvoicingConnection } from '@/lib/invoicing-connection'
+import { isGoogleCalendarConfigured } from '@/lib/calendar/google'
 
 // Settings is reachable by every signed-in member, subscribed or not (the billing page is where
 // an unsubscribed user is sent), but still requires authentication and an account.
@@ -17,7 +18,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
           <p className="text-sm text-gray-500 mt-1">Your profile, account, team, subscription and privacy.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-6">
-          <SettingsNav isTeamAdmin={isTeamAdmin(ctx.role)} showConnection={canUseInvoicingConnection(ctx.user.email)} />
+          <SettingsNav isTeamAdmin={isTeamAdmin(ctx.role)} showConnection={canUseInvoicingConnection(ctx.user.email)} showCalendar={isGoogleCalendarConfigured()} />
           <div className="flex-1 min-w-0 space-y-6">{children}</div>
         </div>
       </div>
