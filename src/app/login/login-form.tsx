@@ -7,9 +7,6 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
 
-// Shown once the Google provider is turned on in Supabase (Authentication → Providers → Google)
-const GOOGLE_SIGN_IN = process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN === 'true'
-
 const GOOGLE_ERRORS: Record<string, string> = {
   'google-no-account': 'No Benchtop account uses that Google address. Sign in with the Google account for the email you were invited with, or with your password.',
   'google-canceled': 'Google sign-in was canceled.',
@@ -28,7 +25,7 @@ function GoogleMark() {
   )
 }
 
-export default function LoginForm() {
+export default function LoginForm({ googleSignIn }: { googleSignIn: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/projects'
@@ -108,7 +105,7 @@ export default function LoginForm() {
         </div>
       )}
 
-      {GOOGLE_SIGN_IN && (
+      {googleSignIn && (
         <>
           <button
             type="button"

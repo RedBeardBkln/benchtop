@@ -1,7 +1,17 @@
 import { Suspense } from 'react'
 import LoginForm from './login-form'
 
+// Read per request, not baked in at build time, so the Vercel setting takes effect without a rebuild
+export const dynamic = 'force-dynamic'
+
+// A computed name keeps the bundler from inlining the build-time value of the variable
+function runtimeEnv(name: string): string | undefined {
+  return process.env[name]
+}
+
 export default function LoginPage() {
+  // Shown once the Google provider is turned on in Supabase (Authentication → Providers → Google)
+  const googleSignIn = runtimeEnv(['NEXT_PUBLIC', 'GOOGLE_SIGN_IN'].join('_'))?.trim().toLowerCase() === 'true'
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Suspense fallback={
@@ -14,7 +24,7 @@ export default function LoginPage() {
           </div>
         </div>
       }>
-        <LoginForm />
+        <LoginForm googleSignIn={googleSignIn} />
       </Suspense>
     </div>
   )
