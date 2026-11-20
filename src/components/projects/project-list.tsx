@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Plus, FolderOpen, FileSpreadsheet } from 'lucide-react'
+import { Plus, FolderOpen, FileSpreadsheet, Archive } from 'lucide-react'
 import type { ProjectSummary } from '@/lib/types'
 import { NewProjectDialog } from './new-project-dialog'
 import { useImportDrafts } from '@/components/formulations/import/use-import-drafts'
@@ -14,12 +14,18 @@ import { Term } from '@/components/term'
 export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
   const router = useRouter()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const { data: importDrafts = [] } = useImportDrafts()
 
   const { data: projects, isLoading } = useQuery<ProjectSummary[]>({
     queryKey: ['projects'],
     queryFn: () => fetch('/api/projects').then(r => r.json()),
   })
+
+  // Archived projects stay out of the list until asked for, then show after the active ones, faded
+  const active = projects?.filter(p => p.status !== 'archived') ?? []
+  const archived = projects?.filter(p => p.status === 'archived') ?? []
+  const shown = showArchived ? [...active, ...archived] : active
 
   return (
     <>
@@ -82,6 +88,27 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
             )}
           </div>
         ) : (
+          <>
+          {archived.length > 0 && (
+            <div className="flex justify-end mb-3">
+              <button
+                type="button"
+                onClick={() => setShowArchived(v => !v)}
+                aria-pressed={showArchived}
+                data-tip={showArchived ? 'Hide archived projects from the list' : 'Show archived projects, faded, below the active ones'}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-gray-200 bg-white rounded-md text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                <Archive size={12} />
+                {showArchived ? 'Hide archived' : `Archived (${archived.length})`}
+              </button>
+            </div>
+          )}
+          {shown.length === 0 ? (
+            <div data-tour="projects-list" className="rounded-lg border border-dashed border-gray-200 bg-white p-12 text-center">
+              <FolderOpen size={32} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-sm text-gray-400">Every project is archived. Click <strong>Archived ({archived.length})</strong> to see them.</p>
+            </div>
+          ) : (
           <div data-tour="projects-list" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-200">
@@ -92,7 +119,7 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
                     <Term tip="How many formulations the project holds. All versions of one formulation count once; archived ones are included.">Formulations</Term>
                   </th>
                   <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">
-                    <Term tip="Active: in progress. Archived: marked finished or on hold, but still open to view and edit.">Status</Term>
+                    <Term tip="Active: in progress. Archived: marked finished or on hold. Hidden from this list until you click Archived, but still open to view and edit.">Status</Term>
                   </th>
                   <th className="hidden sm:table-cell px-4 py-3 text-left font-medium">
                     <Term tip="When the project itself last changed (name, client, targets, status). Editing a formulation doesn’t change it.">Updated</Term>
@@ -100,11 +127,11 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {projects.map(p => (
+                {shown.map(p => (
                   <tr
                     key={p.id}
                     onClick={() => router.push(`/projects/${p.id}`)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    className={`hover:bg-gray-50 cursor-pointer transition-colors${p.status === 'archived' ? ' opacity-60' : ''}`}
                   >
                     <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
                     <td className="hidden sm:table-cell px-4 py-3 text-gray-500">{p.client ?? '—'}</td>
@@ -126,6 +153,8 @@ export function ProjectList({ canCreate = true }: { canCreate?: boolean }) {
               </tbody>
             </table>
           </div>
+          )}
+          </>
         )}
       </div>
 

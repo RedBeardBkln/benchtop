@@ -405,7 +405,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 onClick={() => archiveMutation.mutate()}
                 disabled={archiveMutation.isPending}
                 data-tip={data.status === 'active'
-                  ? 'Marks the project archived (finished or on hold). It stays in the list and can still be edited.'
+                  ? 'Marks the project archived (finished or on hold). It’s hidden from the Projects list until you show archived ones, and can still be edited.'
                   : 'Makes this project active again.'}
                 className="px-3 py-1.5 text-xs border border-gray-200 rounded-md hover:bg-gray-50 text-gray-600 transition-colors"
               >

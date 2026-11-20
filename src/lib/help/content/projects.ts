@@ -28,7 +28,7 @@ export const projects: HelpSection = {
         },
         {
           type: 'note',
-          text: 'On a phone, only the Project and Formulations columns fit on screen. Archived projects stay in the list with a gray badge; there is no filter to hide them.',
+          text: 'On a phone, only the Project and Formulations columns fit on screen. Archived projects are hidden from the list. Click `Archived (N)` above the list to show them (faded, below the active ones), and `Hide archived` to hide them again.',
         },
       ],
     },
@@ -90,7 +90,7 @@ export const projects: HelpSection = {
         { type: 'h', text: 'Archive or restore a project' },
         {
           type: 'p',
-          text: 'Click `Archive` in the top-right corner. The status changes to `archived` right away (there’s no pop-up). Click `Restore` to make it active again. Archiving is just a label to show the project is finished or on hold: the project stays in the list and can still be opened and edited.',
+          text: 'Click `Archive` in the top-right corner. The status changes to `archived` right away (there’s no pop-up). Click `Restore` to make it active again. Archiving shows the project is finished or on hold: it’s hidden from the Projects list until you click `Archived (N)`, and can still be opened and edited.',
         },
         {
           type: 'note',
@@ -194,11 +194,11 @@ export const projects: HelpSection = {
   faqs: [
     {
       q: 'How do I delete a project?',
-      a: 'Projects can’t be deleted. Click `Archive` on the project page instead. It stays in the list with a gray `archived` badge, and you can `Restore` it any time.',
+      a: 'Projects can’t be deleted. Click `Archive` on the project page instead. It’s hidden from the Projects list (click `Archived (N)` to find it), and you can `Restore` it any time.',
     },
     {
       q: 'Can I hide archived projects?',
-      a: 'Not at the moment. Archived projects stay in the list with a gray badge so you can always find them.',
+      a: 'They’re hidden automatically. Click `Archived (N)` above the Projects list to show them, and `Hide archived` to hide them again.',
     },
     {
       q: 'Can I change the project objective after creating it?',

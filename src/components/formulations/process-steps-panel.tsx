@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type TextareaHTMLAttributes } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { GripVertical, Plus, X, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
@@ -12,6 +12,49 @@ import { EquipmentManagerDialog } from '@/components/formulations/equipment-mana
 import { Term } from '@/components/term'
 
 type LossDraft = { type: LossType | ''; amount: string; unit: LossUnit }
+
+// A one-paragraph text box that wraps long instructions and grows to fit them, so the whole step is
+// readable without scrolling. Enter doesn't add a line break: it runs onEnter (or just leaves the field).
+function StepTextArea({ onEnter, onKeyDown, onInput, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { onEnter?: () => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const fit = () => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+  }
+  useLayoutEffect(fit, [props.value, props.defaultValue])
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    let width = el.clientWidth
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth !== width) { width = el.clientWidth; fit() }
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <textarea
+      {...props}
+      ref={ref}
+      rows={1}
+      onInput={(e) => { fit(); onInput?.(e) }}
+      onKeyDown={(e) => {
+        onKeyDown?.(e)
+        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+          e.preventDefault()
+          if (onEnter) onEnter()
+          else e.currentTarget.blur()
+        }
+      }}
+      className={`${props.className ?? ''} block resize-none overflow-hidden whitespace-pre-wrap break-words`}
+    />
+  )
+}
+
+/** Steps are one paragraph: pasted line breaks become spaces. */
+const oneLine = (s: string) => s.replace(/\s*[\r\n]+\s*/g, ' ')
 
 const NO_LOSS: LossDraft = { type: '', amount: '', unit: 'g' }
 
@@ -393,14 +436,15 @@ export function ProcessStepsPanel({
                   </span>
 
                   <div className="flex-1 space-y-2">
-                    <input
+                    <StepTextArea
                       defaultValue={step.instruction}
                       disabled={isLocked}
                       aria-label="Step instruction"
                       data-tip={isLocked ? undefined : 'Click to edit the instruction. Saves when you click away.'}
                       onBlur={(e) => {
-                        const value = e.target.value.trim()
+                        const value = oneLine(e.target.value).trim()
                         if (value && value !== step.instruction) {
+                          e.target.value = value
                           patchMutation.mutate({ stepId: step.id, body: { instruction: value } })
                         } else if (!value) {
                           e.target.value = step.instruction
@@ -496,11 +540,11 @@ export function ProcessStepsPanel({
 
       {!collapsed && !isLocked && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <input
+          <div className="flex items-start gap-2">
+            <StepTextArea
               value={newInstruction}
-              onChange={(e) => setNewInstruction(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }}
+              onChange={(e) => setNewInstruction(oneLine(e.target.value))}
+              onEnter={handleAdd}
               placeholder="Add a process step, e.g. Bake at 175°C for 25 minutes"
               className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-md
                          focus:outline-none focus:ring-2 focus:ring-blue-500"
