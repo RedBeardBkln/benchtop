@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
 import { SOUS_CHEF_NOTE_KINDS, type ConversationLink, type SousChefEvent } from '@/lib/sous-chef'
+import type { ProposalView } from '@/lib/sous-chef-proposals'
 import { NOTES_KEY } from './lab-notebook'
 
 // The Sous Chef chat you're in, kept above every page (in the root layout's providers) so it carries
@@ -22,6 +23,8 @@ export type ChatMessage = {
   error?: string
   /** The error was the team running out of included AI, so point to Settings › AI */
   aiLimit?: boolean
+  /** Formulation changes this reply proposed, for the person to approve or decline */
+  proposals?: ProposalView[]
 }
 
 export type ConversationSummary = {
@@ -98,6 +101,10 @@ type Session = {
   setPage: (page: SousChefPage | null) => void
   /** Set while the page has unsaved changes, so a link in the chat asks before leaving */
   setUnsaved: (unsaved: boolean) => void
+  /** Whether the page has unsaved changes right now */
+  hasUnsaved: () => boolean
+  /** Replaces a proposal card's state after it's approved or declined */
+  updateProposal: (proposal: ProposalView) => void
   /** Follows a link in a reply: keeps the chat in the side panel and checks for unsaved changes */
   followLink: (e: React.MouseEvent, href: string) => void
   reset: () => void
@@ -223,6 +230,9 @@ export function SousChefProvider({ children }: { children: React.ReactNode }) {
           case 'activity':
             patchLast(m => ({ ...m, activity: [...m.activity, e.label] }))
             break
+          case 'proposal':
+            patchLast(m => ({ ...m, proposals: [...(m.proposals ?? []), e.proposal] }))
+            break
           case 'note':
             toast.success(`Recorded in the lab notebook: ${SOUS_CHEF_NOTE_KINDS[e.kind].label.toLowerCase()}`, { description: e.content })
             qc.invalidateQueries({ queryKey: NOTES_KEY })
@@ -246,7 +256,7 @@ export function SousChefProvider({ children }: { children: React.ReactNode }) {
       // Never leave an empty reply looking like silence
       patchLast(m => ({
         ...m, pending: false,
-        error: m.content || m.error ? m.error : 'No reply came back. Try sending your message again.',
+        error: m.content || m.error || m.proposals?.length ? m.error : 'No reply came back. Try sending your message again.',
       }))
       qc.invalidateQueries({ queryKey: LIST_KEY })
     } catch (e) {
@@ -289,10 +299,17 @@ export function SousChefProvider({ children }: { children: React.ReactNode }) {
   }
 
   const setUnsaved = useCallback((unsaved: boolean) => { unsavedRef.current = unsaved }, [])
+  const hasUnsaved = useCallback(() => unsavedRef.current, [])
+  const updateProposal = useCallback((proposal: ProposalView) => {
+    setMessages(ms => ms.map(m => m.proposals?.some(p => p.id === proposal.id)
+      ? { ...m, proposals: m.proposals.map(p => (p.id === proposal.id ? proposal : p)) }
+      : m))
+  }, [])
 
   const value: Session = {
     conversationId, messages, loading, sending, draftLink, setDraftLink, input, setInput, open, send,
-    dockOpen, dockView, showDock, closeDock: () => setDockOpen(false), page, setPage, setUnsaved, followLink, reset,
+    dockOpen, dockView, showDock, closeDock: () => setDockOpen(false), page, setPage, setUnsaved, hasUnsaved,
+    updateProposal, followLink, reset,
   }
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

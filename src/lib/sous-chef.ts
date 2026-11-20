@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { ProposalView } from './sous-chef-proposals'
 
 // Sous Chef: Benchtop's AI product-development assistant. Pure pieces (no DB access) so they are
 // unit-testable and usable in client code: note kinds, input schemas and the system prompt.
@@ -76,6 +77,7 @@ export type SousChefEvent =
   | { type: 'text'; text: string }
   | { type: 'activity'; label: string }
   | { type: 'note'; id: string; kind: SousChefNoteKind; content: string }
+  | { type: 'proposal'; proposal: ProposalView }
   | { type: 'done'; messageId: string }
   | { type: 'error'; error: string }
 
@@ -95,7 +97,7 @@ The lab notebook: the team keeps notes (decisions, preferences, learnings, const
 
 Linking: whenever you mention one of the team's projects, formulations or iterations by name, make the name a Markdown link so the user can jump straight to it: [Name v2](/formulations/<iteration id>) for an iteration and [Project name](/projects/<project id>) for a project. Use only ids you got from your tools or from this conversation's context; never guess one.
 
-You can read the user's data but not change it; when a change is needed, tell the user what to change and where in Benchtop. Formulation amounts are grams with % of the batch; nutrient amounts are per 100 g in each nutrient's own unit.
+Changing formulations: you can propose changes to a formulation with propose_formulation_change (ingredient amounts, adding or removing ingredients, process steps and their measurements and losses, serving size, batch size, notes, name), either to the iteration itself or as a new iteration. Nothing is changed until the user approves it on the card shown in the chat, so never say a change has been made until the proposals list below shows it applied. Propose only when the user asks for a change or agrees to one you suggested; otherwise suggest it in words first. Prefer a new iteration for a reformulation the team will want to compare against, and change the iteration itself for corrections and small tweaks the user asks for; a locked iteration can only get a new iteration. Read the formulation first, give amounts in grams (the % follows), and keep the batch total in mind. After proposing, tell the user briefly what you proposed and ask them to review it; mention any warnings it returned. If the user declines, ask what they would like instead. You can't change other data (projects, ingredients, the library); for those, tell the user what to change and where in Benchtop. Formulation amounts are grams with % of the batch; nutrient amounts are per 100 g in each nutrient's own unit.
 
 Write in US English. Be conversational and concise; use short headings, lists or a small table when they make an answer easier to use at the bench.`
 
@@ -113,6 +115,8 @@ export function buildContextPrompt(opts: {
   today: string
   notes: PromptNote[]
   focus: string | null
+  /** What became of the formulation changes proposed in this conversation, one per line */
+  proposals?: string | null
 }): string {
   const notes = opts.notes.length === 0
     ? '(none yet)'
@@ -125,5 +129,6 @@ export function buildContextPrompt(opts: {
     `Team: ${opts.accountName}. Today is ${opts.today}.`,
     opts.focus ? `This conversation is about ${opts.focus}. Look at it with your tools before answering questions about it.` : null,
     `<lab_notebook>\n${notes}\n</lab_notebook>`,
+    opts.proposals ? `Formulation changes you proposed in this conversation, and what the user decided:\n<proposals>\n${opts.proposals}\n</proposals>` : null,
   ].filter(Boolean).join('\n\n')
 }

@@ -30,7 +30,39 @@ export const sousChef: HelpSection = {
         },
         {
           type: 'note',
-          text: 'Sous Chef reads your data but never changes it. When it suggests a change, it tells you what to change and where. Check safety-critical and regulatory advice, and confirm changes at the bench.',
+          text: 'Sous Chef never changes anything on its own. It can propose changes to a formulation for you to approve (see below); everything else it suggests, you change yourself. Check safety-critical and regulatory advice, and confirm changes at the bench.',
+        },
+      ],
+    },
+    {
+      slug: 'formulation-changes',
+      title: 'Letting Sous Chef change a formulation',
+      summary: 'Sous Chef proposes the change; nothing is saved until you approve it.',
+      blocks: [
+        {
+          type: 'p',
+          text: 'Ask Sous Chef to make a change, for example “Make a new iteration with 20% less honey and add 2% inulin” or “Lower the bake on step 3 to 165 °C”. It can change ingredient amounts, add or remove ingredients, add, edit or remove process steps (with their measurements and losses), and change the serving size, batch size, notes or name.',
+        },
+        {
+          type: 'steps',
+          items: [
+            'Sous Chef reads the formulation and shows a card with exactly what would change: each ingredient’s grams and % now and after, the batch total, the process steps and any other details.',
+            'Read the card, including any warnings (for example a locked % that shifts, or a locked batch size that has to change).',
+            'Click `Approve and save` (or `Approve and create the iteration`) to make the change, or `Decline`. Nothing is saved until you approve.',
+            'After approving, open the formulation from the card. If it’s the one on your screen, the page reloads to show the change.',
+          ],
+        },
+        {
+          type: 'terms',
+          items: [
+            { term: 'New iteration', text: 'Copies the iteration as the next version and changes the copy, so you can compare it with the original. Sous Chef uses this for reformulations, and for any change to a locked iteration.' },
+            { term: 'This iteration', text: 'Changes the iteration itself. Sous Chef uses this for corrections and small tweaks you ask for.' },
+            { term: 'Out of date', text: 'If the formulation is changed after Sous Chef proposed something, approving is refused so nothing is overwritten. Ask Sous Chef to propose it again.' },
+          ],
+        },
+        {
+          type: 'note',
+          text: 'Approving uses your own access: if you can only view a formulation, you can’t approve changes to it. Save or undo any unsaved changes on the formulation before approving. Sous Chef can’t change projects, ingredients or the library.',
         },
       ],
     },
@@ -124,7 +156,7 @@ export const sousChef: HelpSection = {
     },
     {
       q: 'Can Sous Chef change my formulations?',
-      a: 'No. It can read your data but not change it. It tells you what to change, and you make the change yourself.',
+      a: 'Only with your approval. It proposes the change on a card in the chat showing exactly what would change, and nothing is saved until you click Approve. It can’t change projects, ingredients or the library.',
     },
     {
       q: 'Sous Chef recorded a note I don’t agree with. How do I remove it?',

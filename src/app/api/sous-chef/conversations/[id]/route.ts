@@ -6,6 +6,7 @@ import { sousChefConversations, sousChefMessages } from '@/lib/db/schema'
 import { isUuid, notFoundResponse } from '@/lib/tenancy'
 import { conversationPatchSchema } from '@/lib/sous-chef'
 import { loadConversations, resolveConversationLink, type SousChefScope } from '@/lib/sous-chef-server'
+import { loadProposalViews } from '@/lib/sous-chef-proposals-server'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -37,7 +38,16 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .from(sousChefMessages)
     .where(eq(sousChefMessages.conversationId, conversation.id))
     .orderBy(sousChefMessages.createdAt)])
-  return NextResponse.json({ ...summary, messages })
+  // Each proposal card sits under the reply that made it (one whose reply wasn't saved goes under the last)
+  const proposals = await loadProposalViews(conversation.id)
+  const lastAssistant = messages.findLast(m => m.role === 'assistant')?.id
+  const withProposals = messages.map(m => ({
+    ...m,
+    proposals: proposals
+      .filter(p => p.messageId === m.id || (!p.messageId && m.id === lastAssistant))
+      .map(p => p.view),
+  }))
+  return NextResponse.json({ ...summary, messages: withProposals })
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {

@@ -6,7 +6,7 @@ export const sousChefTour: Tour = {
   steps: [
     {
       title: 'Meet Sous Chef',
-      body: 'Your product-development sidekick. Ask about food science, ingredient swaps or hitting a target. It reads your projects and formulations but never changes them.',
+      body: 'Your product-development sidekick. Ask about food science, ingredient swaps or hitting a target. It reads your projects and formulations, and can propose changes to a formulation that are saved only when you approve them.',
     },
     {
       target: 'souschef-starters',

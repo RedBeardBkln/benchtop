@@ -9,12 +9,15 @@ type Target =
   // Brand-new family starting at v1 under a new name
   | { kind: 'formulation'; name: string }
 
+/** The database, or a transaction to run the copy inside (it then commits or rolls back with it) */
+export type DbExecutor = Pick<typeof db, 'transaction'>
+
 /**
  * Copies a formulation (header, lines, process steps) as a draft.
  * Runs in a transaction so a failed copy never leaves a half-populated row.
  */
-export async function duplicateFormulation(source: Formulation, target: Target) {
-  return db.transaction(async tx => {
+export async function duplicateFormulation(source: Formulation, target: Target, exec: DbExecutor = db) {
+  return exec.transaction(async tx => {
     const newId = crypto.randomUUID()
     let familyId = newId
     let version = 1

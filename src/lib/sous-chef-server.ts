@@ -15,6 +15,8 @@ import {
   linkScope, NOTE_KIND_KEYS, NOTE_MAX_CHARS, NOTES_IN_PROMPT,
   type ConversationLink, type LinkInput, type PromptNote, type SousChefNoteKind,
 } from '@/lib/sous-chef'
+import { proposalChangesSchema, type ProposalView } from '@/lib/sous-chef-proposals'
+import { createProposal } from '@/lib/sous-chef-proposals-server'
 
 export type SousChefScope = TenantScope & { user: { id: string } }
 
@@ -199,6 +201,8 @@ type ToolEnv = {
   conversationId: string
   /** Called when a tool records a note, so the chat can show it */
   onNote: (note: { id: string; kind: SousChefNoteKind; content: string }) => void
+  /** Called when a tool proposes a formulation change, so the chat can show it for approval */
+  onProposal: (proposal: ProposalView) => void
 }
 
 type ToolDef<S extends z.ZodType> = {
@@ -446,6 +450,23 @@ const TOOLS = [
       }).returning({ id: sousChefNotes.id })
       onNote({ id: row.id, kind, content: content.trim() })
       return { recorded: row.id }
+    },
+  }),
+  tool({
+    name: 'propose_formulation_change',
+    description: 'Propose a change to one of the team’s formulations: change, add or remove ingredient amounts, add, edit or remove process steps, change the serving size, batch size, notes or name, either in the iteration itself or as a new iteration. Nothing changes yet: the user sees exactly what would change and approves or declines it in the chat. Read the formulation with get_formulation first. Returns the preview the user sees, or why the change can’t be made.',
+    input: proposalChangesSchema,
+    label: ({ createNewIteration }) => (createNewIteration ? 'Proposed a new iteration' : 'Proposed a change to a formulation'),
+    run: async (changes, { scope, conversationId, onProposal }) => {
+      const r = await createProposal(scope, conversationId, changes)
+      if (!r.ok) return { error: r.error }
+      onProposal(r.view)
+      const p = r.view.preview
+      return {
+        proposalId: r.view.id,
+        status: 'Shown to the user for approval. Nothing has changed yet.',
+        lines: p.lines, totalsG: p.totals, steps: p.steps, details: p.details, warnings: p.warnings,
+      }
     },
   }),
   tool({

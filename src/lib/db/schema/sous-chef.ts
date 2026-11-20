@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, index, check } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, index, check, jsonb } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { accounts } from './accounts'
 import { projects } from './projects'
@@ -37,6 +37,33 @@ export const sousChefMessages = pgTable('sous_chef_messages', {
 }, (t) => [
   index('sous_chef_messages_conversation_idx').on(t.conversationId, t.createdAt),
   check('sous_chef_messages_role_chk', sql`${t.role} in ('user', 'assistant')`),
+])
+
+// A change to a formulation Sous Chef proposed in a conversation (see lib/sous-chef-proposals.ts).
+// Nothing is written to the formulation until the person approves it in the chat; approval
+// re-checks their edit access and that the formulation hasn't changed since (`base_fingerprint`).
+export const sousChefProposals = pgTable('sous_chef_proposals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  accountId: uuid('account_id').notNull().references(() => accounts.id),
+  userId: uuid('user_id').notNull(), // the conversation's owner, the only one who can decide
+  conversationId: uuid('conversation_id').notNull().references(() => sousChefConversations.id, { onDelete: 'cascade' }),
+  // The assistant turn that made it, once that turn is saved
+  messageId: uuid('message_id').references(() => sousChefMessages.id, { onDelete: 'set null' }),
+  formulationId: uuid('formulation_id').notNull().references(() => formulations.id, { onDelete: 'cascade' }),
+  // The proposed change as Sous Chef gave it (ProposalChanges) and what the card shows (ProposalPreview)
+  changes: jsonb('changes').notNull(),
+  preview: jsonb('preview').notNull(),
+  // sha256 of the formulation's lines, steps and details when proposed
+  baseFingerprint: text('base_fingerprint').notNull(),
+  status: text('status').notNull().default('pending'), // pending | applied | declined | stale
+  // The iteration the change landed in (a new one, or the same as formulation_id)
+  resultFormulationId: uuid('result_formulation_id').references(() => formulations.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+}, (t) => [
+  index('sous_chef_proposals_conversation_idx').on(t.conversationId, t.createdAt),
+  index('sous_chef_proposals_formulation_idx').on(t.formulationId),
+  check('sous_chef_proposals_status_chk', sql`${t.status} in ('pending', 'applied', 'declined', 'stale')`),
 ])
 
 // The team's lab notebook: decisions, preferences, learnings and constraints Sous Chef (or a person)

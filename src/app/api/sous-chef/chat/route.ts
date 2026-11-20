@@ -13,6 +13,7 @@ import {
   describeLinkForPrompt, loadPromptNotes, resolveConversationLink, runSousChefTool, SOUS_CHEF_TOOLS, type SousChefScope,
 } from '@/lib/sous-chef-server'
 import { openAiErrorMessage, runOpenAiConversation } from '@/lib/sous-chef-openai'
+import { attachProposalsToMessage, describeProposalsForPrompt } from '@/lib/sous-chef-proposals-server'
 
 export const maxDuration = 300
 
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   await db.insert(sousChefMessages).values({ conversationId: conversation.id, role: 'user', content: input.message })
 
-  const [history, notes, focus] = await Promise.all([
+  const [history, notes, focus, proposals] = await Promise.all([
     db.select({ role: sousChefMessages.role, content: sousChefMessages.content })
       .from(sousChefMessages)
       .where(eq(sousChefMessages.conversationId, conversation.id))
@@ -62,13 +63,14 @@ export async function POST(req: NextRequest) {
       .limit(HISTORY_TURNS),
     loadPromptNotes(scope),
     describeLinkForPrompt(scope, conversation),
+    describeProposalsForPrompt(conversation.id),
   ])
   const turns = history.reverse()
   while (turns.length > 0 && turns[0].role !== 'user') turns.shift()
   const chatTurns = turns.map(t => ({ role: t.role as 'user' | 'assistant', content: t.content }))
   const messages: Anthropic.Beta.BetaMessageParam[] = chatTurns.map(t => ({ ...t }))
 
-  const contextPrompt = buildContextPrompt({ accountName: ctx.account.name, today: new Date().toISOString().slice(0, 10), notes, focus })
+  const contextPrompt = buildContextPrompt({ accountName: ctx.account.name, today: new Date().toISOString().slice(0, 10), notes, focus, proposals })
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
     { type: 'text', text: SOUS_CHEF_PERSONA },
     { type: 'text', text: contextPrompt, cache_control: { type: 'ephemeral' } },
@@ -90,10 +92,16 @@ export async function POST(req: NextRequest) {
         activity.push(label)
         send({ type: 'activity', label })
       }
+      // Proposals made this turn, tied to the reply once it's saved
+      const proposalIds: string[] = []
       const runTool = (block: { id: string; name: string; input: unknown }) => runSousChefTool(block, {
         scope,
         conversationId: conversation.id,
         onNote: note => send({ type: 'note', ...note }),
+        onProposal: proposal => {
+          proposalIds.push(proposal.id)
+          send({ type: 'proposal', proposal })
+        },
       })
 
       if (isNew) send({ type: 'conversation', id: conversation.id, title: conversation.title })
@@ -167,11 +175,17 @@ export async function POST(req: NextRequest) {
         send({ type: 'error', error })
       }
 
-      const content = parts.join('\n\n').trim()
+      // A proposal card needs a reply to sit under, even when the model said nothing around it
+      let content = parts.join('\n\n').trim()
+      if (!content && proposalIds.length > 0) {
+        content = 'Here’s the change for you to review.'
+        send({ type: 'text', text: content })
+      }
       if (content) {
         const [saved] = await db.insert(sousChefMessages)
           .values({ conversationId: conversation.id, role: 'assistant', content, activity })
           .returning({ id: sousChefMessages.id })
+        await attachProposalsToMessage(proposalIds, saved.id)
         await db.update(sousChefConversations).set({ updatedAt: new Date() })
           .where(eq(sousChefConversations.id, conversation.id))
         send({ type: 'done', messageId: saved.id })

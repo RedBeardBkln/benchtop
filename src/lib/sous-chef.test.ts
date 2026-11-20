@@ -20,6 +20,12 @@ describe('buildContextPrompt', () => {
     expect(buildContextPrompt({ ...base, notes: [] })).toContain('(none yet)')
   })
 
+  it('lists proposed formulation changes only when there are some', () => {
+    expect(buildContextPrompt({ ...base, notes: [] })).not.toContain('<proposals>')
+    const prompt = buildContextPrompt({ ...base, notes: [], proposals: '- [p1] Oat Bar v2: Less honey → declined by the user' })
+    expect(prompt).toContain('<proposals>\n- [p1] Oat Bar v2: Less honey → declined by the user\n</proposals>')
+  })
+
   it('lists notes with their id, kind, date and where they came from', () => {
     const prompt = buildContextPrompt({
       ...base,

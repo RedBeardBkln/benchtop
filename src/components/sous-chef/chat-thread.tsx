@@ -8,6 +8,7 @@ import { ArrowUp, Check, ChefHat, ChevronDown, Link2, Loader2 } from 'lucide-rea
 import { readErrorMessage } from '@/lib/utils'
 import { MESSAGE_MAX_CHARS, type ConversationLink, type LinkScope } from '@/lib/sous-chef'
 import { ChatMarkdown } from './chat-markdown'
+import { ProposalCard } from './proposal-card'
 import { LIST_KEY, useSousChef } from './sous-chef-session'
 
 // The pieces of a Sous Chef chat shared by the Sous Chef page and the side panel
@@ -43,6 +44,7 @@ export function ChatThread({ empty }: { empty: React.ReactNode }) {
               </ul>
             )}
             {m.content && <ChatMarkdown text={m.content} onInternalLink={followLink} />}
+            {m.proposals?.map(p => <ProposalCard key={p.id} proposal={p} />)}
             {m.pending && (
               <p className="inline-flex items-center gap-2 text-xs text-gray-500">
                 <Loader2 size={13} className="animate-spin" /> {m.content ? 'Writing…' : 'Thinking…'}
