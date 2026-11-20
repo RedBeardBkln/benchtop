@@ -55,15 +55,20 @@ export const sousChefProposals = pgTable('sous_chef_proposals', {
   preview: jsonb('preview').notNull(),
   // sha256 of the formulation's lines, steps and details when proposed
   baseFingerprint: text('base_fingerprint').notNull(),
-  status: text('status').notNull().default('pending'), // pending | applied | declined | stale
+  status: text('status').notNull().default('pending'), // pending | applied | declined | stale | reverted
   // The iteration the change landed in (a new one, or the same as formulation_id)
   resultFormulationId: uuid('result_formulation_id').references(() => formulations.id, { onDelete: 'set null' }),
+  // Saved over the iteration: its lines, steps and details as they were before (RevertSnapshot), so
+  // the person can put it back; and the fingerprint just after, to tell whether it was edited since
+  snapshot: jsonb('snapshot'),
+  appliedFingerprint: text('applied_fingerprint'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   decidedAt: timestamp('decided_at', { withTimezone: true }),
+  revertedAt: timestamp('reverted_at', { withTimezone: true }),
 }, (t) => [
   index('sous_chef_proposals_conversation_idx').on(t.conversationId, t.createdAt),
   index('sous_chef_proposals_formulation_idx').on(t.formulationId),
-  check('sous_chef_proposals_status_chk', sql`${t.status} in ('pending', 'applied', 'declined', 'stale')`),
+  check('sous_chef_proposals_status_chk', sql`${t.status} in ('pending', 'applied', 'declined', 'stale', 'reverted')`),
 ])
 
 // The team's lab notebook: decisions, preferences, learnings and constraints Sous Chef (or a person)

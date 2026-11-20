@@ -121,7 +121,10 @@ export type ProposalPreview = {
   warnings: string[]
 }
 
-export type ProposalStatus = 'pending' | 'applied' | 'declined' | 'stale'
+export type ProposalStatus = 'pending' | 'applied' | 'declined' | 'stale' | 'reverted'
+
+/** How the person chose to save an approved change */
+export type SaveAs = 'new_iteration' | 'this_iteration'
 
 /** A proposal as the chat shows it */
 export type ProposalView = {
@@ -130,6 +133,10 @@ export type ProposalView = {
   formulationId: string
   resultFormulationId: string | null
   resultVersion: number | null
+  /** Pending: whether it may be saved over the iteration (not when that iteration is locked) */
+  canSaveOver: boolean
+  /** Applied over the iteration, with the earlier version kept: it can be put back */
+  canRevert: boolean
   preview: ProposalPreview
 }
 

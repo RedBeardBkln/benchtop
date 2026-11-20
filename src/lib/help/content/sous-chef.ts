@@ -37,7 +37,7 @@ export const sousChef: HelpSection = {
     {
       slug: 'formulation-changes',
       title: 'Letting Sous Chef change a formulation',
-      summary: 'Sous Chef proposes the change; nothing is saved until you approve it.',
+      summary: 'Sous Chef proposes the change; you save it as a new iteration or over the iteration, and can revert it.',
       blocks: [
         {
           type: 'p',
@@ -48,15 +48,17 @@ export const sousChef: HelpSection = {
           items: [
             'Sous Chef reads the formulation and shows a card with exactly what would change: each ingredient’s grams and % now and after, the batch total, the process steps and any other details.',
             'Read the card, including any warnings (for example a locked % that shifts, or a locked batch size that has to change).',
-            'Click `Approve and save` (or `Approve and create the iteration`) to make the change, or `Decline`. Nothing is saved until you approve.',
-            'After approving, open the formulation from the card. If it’s the one on your screen, the page reloads to show the change.',
+            'Choose how to save it: `Save as new iteration`, or `Save over v2` to change the iteration itself. The blue button is what Sous Chef suggests; either works. Or click `Decline`. Nothing is saved until you choose.',
+            'Open the formulation from the card. If it’s the one on your screen and you saved over it, the page reloads to show the change.',
+            'Changed your mind about a change saved over the iteration? Click `Revert` on the card to put the iteration back exactly as it was before.',
           ],
         },
         {
           type: 'terms',
           items: [
-            { term: 'New iteration', text: 'Copies the iteration as the next version and changes the copy, so you can compare it with the original. Sous Chef uses this for reformulations, and for any change to a locked iteration.' },
-            { term: 'This iteration', text: 'Changes the iteration itself. Sous Chef uses this for corrections and small tweaks you ask for.' },
+            { term: 'Save as new iteration', text: 'Copies the iteration as the next version and makes the change in the copy, so you can compare it with the original. The only choice for a locked iteration.' },
+            { term: 'Save over', text: 'Makes the change in the iteration itself. Benchtop keeps the version it replaced, so you can revert it.' },
+            { term: 'Revert', text: 'Puts the iteration back as it was before the change: its ingredients, process steps and details. If the iteration was edited after the change, you’re asked first, because reverting undoes those edits too.' },
             { term: 'Out of date', text: 'If the formulation is changed after Sous Chef proposed something, approving is refused so nothing is overwritten. Ask Sous Chef to propose it again.' },
           ],
         },
@@ -156,7 +158,7 @@ export const sousChef: HelpSection = {
     },
     {
       q: 'Can Sous Chef change my formulations?',
-      a: 'Only with your approval. It proposes the change on a card in the chat showing exactly what would change, and nothing is saved until you click Approve. It can’t change projects, ingredients or the library.',
+      a: 'Only with your approval. It proposes the change on a card in the chat showing exactly what would change, and nothing is saved until you choose to save it, as a new iteration or over the iteration itself. A change saved over an iteration can be reverted from the card. It can’t change projects, ingredients or the library.',
     },
     {
       q: 'Sous Chef recorded a note I don’t agree with. How do I remove it?',
