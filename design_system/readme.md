@@ -1,6 +1,6 @@
-# benchtop Design System
+# Benchtop Design System
 
-**benchtop** is an R&D formulation-tracking system for food development. It logs formulations, ingredients and trials, and uses AI to help solve hard formulation problems (texture, sugar reduction, shelf life). Audience: food scientists and product developers.
+**Benchtop** is an R&D formulation-tracking system for food development. It logs formulations, ingredients and trials, and uses AI to help solve hard formulation problems (texture, sugar reduction, shelf life). Audience: food scientists and product developers.
 
 **Sources:** none supplied. Everything here (logo, palette, type, components, app UI kit) was designed from the brief: *logo in DS-Digital (user-supplied LCD font), background = near-neon LCD backlight, tone = nerdy but warm*
 
@@ -9,7 +9,7 @@
 - `assets/` — logo-mark.svg, logo-mark-lcd.svg, app-icon.svg, app-icon-dark.svg, ghost-segments.svg (tile of unlit LCD segments)
 - `guidelines/` — specimen cards (brand, colors, type, spacing)
 - `components/` — React primitives (see below)
-- `ui_kits/app/` — benchtop app: formulation list, editor with AI suggestion, trials, assistant
+- `ui_kits/app/` — Benchtop app: formulation list, editor with AI suggestion, trials, assistant
 - `SKILL.md` — Agent Skill entry
 
 ## Components
@@ -17,7 +17,7 @@
 Intentional additions: **Icon** (Lucide wrapper) and **SegmentDisplay** (the brand's signature numeral). Not built yet: Dialog, Toast, Select, Radio, Tag (Badge covers tags).
 
 ## Content fundamentals
-- Voice: a friendly lab-mate. Nerdy-precise, never stiff. First person plural for shared work ("What are we solving today?"), "you/your" for the user, "benchtop" (always lowercase, even at sentence start) for the product.
+- Voice: a friendly lab-mate. Nerdy-precise, never stiff. First person plural for shared work ("What are we solving today?"), "you/your" for the user, "Benchtop" (capital B, always, as a proper name) for the product; only the logo and wordmark use DS-Digital capitals (B / BENCHTOP).
 - Casing: sentence case everywhere. UI labels are mono and may be UPPERCASE with tracking. No Title Case headings.
 - Numbers are first-class: always with units, in mono or segment display (`aw 0.62`, `12.4 %`).
 - Short, concrete, a little wry: "Bars are coming out crumbly." "Formulation, from bench to label." "Formulas that finally add up."

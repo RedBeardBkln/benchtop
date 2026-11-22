@@ -122,7 +122,7 @@ function Logo({
   style
 }) {
   return /*#__PURE__*/React.createElement("span", {
-    "aria-label": "benchtop",
+    "aria-label": "Benchtop",
     style: {
       display: "inline-block",
       fontFamily: "var(--font-segment)",
@@ -483,7 +483,7 @@ function Editor() {
     value: applied ? "8.4" : "12.4",
     height: 34
   })))), /*#__PURE__*/React.createElement(Card, {
-    title: "Ask benchtop",
+    title: "Ask Benchtop",
     action: /*#__PURE__*/React.createElement(Icon, {
       name: "sparkles",
       color: "var(--tang-500)"
@@ -576,7 +576,7 @@ function Assistant() {
     }
   }, /*#__PURE__*/React.createElement(PageHead, {
     sub: "Assistant",
-    title: "Ask benchtop"
+    title: "Ask Benchtop"
   }), /*#__PURE__*/React.createElement(Card, {
     tone: "lcd",
     padding: 24
@@ -621,7 +621,7 @@ const {
   Badge,
   Button
 } = window.DesignSystem_998768;
-const nav = [["formulations", "flask-conical", "Formulations"], ["trials", "test-tubes", "Trials"], ["ingredients", "wheat", "Ingredients"], ["assistant", "sparkles", "Ask benchtop"]];
+const nav = [["formulations", "flask-conical", "Formulations"], ["trials", "test-tubes", "Trials"], ["ingredients", "wheat", "Ingredients"], ["assistant", "sparkles", "Ask Benchtop"]];
 function Sidebar({
   screen,
   go

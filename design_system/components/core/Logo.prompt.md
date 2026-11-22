@@ -1,4 +1,4 @@
-One-sentence: the benchtop logo — capital B mark or BENCHTOP wordmark, set in the DS-Digital LCD segment font.
+One-sentence: the Benchtop logo — capital B mark or BENCHTOP wordmark, set in the DS-Digital LCD segment font.
 
 ```jsx
 <Logo variant="wordmark" height={56} />

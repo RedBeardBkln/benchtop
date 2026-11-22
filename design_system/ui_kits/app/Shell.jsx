@@ -1,5 +1,5 @@
 const { Logo, Icon, Badge, Button } = window.DesignSystem_998768;
-const nav = [["formulations","flask-conical","Formulations"],["trials","test-tubes","Trials"],["ingredients","wheat","Ingredients"],["assistant","sparkles","Ask benchtop"]];
+const nav = [["formulations","flask-conical","Formulations"],["trials","test-tubes","Trials"],["ingredients","wheat","Ingredients"],["assistant","sparkles","Ask Benchtop"]];
 function Sidebar({ screen, go }) {
   return <aside style={{ width: 232, background: "var(--ink-900)", color: "var(--ink-300)", padding: "20px 14px", display: "flex", flexDirection: "column", gap: 4, flex: "none" }}>
     <div style={{ padding: "4px 10px 22px" }}><Logo variant="wordmark" height={30} color="var(--lcd-300)" /></div>

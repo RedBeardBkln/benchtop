@@ -26,7 +26,7 @@ function Editor() {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <Card tone="lcd"><div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}><div><div className="label" style={{ color: "var(--ink-800)", whiteSpace: "nowrap" }}>Water act.</div><SegmentDisplay value={applied ? "0.58" : "0.62"} height={34} /></div><div><div className="label" style={{ color: "var(--ink-800)", whiteSpace: "nowrap" }}>Sugars</div><SegmentDisplay value={applied ? "8.4" : "12.4"} height={34} /></div></div></Card>
-        <Card title="Ask benchtop" action={<Icon name="sparkles" color="var(--tang-500)" />}>
+        <Card title="Ask Benchtop" action={<Icon name="sparkles" color="var(--tang-500)" />}>
           <p style={{ margin: 0, fontSize: 15 }}>Bars are coming out crumbly. Want to firm the bite without more sugar?</p>
           <div style={{ marginTop: 12, padding: 12, background: "var(--paper-200)", borderRadius: 8, fontSize: 14 }}><b>Try this:</b> swap 4% glucose syrup for allulose. Predicted aw <span className="mono">0.58</span>, sugars <span className="mono">−4.0 g</span>, binding holds.</div>
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}><Button size="sm" onClick={apply} disabled={applied}>{applied ? "Applied" : "Apply to v5"}</Button><Button size="sm" variant="ghost">Explain why</Button></div>
@@ -42,7 +42,7 @@ function Trials() {
       <Input label="Search trials" placeholder="texture, batch…" /></div></div>;
 }
 function Assistant() {
-  return <div style={{ maxWidth: 640 }}><PageHead sub="Assistant" title="Ask benchtop" />
+  return <div style={{ maxWidth: 640 }}><PageHead sub="Assistant" title="Ask Benchtop" />
     <Card tone="lcd" padding={24}><div className="display" style={{ fontSize: 32 }}>What are we solving today?</div><div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>{["Reduce sugar 30%", "Fix crumbly texture", "Replace palm oil", "Extend shelf life"].map(s => <Button key={s} size="sm" variant="primary">{s}</Button>)}</div></Card>
     <div style={{ marginTop: 16 }}><Input label="Describe the challenge" placeholder="e.g. gummy is weeping after 3 weeks at 25°C" /></div></div>;
 }
