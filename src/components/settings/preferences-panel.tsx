@@ -27,7 +27,7 @@ function AppearanceCard() {
     <Card
       tour="settings-prefs-appearance"
       title="Appearance"
-      description="Show Benchtop light or dark, or set it to Auto to follow your device. Printed pages and downloads are always light."
+      description="Show Benchtop light or dark, or set it to Auto to follow your device. Dark until you choose. Printed pages and downloads are always light."
     >
       <div role="radiogroup" aria-label="Appearance" className="inline-flex rounded-md border border-gray-300 p-0.5 gap-0.5">
         {THEME_OPTIONS.map(({ value, label, icon: Icon, tip }) => {

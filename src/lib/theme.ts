@@ -1,8 +1,10 @@
 // Light, dark or auto (follow the device) appearance. A per-browser view preference like the % decimals:
 // stored in localStorage and applied as data-theme="light" | "dark" on <html>, which globals.css keys
 // the dark palette off. THEME_INIT_SCRIPT runs in <head> before the first paint so there is no flash.
+// With nothing stored yet (a new account, or a new browser), Benchtop is dark.
 export type ThemePref = 'light' | 'dark' | 'auto'
 export const THEME_PREFS: ThemePref[] = ['light', 'dark', 'auto']
+export const DEFAULT_THEME: ThemePref = 'dark'
 const KEY = 'theme'
 
 export function readThemePref(): ThemePref {
@@ -10,7 +12,7 @@ export function readThemePref(): ThemePref {
     const v = window.localStorage.getItem(KEY)
     if (v === 'light' || v === 'dark' || v === 'auto') return v
   } catch { /* storage unavailable */ }
-  return 'light'
+  return DEFAULT_THEME
 }
 
 export function setThemePref(pref: ThemePref): void {
@@ -24,8 +26,8 @@ export function setThemePref(pref: ThemePref): void {
 export const THEME_INIT_SCRIPT = `(function(){
   var mq = window.matchMedia('(prefers-color-scheme: dark)');
   function apply() {
-    var p = 'light';
-    try { p = localStorage.getItem('${KEY}') || 'light'; } catch (e) {}
+    var p = '${DEFAULT_THEME}';
+    try { p = localStorage.getItem('${KEY}') || '${DEFAULT_THEME}'; } catch (e) {}
     document.documentElement.dataset.theme = (p === 'dark' || (p === 'auto' && mq.matches)) ? 'dark' : 'light';
   }
   apply();

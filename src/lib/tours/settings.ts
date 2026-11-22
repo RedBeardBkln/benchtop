@@ -40,7 +40,7 @@ export const settingsPreferencesTour: Tour = {
     {
       target: 'settings-prefs-appearance',
       title: 'Light or dark',
-      body: 'Pick light, dark or Auto to follow your device. It’s remembered in this browser, and printouts are always light.',
+      body: 'Benchtop starts dark. Pick light, dark or Auto to follow your device. It’s remembered in this browser, and printouts are always light.',
     },
     {
       target: 'settings-prefs-cogs',
