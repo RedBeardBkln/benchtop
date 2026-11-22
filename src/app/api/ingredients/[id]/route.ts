@@ -149,7 +149,7 @@ const patchSchema = z.object({
   itemCode: z.string().max(100).nullable().optional(),
   verification: z.enum(['verified', 'unverified']).optional(),
   naturallyDerived: z.boolean().optional(),
-  notes: z.string().max(2000).optional(),
+  notes: z.string().max(2000).nullable().optional(),
   defaultCostPerKg: z.number().positive().max(1e6).nullable().optional(),
   costUnit: z.enum(COST_UNITS).optional(),
   moisturePct: z.number().min(0).max(100).nullable().optional(),
@@ -195,7 +195,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     if (d.itemCode !== undefined) updateValues.itemCode = d.itemCode
     if (d.verification !== undefined) updateValues.verification = d.verification
     if (d.naturallyDerived !== undefined) updateValues.naturallyDerived = d.naturallyDerived
-    if (d.notes !== undefined) updateValues.notes = d.notes
+    if (d.notes !== undefined) updateValues.notes = d.notes?.trim() || null
     if (d.defaultCostPerKg !== undefined) updateValues.defaultCostPerKg = d.defaultCostPerKg?.toString() ?? null
     if (d.costUnit !== undefined) updateValues.costUnit = d.costUnit
     if (d.moisturePct !== undefined) updateValues.moisturePct = d.moisturePct?.toString() ?? null

@@ -67,7 +67,7 @@ export const ingredients: HelpSection = {
         },
         {
           type: 'tip',
-          text: 'You can change **Notes**, **Naturally derived** and **Moisture %** later with `Edit details` on the ingredient’s page.',
+          text: 'You can change **Naturally derived** and **Moisture %** later with `Edit details` on the ingredient’s page. To change **Notes**, click the pencil next to them under the ingredient’s name (or **+ Add notes** if it has none), or use `Edit details`.',
         },
         {
           type: 'note',
@@ -522,7 +522,7 @@ export const ingredients: HelpSection = {
     },
     {
       q: 'How do I change an ingredient’s notes, moisture % or “naturally derived”?',
-      a: 'Yes. Open the ingredient and click `Edit details`, or click the pencil on its row in the [Ingredients](/ingredients) list.',
+      a: 'Open the ingredient and click `Edit details`, or click the pencil on its row in the [Ingredients](/ingredients) list. For notes you can also click the pencil next to them under the ingredient’s name, or **+ Add notes** if it has none, then click `Save`. Notes can also be edited in the ingredient side panel in a formulation.',
     },
     {
       q: 'Why can’t I delete an ingredient?',

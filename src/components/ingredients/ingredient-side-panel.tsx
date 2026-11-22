@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { IngredientDetail, Nutrient } from '@/lib/types'
 import { readErrorMessage } from '@/lib/utils'
+import { IngredientNotes } from './ingredient-notes'
 import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
 import { GLOSSARY } from '@/lib/glossary'
 import { Term } from '@/components/term'
@@ -642,12 +643,7 @@ export function IngredientSidePanel({
                       </div>
                     )}
                   </div>
-                  {data.notes && (
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Notes</div>
-                      <p className="text-sm text-gray-700 leading-relaxed">{data.notes}</p>
-                    </div>
-                  )}
+                  <IngredientNotes ingredientId={ingredientId} notes={data.notes} canEdit={canEditLibrary} showLabel />
                   {(data.subIngredients?.length ?? 0) > 0 && (
                     <div>
                       <div className="text-xs text-gray-400 mb-1"><Term t="subIngredients">Sub-ingredients</Term></div>

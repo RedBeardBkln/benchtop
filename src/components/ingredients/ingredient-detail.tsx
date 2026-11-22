@@ -17,6 +17,7 @@ import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-sourc
 import { convertToUnit, vitaminUnitOptions } from '@/lib/units'
 import { DuplicateResolveDialog } from './duplicate-resolve-dialog'
 import { IngredientCostPanel } from './ingredient-cost-panel'
+import { IngredientNotes } from './ingredient-notes'
 import { EditIngredientDialog, toEditable, type EditableIngredient } from './edit-ingredient-dialog'
 import { categoryPath } from '@/lib/ingredient-categories'
 import { GLOSSARY } from '@/lib/glossary'
@@ -777,7 +778,9 @@ export function IngredientDetail({ id, canEdit }: { id: string; canEdit: boolean
               </a>
             )}
           </div>
-          {data.notes && <p className="mt-2 text-sm text-gray-500">{data.notes}</p>}
+          <div className="mt-2 max-w-2xl">
+            <IngredientNotes ingredientId={id} notes={data.notes} canEdit={canEdit} />
+          </div>
         </div>
 
         {canEdit && <div data-tour="ingredient-actions" className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
