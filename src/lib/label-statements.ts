@@ -155,7 +155,7 @@ export function splitIngredientList(text: string): string[] {
   return parts.map(p => p.trim()).filter(Boolean)
 }
 
-/** "Milk, Soybeans." from every declared allergen of the ingredients in use (the panel prints "Contains:"); empty when none. */
+/** "Milk, Soy." from every declared allergen of the ingredients in use (the panel prints "Contains:"); empty when none. */
 export function allergenStatement(lines: StatementLine[], info: Map<string, LabelInfo>): string {
   const byKey = new Map<string, string>()
   for (const l of lines) {

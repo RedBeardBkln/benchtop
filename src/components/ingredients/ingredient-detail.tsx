@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { ArchivedBanner } from '@/components/archived-records'
 import type { IngredientDetail as IngredientDetailType, Nutrient, Supplier, IngredientSupplierWithName } from '@/lib/types'
+import { STANDARD_ALLERGENS } from '@/lib/allergens'
 import { readErrorMessage } from '@/lib/utils'
 import { uploadStaged } from '@/lib/upload-file'
 import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
@@ -33,10 +34,6 @@ const PACK_UNITS = ['kg', 'g', 'lb', 'oz', 'mt', 'case', 'bag', 'drum', 'pail', 
 
 const CATEGORY_ORDER = ['macros', 'vitamins', 'minerals', 'other'] as const
 
-const STANDARD_ALLERGENS = [
-  'Milk', 'Eggs', 'Fish', 'Shellfish', 'Tree Nuts',
-  'Peanuts', 'Wheat', 'Soybeans', 'Sesame', 'Gluten',
-]
 
 const STANDARD_CERTS = [
   'Organic', 'Non-GMO', 'IP Non-GMO', 'Kosher', 'Halal',

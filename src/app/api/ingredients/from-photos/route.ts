@@ -9,6 +9,7 @@ import {
   subIngredients,
 } from '@/lib/db/schema'
 import { z } from 'zod'
+import { canonicalAllergen } from '@/lib/allergens'
 import { duplicateResponse, findDuplicate } from '@/lib/ingredient-duplicates'
 import { formatIngredientName } from '@/lib/ingredient-name'
 
@@ -73,9 +74,10 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      if (d.allergens.length > 0) {
+      const allergens = [...new Set(d.allergens.map(canonicalAllergen).filter(Boolean))]
+      if (allergens.length > 0) {
         await tx.insert(ingredientAllergens).values(
-          d.allergens.map(a => ({ ingredientId: row.id, allergen: a }))
+          allergens.map(a => ({ ingredientId: row.id, allergen: a }))
         )
       }
 

@@ -3,6 +3,7 @@ import { requireApi } from '@/lib/auth/context'
 import { db } from '@/lib/db'
 import { ingredientAllergens } from '@/lib/db/schema'
 import { z } from 'zod'
+import { canonicalAllergen } from '@/lib/allergens'
 import { getOwnedIngredient, notFoundResponse } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -20,11 +21,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   if (!(await getOwnedIngredient(ctx, id))) return notFoundResponse()
 
+  const allergen = canonicalAllergen(body.data.allergen)
   const [row] = await db
     .insert(ingredientAllergens)
-    .values({ ingredientId: id, allergen: body.data.allergen })
+    .values({ ingredientId: id, allergen })
     .onConflictDoNothing()
     .returning()
 
-  return NextResponse.json(row ?? { allergen: body.data.allergen }, { status: 201 })
+  return NextResponse.json(row ?? { allergen }, { status: 201 })
 }

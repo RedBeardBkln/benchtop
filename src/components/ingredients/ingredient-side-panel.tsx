@@ -8,6 +8,7 @@ import {
   ChevronRight, Sparkles,
 } from 'lucide-react'
 import type { IngredientDetail, Nutrient } from '@/lib/types'
+import { STANDARD_ALLERGENS } from '@/lib/allergens'
 import { readErrorMessage } from '@/lib/utils'
 import { IngredientNotes } from './ingredient-notes'
 import { nutrientSourceFor, type NutrientEditSource } from '@/lib/nutrient-source'
@@ -16,10 +17,6 @@ import { Term } from '@/components/term'
 
 const CATEGORY_ORDER = ['macros', 'vitamins', 'minerals', 'other'] as const
 
-const STANDARD_ALLERGENS = [
-  'Milk', 'Eggs', 'Fish', 'Shellfish', 'Tree Nuts',
-  'Peanuts', 'Wheat', 'Soybeans', 'Sesame', 'Gluten',
-]
 
 const STANDARD_CERTS = [
   'Organic', 'Non-GMO', 'IP Non-GMO', 'Kosher', 'Halal',

@@ -227,7 +227,7 @@ export const ingredients: HelpSection = {
           type: 'steps',
           items: [
             'Open the ingredient and go to the **Allergens** tab.',
-            'Click each allergen it contains: Milk, Eggs, Fish, Shellfish, Tree Nuts, Peanuts, Wheat, Soybeans, Sesame or Gluten. Selected ones turn orange with a ✓. Click again to remove.',
+            'Click each allergen it contains: Milk, Eggs, Fish, Shellfish, Tree Nuts, Peanuts, Wheat, Soy, Sesame or Gluten. Selected ones turn orange with a ✓. Click again to remove.',
             'For anything else, type it in **Add custom allergen…** and click `Add`.',
           ],
         },

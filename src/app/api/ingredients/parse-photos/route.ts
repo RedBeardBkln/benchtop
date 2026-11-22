@@ -80,7 +80,7 @@ Rules:
 - notes: any important quality notes from the label (e.g. "cold-processed", "non-denatured"), else null.
 - nutrients: match ONLY to the UUIDs in the list below. Convert per-serving values to per-100g using the stated serving size. Include only nutrients that are declared. Express amountPer100g in the unit listed for that nutrient, converting if the label uses another (1 g = 1,000 mg = 1,000,000 mcg); set "unit" to the unit your number is in.
 ${VITAMIN_UNIT_RULES}
-- allergens: extract from "Contains:" statement or parenthetical callouts. Use: Milk, Eggs, Fish, Shellfish, Tree Nuts, Peanuts, Wheat, Soybeans, Sesame.
+- allergens: extract from "Contains:" statement or parenthetical callouts. Use: Milk, Eggs, Fish, Shellfish, Tree Nuts, Peanuts, Wheat, Soy, Sesame.
 - certs: use only: Organic, Non-GMO, Kosher, Halal, Vegan, Gluten-Free, Fair Trade, IP Non-GMO.
 - subIngredients: list each ingredient from the ingredient deck in order (position 1-N). Flatten parentheticals — list sub-ingredients as separate entries.
 
