@@ -10,11 +10,14 @@ import { formatInUnit, fromGrams, isAmountInput, toGrams, type WeightUnit } from
  * `value` and `onChange` are always grams; `unit` (default g) is only what's shown and typed,
  * with `densityGPerMl` needed for volume units.
  *
+ * `decimals` (optional) shows the amount to exactly that many places while you aren't editing it;
+ * the full value comes back when you click in.
+ *
  * `commitOn="change"` (default) reports every keystroke; `"blur"` reports once, when you leave the
  * box or press Enter (for values that trigger a bigger recalculation, like the batch size).
  */
 export function WeightInput({
-  value, onChange, disabled, commitOn = 'change', tip, ariaLabel = 'Weight (g)', className, unit = 'g', densityGPerMl,
+  value, onChange, disabled, commitOn = 'change', tip, ariaLabel = 'Weight (g)', className, unit = 'g', densityGPerMl, decimals,
 }: {
   value: number
   onChange: (grams: number) => void
@@ -26,6 +29,7 @@ export function WeightInput({
   className?: string
   unit?: WeightUnit
   densityGPerMl?: number | null
+  decimals?: number | null
 }) {
   const show = (grams: number) => {
     if (!grams) return ''
@@ -35,6 +39,9 @@ export function WeightInput({
   const parse = (raw: string) => (raw === '' || raw === '.' ? 0 : toGrams(parseFloat(raw), unit, densityGPerMl) ?? 0)
 
   const [draft, setDraft] = useState(() => show(value))
+  const [focused, setFocused] = useState(false)
+  const amount = value ? fromGrams(value, unit, densityGPerMl) : null
+  const shown = !focused && decimals != null && amount != null ? formatInUnit(amount, unit, decimals) : draft
 
   // Follow changes made elsewhere (solver, swaps, rebalancing, a new unit) without overwriting a
   // matching in-progress edit
@@ -46,7 +53,7 @@ export function WeightInput({
     <input
       type="text"
       inputMode="decimal"
-      value={draft}
+      value={shown}
       disabled={disabled}
       data-tip={tip}
       placeholder="0"
@@ -57,7 +64,9 @@ export function WeightInput({
         setDraft(raw)
         if (commitOn === 'change') onChange(parse(raw))
       }}
+      onFocus={() => setFocused(true)}
       onBlur={() => {
+        setFocused(false)
         if (commitOn !== 'blur') return
         if (parse(draft) !== value) onChange(parse(draft))
         else setDraft(show(value))

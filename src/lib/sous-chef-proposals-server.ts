@@ -47,7 +47,8 @@ async function loadState(f: Formulation, q: Reader = db): Promise<PlanState> {
     lines: lines.map(({ line: l, ingredientName }) => ({
       id: l.id, ingredientId: l.ingredientId, ingredientName, position: l.position, weightG: Number(l.weightG),
       pct: Number(l.pct), locked: l.locked, pctLocked: l.pctLocked, stagePct: num(l.stagePct),
-      addedAfterStepId: l.addedAfterStepId, weightUnit: l.weightUnit, minPct: num(l.minPct), maxPct: num(l.maxPct),
+      addedAfterStepId: l.addedAfterStepId, weightUnit: l.weightUnit, amountDecimals: l.amountDecimals,
+      pctDecimals: l.pctDecimals, minPct: num(l.minPct), maxPct: num(l.maxPct),
     })),
     steps: steps.map(s => ({
       id: s.id, stepNo: s.stepNo, instruction: s.instruction, params: (s.params ?? {}) as Record<string, string>,
@@ -282,7 +283,7 @@ async function applyPlan(proposalId: string, source: Formulation, plan: Plan, ch
         return {
           formulationId: targetId, ingredientId: l.ingredientId, position: i + 1,
           weightG: l.weightG.toString(), pct: l.pct.toString(), locked: l.locked, pctLocked: l.pctLocked,
-          weightUnit: l.weightUnit, addedAfterStepId: stepId,
+          weightUnit: l.weightUnit, amountDecimals: l.amountDecimals, pctDecimals: l.pctDecimals, addedAfterStepId: stepId,
           stagePct: stepId && l.pctLocked && l.stagePct != null ? l.stagePct.toString() : null,
           minPct: l.minPct?.toString() ?? null, maxPct: l.maxPct?.toString() ?? null,
         }

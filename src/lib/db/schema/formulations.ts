@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, integer, numeric, boolean,
+  pgTable, uuid, text, integer, smallint, numeric, boolean,
   timestamp, jsonb, index, uniqueIndex, foreignKey,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
@@ -79,6 +79,9 @@ export const formulationLines = pgTable('formulation_lines', {
   pctLocked: boolean('pct_locked').notNull().default(false),
   // This line's own display unit, overriding the formulation's weight_unit; null = follow the column
   weightUnit: text('weight_unit'),
+  // Decimal places this line's amount and usage % are shown with, overriding the column's; null = follow the column
+  amountDecimals: smallint('amount_decimals'),
+  pctDecimals: smallint('pct_decimals'),
   // Added to the batch after this process step's loss (so earlier losses don't apply to it); null = in the
   // starting blend. Cleared if the step is removed, leaving the line in the starting blend at its grams.
   addedAfterStepId: uuid('added_after_step_id').references((): AnyPgColumn => processSteps.id, { onDelete: 'set null' }),

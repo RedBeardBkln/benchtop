@@ -3,7 +3,7 @@ import { planChanges, proposalChangesSchema, type PlanLine, type PlanState, type
 
 const line = (over: Partial<PlanLine> & Pick<PlanLine, 'id' | 'ingredientId' | 'ingredientName' | 'weightG'>): PlanLine => ({
   position: 1, pct: 0, locked: false, pctLocked: false, stagePct: null, addedAfterStepId: null,
-  weightUnit: null, minPct: null, maxPct: null, ...over,
+  weightUnit: null, amountDecimals: null, pctDecimals: null, minPct: null, maxPct: null, ...over,
 })
 const step = (over: Partial<PlanStep> & Pick<PlanStep, 'id' | 'stepNo' | 'instruction'>): PlanStep => ({
   params: {}, lossType: null, lossAmount: null, lossUnit: 'g', ...over,

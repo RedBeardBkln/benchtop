@@ -58,6 +58,8 @@ export type PlanLine = {
   stagePct: number | null
   addedAfterStepId: string | null
   weightUnit: string | null
+  amountDecimals: number | null
+  pctDecimals: number | null
   minPct: number | null
   maxPct: number | null
 }
@@ -249,7 +251,8 @@ export function planChanges(state: PlanState, changes: ProposalChanges, ingredie
     const draft: Draft = {
       sourceId: l.id, ingredientId: l.ingredientId, ingredientName: l.ingredientName, weightG: grams, pct: 0,
       locked: l.locked, pctLocked: l.pctLocked, stagePct: l.stagePct, addedAfterStepId: stepGone ? null : l.addedAfterStepId,
-      weightUnit: l.weightUnit, minPct: l.minPct, maxPct: l.maxPct, fromG: l.weightG, fromPct: l.pct,
+      weightUnit: l.weightUnit, amountDecimals: l.amountDecimals, pctDecimals: l.pctDecimals,
+      minPct: l.minPct, maxPct: l.maxPct, fromG: l.weightG, fromPct: l.pct,
     }
     if (stepGone) {
       warnings.push(`${l.ingredientName} was added after a step that is removed, so it moves to the starting blend.`)
@@ -267,7 +270,8 @@ export function planChanges(state: PlanState, changes: ProposalChanges, ingredie
     if (op.remove || byIngredient.has(ingredientId)) continue
     drafts.push({
       sourceId: null, ingredientId, ingredientName: ingredientNames.get(ingredientId)!, weightG: op.grams!, pct: 0,
-      locked: false, pctLocked: false, stagePct: null, addedAfterStepId: null, weightUnit: null, minPct: null, maxPct: null,
+      locked: false, pctLocked: false, stagePct: null, addedAfterStepId: null, weightUnit: null,
+      amountDecimals: null, pctDecimals: null, minPct: null, maxPct: null,
       fromG: null, fromPct: null,
     })
   }

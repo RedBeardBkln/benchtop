@@ -54,8 +54,12 @@ export const UNIT_DECIMALS: Record<WeightUnit, number> = {
   g: 4, mg: 1, kg: 7, oz: 5, lb: 6, mL: 3, L: 6, tsp: 4, tbsp: 4, 'fl oz': 5, cup: 5,
 }
 
-/** An amount in a unit for display: up to that unit's decimals, trailing zeros dropped */
-export function formatInUnit(amount: number, unit: WeightUnit): string {
+/**
+ * An amount in a unit for display: up to that unit's decimals, trailing zeros dropped; or, given
+ * `decimals`, exactly that many places (never more than the unit holds)
+ */
+export function formatInUnit(amount: number, unit: WeightUnit, decimals?: number | null): string {
+  if (decimals != null) return amount.toFixed(Math.min(decimals, UNIT_DECIMALS[unit]))
   return String(Number(amount.toFixed(UNIT_DECIMALS[unit])))
 }
 
@@ -68,9 +72,9 @@ export function isAmountInput(raw: string, unit: WeightUnit): boolean {
  * Grams shown in a unit with its label, e.g. "1.5 lb". Falls back to grams when a volume unit has no
  * density, e.g. a batch total (a mix of ingredients has no single density).
  */
-export function formatGramsIn(grams: number, unit: WeightUnit, densityGPerMl?: number | null): string {
+export function formatGramsIn(grams: number, unit: WeightUnit, densityGPerMl?: number | null, decimals?: number | null): string {
   const amount = fromGrams(grams, unit, densityGPerMl)
   return amount == null
-    ? `${Number(grams.toFixed(UNIT_DECIMALS.g))} g`
-    : `${formatInUnit(amount, unit)} ${UNIT_LABELS[unit]}`
+    ? `${formatInUnit(grams, 'g', decimals)} g`
+    : `${formatInUnit(amount, unit, decimals)} ${UNIT_LABELS[unit]}`
 }

@@ -12,7 +12,10 @@ import { describeStepLoss, toLossStep } from '@/lib/process-loss'
 import { flowForLines, stageIndex } from '@/lib/staged-additions'
 import { stepMeasurementBoxes, type StepParams } from '@/lib/step-measurements'
 import { formatWeightG } from '@/lib/weight'
-import { PCT_DECIMALS_MIN, readPctDecimals } from '@/lib/pct-display'
+import {
+  PCT_DECIMALS_MIN, PCT_DECIMALS_MAX, AMOUNT_DECIMALS_MIN, AMOUNT_DECIMALS_MAX,
+  readPctDecimals, readAmountDecimals, lineDecimals,
+} from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtBasis, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import type { PrintSection } from '@/lib/print-sections'
 import { formulationFileName } from '@/lib/download-name'
@@ -46,9 +49,10 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
   const showNotes = sections.includes('notes')
   const needsNutrients = showNutrients || showContributions || showValidation
 
-  // Same % precision as chosen in the editor
+  // Same % and amount precision as chosen in the editor (each line's own setting wins)
   const [pctDecimals, setPctDecimals] = useState(PCT_DECIMALS_MIN)
-  useEffect(() => { setPctDecimals(readPctDecimals()) }, [])
+  const [amountDecimals, setAmountDecimals] = useState<number | null>(null)
+  useEffect(() => { setPctDecimals(readPctDecimals()); setAmountDecimals(readAmountDecimals()) }, [])
 
   const { data, isLoading, error } = useQuery<FormulationDetail>({
     queryKey: ['formulation', id],
@@ -220,6 +224,8 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                 const density = line.ingredientDensityGPerMl != null ? parseFloat(line.ingredientDensityGPerMl) : null
                 const pct = totalWeightG > 0 ? (weightG / totalWeightG) * 100 : 0
                 const stage = stageIndex(line.addedAfterStepId, lossSteps)
+                const linePctDecimals = lineDecimals(line.pctDecimals, PCT_DECIMALS_MIN, PCT_DECIMALS_MAX) ?? pctDecimals
+                const lineAmountDecimals = lineDecimals(line.amountDecimals, AMOUNT_DECIMALS_MIN, AMOUNT_DECIMALS_MAX) ?? amountDecimals
                 return (
                   <tr key={line.id} className="border-b border-gray-200">
                     <td className="py-1.5 pr-2 text-gray-900">
@@ -228,15 +234,15 @@ export function FormulationPrintView({ id, sections }: { id: string; sections: P
                         <span className="ml-1.5 text-xs text-gray-500">
                           (added after step {stage + 1}
                           {processYield.massAfterStepG[stage] > 0
-                            ? `, ${(weightG / processYield.massAfterStepG[stage] * 100).toFixed(Math.max(pctDecimals, 2))}% of the batch at that point`
+                            ? `, ${(weightG / processYield.massAfterStepG[stage] * 100).toFixed(Math.max(linePctDecimals, 2))}% of the batch at that point`
                             : ''})
                         </span>
                       )}
                     </td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-gray-800 whitespace-nowrap">
-                      {formatGramsIn(weightG, effectiveUnit(asUnit(line.weightUnit), columnUnit, density), density)}
+                      {formatGramsIn(weightG, effectiveUnit(asUnit(line.weightUnit), columnUnit, density), density, lineAmountDecimals)}
                     </td>
-                    <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(pctDecimals)}%</td>
+                    <td className="py-1.5 pl-2 text-right tabular-nums text-gray-800">{pct.toFixed(linePctDecimals)}%</td>
                   </tr>
                 )
               })}

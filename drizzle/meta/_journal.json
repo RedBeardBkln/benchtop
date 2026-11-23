@@ -281,6 +281,13 @@
       "when": 1795191406377,
       "tag": "0039_sous_chef_proposal_revert",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795439040242,
+      "tag": "0040_line_decimals",
+      "breakpoints": true
     }
   ]
 }

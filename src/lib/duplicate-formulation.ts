@@ -99,6 +99,8 @@ export async function duplicateFormulation(source: Formulation, target: Target, 
           locked: l.locked,
           pctLocked: l.pctLocked,
           weightUnit: l.weightUnit,
+          amountDecimals: l.amountDecimals,
+          pctDecimals: l.pctDecimals,
           addedAfterStepId: l.addedAfterStepId ? newStepId.get(l.addedAfterStepId) ?? null : null,
           stagePct: l.addedAfterStepId && newStepId.has(l.addedAfterStepId) ? l.stagePct : null,
         }))

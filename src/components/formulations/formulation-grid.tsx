@@ -26,7 +26,10 @@ import {
 import { PctInput } from '@/components/formulations/pct-input'
 import { LockToggle } from '@/components/formulations/lock-toggle'
 import type { Anchor } from '@/lib/formula-lock'
-import { PCT_DECIMALS_MIN, PCT_DECIMALS_MAX, readPctDecimals, writePctDecimals } from '@/lib/pct-display'
+import {
+  PCT_DECIMALS_MIN, PCT_DECIMALS_MAX, AMOUNT_DECIMALS_MIN, AMOUNT_DECIMALS_MAX,
+  readPctDecimals, writePctDecimals, readAmountDecimals, writeAmountDecimals, lineDecimals,
+} from '@/lib/pct-display'
 import { CATEGORY_ORDER, evaluateTargets, fmtBasis, fmtRequirement, type ValidationStatus } from '@/lib/target-validation'
 import { withUnit } from '@/lib/units'
 import { serializePrintSections, type PrintSection } from '@/lib/print-sections'
@@ -93,6 +96,42 @@ function UnitOptions({ needsDensity = false }: { needsDensity?: boolean }) {
         {VOLUME_UNITS.map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}
       </optgroup>
     </>
+  )
+}
+
+/**
+ * One line's own decimal places for its amount or usage %. The first option follows the column (shown
+ * as the column's setting); the picker stays out of sight until the row is hovered unless it's set.
+ */
+function LineDecimalsSelect({ value, columnLabel, min, max, onChange, disabled, ariaLabel, what }: {
+  value: number | null
+  columnLabel: string
+  min: number
+  max: number
+  onChange: (n: number | null) => void
+  disabled: boolean
+  ariaLabel: string
+  what: string
+}) {
+  if (disabled && value == null) return null
+  const options: number[] = []
+  for (let n = min; n <= max; n++) options.push(n)
+  return (
+    <select
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      data-tip={value != null
+        ? `This ingredient’s ${what} shows ${value} decimal place${value === 1 ? '' : 's'}, whatever the column’s setting. Choose the first option to follow the column again.`
+        : `Follows the column (${columnLabel}). Choose how many decimal places just this ingredient’s ${what} shows.`}
+      className={`w-11 px-0 py-0.5 text-[10px] tabular-nums bg-transparent border border-transparent hover:border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60 print:hidden ${
+        value != null ? 'text-blue-700 font-medium' : 'text-gray-400 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100'
+      }`}
+    >
+      <option value="">{columnLabel}</option>
+      {options.map(n => <option key={n} value={n}>{n} dp</option>)}
+    </select>
   )
 }
 
@@ -168,6 +207,8 @@ type LineState = {
   position: number
   weightG: number
   weightUnit: WeightUnit | null  // this line's own display unit; null = the column's
+  amountDecimals: number | null  // this line's own decimal places for its amount; null = the column's
+  pctDecimals: number | null     // this line's own decimal places for its usage %; null = the column's
   densityGPerMl: number | null   // the ingredient's, for volume units
   moisturePct: number | null     // the ingredient's, for dry-basis targets
   locked: boolean          // quantity lock: keeps its grams
@@ -375,7 +416,8 @@ export function FormulationGrid({ id }: { id: string }) {
   const [batchLocked, setBatchLocked] = useState(false)
   const [batchTargetG, setBatchTargetG] = useState<number | null>(null)   // the locked batch size
   const [pctDecimals, setPctDecimals] = useState(PCT_DECIMALS_MIN)
-  useEffect(() => { setPctDecimals(readPctDecimals()) }, [])
+  const [amountDecimals, setAmountDecimals] = useState<number | null>(null)   // null = automatic
+  useEffect(() => { setPctDecimals(readPctDecimals()); setAmountDecimals(readAmountDecimals()) }, [])
   const [servingSizeG, setServingSizeG] = useState<string>('')
   const [isDirty, setIsDirty] = useState(false)
   // A link followed from Sous Chef's side panel asks before dropping unsaved edits
@@ -471,6 +513,8 @@ export function FormulationGrid({ id }: { id: string }) {
         position: l.position,
         weightG: parseFloat(l.weightG),
         weightUnit: isWeightUnit(l.weightUnit) ? l.weightUnit : null,
+        amountDecimals: lineDecimals(l.amountDecimals, AMOUNT_DECIMALS_MIN, AMOUNT_DECIMALS_MAX),
+        pctDecimals: lineDecimals(l.pctDecimals, PCT_DECIMALS_MIN, PCT_DECIMALS_MAX),
         densityGPerMl: l.ingredientDensityGPerMl != null ? parseFloat(l.ingredientDensityGPerMl) : null,
         moisturePct: numOrNull(l.ingredientMoisturePct),
         locked: l.locked,
@@ -872,6 +916,8 @@ export function FormulationGrid({ id }: { id: string }) {
             locked: l.locked,
             pctLocked: l.pctLocked,
             weightUnit: l.weightUnit,
+            amountDecimals: l.amountDecimals,
+            pctDecimals: l.pctDecimals,
             lockedPct: l.pctLocked ? l.lockedPct : null,
             addedAfterStepId: isStaged(l) ? l.addedAfterStepId : null,
             minPct: l.minPct,
@@ -1051,6 +1097,17 @@ export function FormulationGrid({ id }: { id: string }) {
     writePctDecimals(next)
   }
 
+  function changeAmountDecimals(n: number | null) {
+    setAmountDecimals(n)
+    writeAmountDecimals(n)
+  }
+
+  // Gives one line its own decimal places for its amount or usage % (null follows the column); saved with the formula
+  function changeLineDecimals(key: string, field: 'amountDecimals' | 'pctDecimals', n: number | null) {
+    setLines(prev => prev.map(l => (l.key === key ? { ...l, [field]: n } : l)))
+    markDirty()
+  }
+
   function removeLine(key: string) {
     applyLines(lines.filter(l => l.key !== key).map((l, i) => ({ ...l, position: i + 1 })))
     markDirty()
@@ -1070,6 +1127,8 @@ export function FormulationGrid({ id }: { id: string }) {
       position: lines.length + 1,
       weightG: 0,
       weightUnit: null,
+      amountDecimals: null,
+      pctDecimals: null,
       densityGPerMl: numOrNull(libraryById.get(ing.id)?.densityGPerMl),
       moisturePct: numOrNull(libraryById.get(ing.id)?.moisturePct),
       locked: false,
@@ -1707,7 +1766,7 @@ export function FormulationGrid({ id }: { id: string }) {
               <th className="px-2 py-2.5 w-6 print:hidden" />
               <th className="px-3 py-2.5 text-left font-medium w-6">#</th>
               <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2.5 text-left font-medium">Ingredient</th>
-              <th className="px-3 py-2.5 text-right font-medium w-48">
+              <th className="px-3 py-2.5 text-right font-medium w-60">
                 <span className="inline-flex items-center gap-1.5">
                   <Term t="weightG">Amount</Term>
                   <select
@@ -1719,9 +1778,21 @@ export function FormulationGrid({ id }: { id: string }) {
                   >
                     <UnitOptions />
                   </select>
+                  <select
+                    value={amountDecimals ?? ''}
+                    onChange={e => changeAmountDecimals(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                    aria-label="Decimal places for the amount column"
+                    data-tip="Decimal places shown in the amount column. Auto shows as many as each amount needs. Remembered in this browser; each ingredient can set its own."
+                    className="px-0.5 py-0.5 text-xs font-normal text-gray-500 border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums print:hidden"
+                  >
+                    <option value="">auto</option>
+                    {Array.from({ length: AMOUNT_DECIMALS_MAX - AMOUNT_DECIMALS_MIN + 1 }, (_, i) => AMOUNT_DECIMALS_MIN + i).map(n => (
+                      <option key={n} value={n}>{n} dp</option>
+                    ))}
+                  </select>
                 </span>
               </th>
-              <th className="px-3 py-2.5 text-right font-medium w-40">
+              <th className="px-3 py-2.5 text-right font-medium w-48">
                 <span className="inline-flex items-center gap-1">
                   <Term t="usagePct">%</Term>
                   <button
@@ -1732,7 +1803,7 @@ export function FormulationGrid({ id }: { id: string }) {
                     data-tip="Show fewer decimal places in the % column"
                     className="px-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 print:hidden"
                   >−</button>
-                  <span className="text-gray-400 font-normal tabular-nums" data-tip="Decimal places shown in the % column. Remembered in this browser.">{pctDecimals} dp</span>
+                  <span className="text-gray-400 font-normal tabular-nums" data-tip="Decimal places shown in the % column. Remembered in this browser; each ingredient can set its own.">{pctDecimals} dp</span>
                   <button
                     type="button"
                     onClick={() => changePctDecimals(1)}
@@ -1765,6 +1836,8 @@ export function FormulationGrid({ id }: { id: string }) {
               const lineUnit = effectiveUnit(line.weightUnit, columnUnit, line.densityGPerMl)
               // The column is in a volume unit but this ingredient has no density, so it stays in grams
               const columnFallback = !line.weightUnit && isVolumeUnit(columnUnit) && !line.densityGPerMl
+              const lineAmountDecimals = line.amountDecimals ?? amountDecimals
+              const linePctDecimals = line.pctDecimals ?? pctDecimals
               const isBeingDragged = dragKey === line.key
               const isDropTarget = dragOverKey === line.key && dragKey !== line.key
               return (
@@ -1855,6 +1928,7 @@ export function FormulationGrid({ id }: { id: string }) {
                         tip={line.pctLocked ? 'Set by the locked usage %. Unlock the % to edit.' : undefined}
                         unit={lineUnit}
                         densityGPerMl={line.densityGPerMl}
+                        decimals={lineAmountDecimals}
                         ariaLabel={`Amount of ${line.ingredientName} (${UNIT_LABELS[lineUnit]})`}
                       />
                       <select
@@ -1874,6 +1948,16 @@ export function FormulationGrid({ id }: { id: string }) {
                         <option value="">{UNIT_LABELS[effectiveUnit(null, columnUnit, line.densityGPerMl)]}</option>
                         <UnitOptions needsDensity={!line.densityGPerMl} />
                       </select>
+                      <LineDecimalsSelect
+                        value={line.amountDecimals}
+                        columnLabel={amountDecimals == null ? 'auto' : `${amountDecimals} dp`}
+                        min={AMOUNT_DECIMALS_MIN}
+                        max={AMOUNT_DECIMALS_MAX}
+                        onChange={n => changeLineDecimals(line.key, 'amountDecimals', n)}
+                        disabled={isLocked}
+                        ariaLabel={`Decimal places for the amount of ${line.ingredientName}`}
+                        what="amount"
+                      />
                       <LockToggle
                         active={line.locked}
                         disabled={isLocked}
@@ -1888,7 +1972,7 @@ export function FormulationGrid({ id }: { id: string }) {
                     <div className="flex items-center justify-end gap-1">
                       <PctInput
                         value={line.pctLocked && line.lockedPct != null ? line.lockedPct : linePct}
-                        decimals={pctDecimals}
+                        decimals={linePctDecimals}
                         onChange={p => updatePct(line.key, p)}
                         disabled={isLocked || line.locked}
                         tip={line.locked
@@ -1896,6 +1980,16 @@ export function FormulationGrid({ id }: { id: string }) {
                           : stageMass != null
                             ? `% of the ${formatGramsIn(stageMass, columnUnit)} batch leaving step ${stageStepIdx + 1}, not of the total input`
                             : undefined}
+                      />
+                      <LineDecimalsSelect
+                        value={line.pctDecimals}
+                        columnLabel={`${pctDecimals} dp`}
+                        min={PCT_DECIMALS_MIN}
+                        max={PCT_DECIMALS_MAX}
+                        onChange={n => changeLineDecimals(line.key, 'pctDecimals', n)}
+                        disabled={isLocked}
+                        ariaLabel={`Decimal places for the usage % of ${line.ingredientName}`}
+                        what="usage %"
                       />
                       <LockToggle
                         active={line.pctLocked}
@@ -1915,7 +2009,7 @@ export function FormulationGrid({ id }: { id: string }) {
                         className="mt-0.5 text-[10px] leading-tight text-indigo-600 whitespace-nowrap"
                         data-tip="The usage % above is of the batch weight leaving that step. This is the same ingredient as a share of everything weighed in."
                       >
-                        of step {stageStepIdx + 1} · {(totalWeightG > 0 ? (line.weightG / totalWeightG) * 100 : 0).toFixed(pctDecimals)}% of input
+                        of step {stageStepIdx + 1} · {(totalWeightG > 0 ? (line.weightG / totalWeightG) * 100 : 0).toFixed(linePctDecimals)}% of input
                       </div>
                     )}
                   </td>
@@ -2526,7 +2620,8 @@ export function FormulationGrid({ id }: { id: string }) {
           onApply={(newLines) => {
             setLines(newLines.map(l => ({
               ...l, pctLocked: false, lockedPct: null, addedAfterStepId: null, minPct: null, maxPct: null,
-              weightUnit: null, densityGPerMl: numOrNull(libraryById.get(l.ingredientId)?.densityGPerMl),
+              weightUnit: null, amountDecimals: null, pctDecimals: null,
+              densityGPerMl: numOrNull(libraryById.get(l.ingredientId)?.densityGPerMl),
               moisturePct: numOrNull(libraryById.get(l.ingredientId)?.moisturePct),
             })))
             setIsDirty(true)

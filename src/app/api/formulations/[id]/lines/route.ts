@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { hasValidWeightPrecision } from '@/lib/weight'
 import { WEIGHT_UNITS } from '@/lib/weight-units'
+import { AMOUNT_DECIMALS_MAX, AMOUNT_DECIMALS_MIN, PCT_DECIMALS_MAX, PCT_DECIMALS_MIN } from '@/lib/pct-display'
 import { assertIngredientsOwned, notFoundResponse, loadFormulationForEdit } from '@/lib/tenancy'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -18,6 +19,9 @@ const lineSchema = z.object({
   pctLocked: z.boolean().default(false),
   // The line's own display unit; null follows the formulation's column unit
   weightUnit: z.enum(WEIGHT_UNITS).nullable().optional(),
+  // The line's own decimal places for its amount and usage %; null follows the column
+  amountDecimals: z.number().int().min(AMOUNT_DECIMALS_MIN).max(AMOUNT_DECIMALS_MAX).nullable().optional(),
+  pctDecimals: z.number().int().min(PCT_DECIMALS_MIN).max(PCT_DECIMALS_MAX).nullable().optional(),
   // For a line added after a process step, % of the batch weight leaving that step
   lockedPct: z.number().min(0).max(100).nullable().optional(),
   // Process step of this formulation the line is added after; null = the starting blend
@@ -80,6 +84,8 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
           locked: l.locked,
           pctLocked: l.pctLocked,
           weightUnit: l.weightUnit ?? null,
+          amountDecimals: l.amountDecimals ?? null,
+          pctDecimals: l.pctDecimals ?? null,
           addedAfterStepId: l.addedAfterStepId ?? null,
           stagePct: l.addedAfterStepId && l.pctLocked && l.lockedPct != null ? l.lockedPct.toString() : null,
           minPct: l.minPct?.toString() ?? null,

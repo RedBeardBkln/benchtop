@@ -126,7 +126,7 @@ export const formulations: HelpSection = {
         },
         {
           type: 'tip',
-          text: 'Want to see more decimal places in the % column? Use the **−** and **+** buttons in the % column header to show 1 to 4 decimals.',
+          text: 'Want to see more or fewer decimal places? Use the **−** and **+** buttons in the % column header to show 1 to 4 decimals, and the **auto** picker in the Amount header to show 0 to 4 (auto shows as many as each amount needs). To set one ingredient on its own, hover its row and pick from the small **dp** picker next to its amount or %. That choice is saved with the formula and wins over the column’s.',
         },
       ],
     },
