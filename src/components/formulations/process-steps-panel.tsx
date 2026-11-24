@@ -5,13 +5,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { GripVertical, Plus, X, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Equipment, ProcessStepDetail } from '@/lib/types'
-import type { LossType, LossUnit } from '@/lib/process-loss'
+import { hasStepLoss, type LossType, type LossUnit } from '@/lib/process-loss'
 import type { StepParams } from '@/lib/step-measurements'
 import { StepMeasurements } from '@/components/formulations/step-measurements'
 import { EquipmentManagerDialog } from '@/components/formulations/equipment-manager-dialog'
 import { Term } from '@/components/term'
 
 type LossDraft = { type: LossType | ''; amount: string; unit: LossUnit }
+/** A step's losses in the order they apply: the second is taken from what's left after the first */
+type LossDrafts = [LossDraft, LossDraft]
 
 // A one-paragraph text box that wraps long instructions and grows to fit them, so the whole step is
 // readable without scrolling. Enter doesn't add a line break: it runs onEnter (or just leaves the field).
@@ -63,13 +65,21 @@ const LOSS_HINT: Record<LossType, string> = {
   moisture: 'Water driven off (baking, boiling, drying) — yield drops, nutrient profile concentrates',
 }
 
-function stepLossDraft(step: ProcessStepDetail): LossDraft {
-  if (step.lossType !== 'production' && step.lossType !== 'moisture') return NO_LOSS
-  return {
-    type: step.lossType,
-    amount: step.lossAmount != null ? String(parseFloat(step.lossAmount)) : '',
-    unit: step.lossUnit === 'pct' ? 'pct' : 'g',
-  }
+function toDraft(type: string | null, amount: string | null, unit: string | null): LossDraft {
+  if (type !== 'production' && type !== 'moisture') return NO_LOSS
+  return { type, amount: amount != null ? String(parseFloat(amount)) : '', unit: unit === 'pct' ? 'pct' : 'g' }
+}
+
+/** With the first loss removed, the second one moves up */
+function normalizeDrafts([a, b]: LossDrafts): LossDrafts {
+  return a.type ? [a, b] : [b, NO_LOSS]
+}
+
+function stepLossDrafts(step: ProcessStepDetail): LossDrafts {
+  return normalizeDrafts([
+    toDraft(step.lossType, step.lossAmount, step.lossUnit),
+    toDraft(step.loss2Type, step.loss2Amount, step.loss2Unit),
+  ])
 }
 
 /** Why a draft can't be saved yet, or null when it is a valid loss (or no loss). */
@@ -81,81 +91,143 @@ function lossDraftError(d: LossDraft): string | null {
   return null
 }
 
-function lossBody(d: LossDraft) {
-  return d.type
-    ? { lossType: d.type, lossAmount: parseFloat(d.amount), lossUnit: d.unit }
-    : { lossType: null }
+const draftsError = ([a, b]: LossDrafts) => lossDraftError(a) ?? lossDraftError(b)
+
+function lossBody([a, b]: LossDrafts) {
+  if (!a.type) return { lossType: null }
+  return {
+    lossType: a.type, lossAmount: parseFloat(a.amount), lossUnit: a.unit,
+    ...(b.type ? { loss2Type: b.type, loss2Amount: parseFloat(b.amount), loss2Unit: b.unit } : { loss2Type: null }),
+  }
 }
 
-function LossFields({
-  draft, onChange, onCommit, disabled,
+const SELECT_CLASS = `px-1.5 py-1 text-xs border border-gray-200 rounded bg-white
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50`
+
+function LossRow({
+  draft, onChange, onCommit, disabled, second = false,
 }: {
   draft: LossDraft
   onChange: (d: LossDraft) => void
-  /** Called with the draft to persist, whenever a change leaves it valid. */
-  onCommit?: (d: LossDraft) => void
+  /** Called with the changed draft when the change should be saved */
+  onCommit: (d: LossDraft) => void
   disabled: boolean
+  /** The loss applied after the first one */
+  second?: boolean
 }) {
   const error = lossDraftError(draft)
+  const set = (next: LossDraft) => { onChange(next); onCommit(next) }
 
-  function update(next: LossDraft, commit: boolean) {
-    onChange(next)
-    if (commit && !lossDraftError(next)) onCommit?.(next)
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {second && <span className="text-[10px] text-gray-400">then</span>}
+      <select
+        value={draft.type}
+        disabled={disabled}
+        onChange={(e) => {
+          const type = e.target.value as LossDraft['type']
+          set(type ? { ...draft, type } : NO_LOSS)
+        }}
+        aria-label={second ? 'Second loss type' : 'Loss type'}
+        data-tip={second
+          ? 'A second loss at this step, applied after the first. Pick “No loss” to remove it.'
+          : 'Production loss: product left on equipment, per-100 g nutrition unchanged. Moisture loss: water driven off, nutrition concentrates.'}
+        className={SELECT_CLASS}
+      >
+        <option value="">No loss</option>
+        <option value="production">Production loss</option>
+        <option value="moisture">Moisture loss</option>
+      </select>
+      {draft.type && (
+        <>
+          <input
+            type="number"
+            min="0"
+            max={draft.unit === 'pct' ? 100 : undefined}
+            step="any"
+            value={draft.amount}
+            disabled={disabled}
+            onChange={(e) => onChange({ ...draft, amount: e.target.value })}
+            onBlur={() => onCommit(draft)}
+            aria-label={second ? 'Second loss amount' : 'Loss amount'}
+            data-tip={draft.unit === 'pct'
+              ? (second ? 'Loss as a % of what’s left after the first loss' : 'Loss as a % of the weight going into this step, after earlier losses')
+              : 'Grams lost in this step. Saves when you click away.'}
+            placeholder="Amount"
+            className="w-20 px-1.5 py-1 text-xs border border-gray-200 rounded tabular-nums
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          />
+          <select
+            value={draft.unit}
+            disabled={disabled}
+            onChange={(e) => set({ ...draft, unit: e.target.value as LossUnit })}
+            aria-label={second ? 'Second loss unit' : 'Loss unit'}
+            data-tip={second
+              ? 'Grams, or a % of what’s left after the first loss'
+              : 'Grams, or a % of the weight going into this step (after any earlier losses)'}
+            className={SELECT_CLASS}
+          >
+            <option value="g">g</option>
+            <option value="pct">{second ? '% of what’s left' : '% of batch'}</option>
+          </select>
+          {error && <span className="text-[10px] text-amber-600">{error}</span>}
+        </>
+      )}
+    </div>
+  )
+}
+
+function LossFields({
+  drafts, onChange, onCommit, disabled,
+}: {
+  drafts: LossDrafts
+  onChange: (d: LossDrafts) => void
+  /** Called with the drafts to persist, whenever a change leaves them valid. */
+  onCommit?: (d: LossDrafts) => void
+  disabled: boolean
+}) {
+  const [first, second] = drafts
+
+  function update(next: LossDrafts, commit: boolean) {
+    const normalized = normalizeDrafts(next)
+    onChange(normalized)
+    if (commit && !draftsError(normalized)) onCommit?.(normalized)
   }
+
+  const types = [first.type, second.type].filter((t): t is LossType => !!t)
 
   return (
     <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={draft.type}
+      <LossRow
+        draft={first}
+        disabled={disabled}
+        onChange={(d) => update([d, second], false)}
+        onCommit={(d) => update([d, second], true)}
+      />
+      {first.type && second.type && (
+        <LossRow
+          second
+          draft={second}
           disabled={disabled}
-          onChange={(e) => {
-            const type = e.target.value as LossDraft['type']
-            update(type ? { ...draft, type } : NO_LOSS, true)
-          }}
-          aria-label="Loss type"
-          data-tip="Production loss: product left on equipment, per-100 g nutrition unchanged. Moisture loss: water driven off, nutrition concentrates."
-          className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          onChange={(d) => update([first, d], false)}
+          onCommit={(d) => update([first, d], true)}
+        />
+      )}
+      {first.type && !second.type && !disabled && (
+        <button
+          type="button"
+          // Opens a second loss of the other type; it saves once it has an amount
+          onClick={() => update([first, { type: first.type === 'moisture' ? 'production' : 'moisture', amount: '', unit: first.unit }], false)}
+          data-tip="Adds a second loss at this step, applied after the first, e.g. moisture driven off in a centrifuge, then product left inside it"
+          className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-700 transition-colors"
         >
-          <option value="">No loss</option>
-          <option value="production">Production loss</option>
-          <option value="moisture">Moisture loss</option>
-        </select>
-        {draft.type && (
-          <>
-            <input
-              type="number"
-              min="0"
-              max={draft.unit === 'pct' ? 100 : undefined}
-              step="any"
-              value={draft.amount}
-              disabled={disabled}
-              onChange={(e) => onChange({ ...draft, amount: e.target.value })}
-              onBlur={() => update(draft, true)}
-              aria-label="Loss amount"
-              data-tip={draft.unit === 'pct' ? 'Loss as a % of the weight going into this step, after earlier losses' : 'Grams lost in this step. Saves when you click away.'}
-              placeholder="Amount"
-              className="w-20 px-1.5 py-1 text-xs border border-gray-200 rounded tabular-nums
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            />
-            <select
-              value={draft.unit}
-              disabled={disabled}
-              onChange={(e) => update({ ...draft, unit: e.target.value as LossUnit }, true)}
-              aria-label="Loss unit"
-              data-tip="Grams, or a % of the weight going into this step (after any earlier losses)"
-              className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              <option value="g">g</option>
-              <option value="pct">% of batch</option>
-            </select>
-            {error && <span className="text-[10px] text-amber-600">{error}</span>}
-          </>
-        )}
-      </div>
-      {draft.type && <p className="text-[10px] text-gray-400">{LOSS_HINT[draft.type]}</p>}
+          <Plus size={10} /> Then another loss
+        </button>
+      )}
+      {types.length === 1 && <p className="text-[10px] text-gray-400">{LOSS_HINT[types[0]]}</p>}
+      {types.length === 2 && (
+        <p className="text-[10px] text-gray-400">Applied in this order: the second loss is taken from what’s left after the first</p>
+      )}
     </div>
   )
 }
@@ -165,17 +237,17 @@ function StepLoss({
 }: {
   step: ProcessStepDetail
   disabled: boolean
-  onCommit: (d: LossDraft) => void
+  onCommit: (d: LossDrafts) => void
 }) {
-  const [draft, setDraft] = useState(() => stepLossDraft(step))
+  const [drafts, setDrafts] = useState(() => stepLossDrafts(step))
   // Pick up saved values (e.g. after a refetch)
-  const saved = JSON.stringify(stepLossDraft(step))
-  useEffect(() => { setDraft(JSON.parse(saved)) }, [saved])
+  const saved = JSON.stringify(stepLossDrafts(step))
+  useEffect(() => { setDrafts(JSON.parse(saved)) }, [saved])
 
   return (
     <LossFields
-      draft={draft}
-      onChange={setDraft}
+      drafts={drafts}
+      onChange={setDrafts}
       disabled={disabled}
       onCommit={(d) => { if (JSON.stringify(d) !== saved) onCommit(d) }}
     />
@@ -234,7 +306,7 @@ export function ProcessStepsPanel({
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [newInstruction, setNewInstruction] = useState('')
-  const [newLoss, setNewLoss] = useState<LossDraft>(NO_LOSS)
+  const [newLoss, setNewLoss] = useState<LossDrafts>([NO_LOSS, NO_LOSS])
   const [collapsed, setCollapsed] = useState(false)
   useEffect(() => { setCollapsed(readCollapsed()) }, [])
 
@@ -255,22 +327,22 @@ export function ProcessStepsPanel({
     staleTime: 0,
   })
 
-  const showFlow = steps.some(s => s.lossType) || Object.values(stages ?? {}).some(s => s.added.length > 0)
+  const showFlow = steps.some(hasStepLoss) || Object.values(stages ?? {}).some(s => s.added.length > 0)
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['formulation', formulationId] })
   }
 
   const addMutation = useMutation({
-    mutationFn: ({ instruction, loss }: { instruction: string; loss: LossDraft }) =>
+    mutationFn: ({ instruction, loss }: { instruction: string; loss: LossDrafts }) =>
       fetch(`/api/formulations/${formulationId}/process-steps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instruction, ...(loss.type ? lossBody(loss) : {}) }),
+        body: JSON.stringify({ instruction, ...(loss[0].type ? lossBody(loss) : {}) }),
       }).then(jsonOrThrow),
     onSuccess: () => {
       setNewInstruction('')
-      setNewLoss(NO_LOSS)
+      setNewLoss([NO_LOSS, NO_LOSS])
       invalidate()
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to add step'),
@@ -334,8 +406,8 @@ export function ProcessStepsPanel({
   function handleAdd() {
     const instruction = newInstruction.trim()
     if (!instruction) return
-    if (lossDraftError(newLoss)) {
-      toast.error('Enter a loss amount, or set the loss to "No loss"')
+    if (draftsError(newLoss)) {
+      toast.error('Enter each loss amount, or set the loss to "No loss"')
       return
     }
     addMutation.mutate({ instruction, loss: newLoss })
@@ -458,7 +530,7 @@ export function ProcessStepsPanel({
                     <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
                       <div className="space-y-0.5">
                         <span className="block text-[10px] text-gray-400">
-                          <Term tip="Weight lost in this step. It lowers the yield; a moisture loss also concentrates the nutrition per 100 g.">Loss</Term>
+                          <Term tip="Weight lost in this step. It lowers the yield; a moisture loss also concentrates the nutrition per 100 g. A step can have two losses, applied in the order entered.">Loss</Term>
                         </span>
                         <StepLoss
                           step={step}
@@ -560,7 +632,7 @@ export function ProcessStepsPanel({
               Add step
             </button>
           </div>
-          <LossFields draft={newLoss} onChange={setNewLoss} disabled={false} />
+          <LossFields drafts={newLoss} onChange={setNewLoss} disabled={false} />
         </div>
       )}
 

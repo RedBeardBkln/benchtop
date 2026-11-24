@@ -9,6 +9,30 @@ export type LossStep = {
   lossType: string | null
   lossAmount: number | null
   lossUnit: string | null
+  /** A second loss at the same step, applied after the first (e.g. moisture, then product left in the centrifuge) */
+  loss2Type?: string | null
+  loss2Amount?: number | null
+  loss2Unit?: string | null
+}
+
+export type StepLoss = { type: LossType; amount: number; unit: LossUnit }
+
+const isLossType = (t: unknown): t is LossType => t === 'production' || t === 'moisture'
+
+/** A step's losses in the order they apply; losses without a type or a positive amount are skipped. */
+export function stepLosses(s: LossStep): StepLoss[] {
+  const out: StepLoss[] = []
+  const push = (type: string | null | undefined, amount: number | null | undefined, unit: string | null | undefined) => {
+    if (isLossType(type) && amount != null && amount > 0) out.push({ type, amount, unit: unit === 'pct' ? 'pct' : 'g' })
+  }
+  push(s.lossType, s.lossAmount, s.lossUnit)
+  push(s.loss2Type, s.loss2Amount, s.loss2Unit)
+  return out
+}
+
+/** Whether a step has any loss set (a type, whatever the amount). */
+export function hasStepLoss(s: { lossType: string | null; loss2Type?: string | null }): boolean {
+  return isLossType(s.lossType) || isLossType(s.loss2Type)
 }
 
 export type ProcessYield = {
@@ -51,6 +75,8 @@ export type ProcessFlow = ProcessYield & {
  * - moisture: only water leaves → nutrients stay in a smaller weight, so
  *   per-100g values rise.
  * - unit 'pct' is taken of the weight entering that step; 'g' is absolute.
+ * - a step with two losses applies them in order: the second loss's % is of the
+ *   weight left after the first.
  * A loss can never exceed the weight remaining at that step.
  *
  * `addAfter(i, massG)` returns the grams added once step i's loss is applied, given the batch weight
@@ -71,11 +97,12 @@ export function simulateProcess(
 
   steps.forEach((s, i) => {
     let kept = 1
-    if ((s.lossType === 'production' || s.lossType === 'moisture') && s.lossAmount != null && s.lossAmount > 0 && weight > 0) {
-      const requested = s.lossUnit === 'pct' ? weight * (s.lossAmount / 100) : s.lossAmount
+    for (const l of stepLosses(s)) {
+      if (!(weight > 0)) break
+      const requested = l.unit === 'pct' ? weight * (l.amount / 100) : l.amount
       const loss = Math.min(requested, weight)
-      if (s.lossType === 'production') {
-        kept = (weight - loss) / weight
+      if (l.type === 'production') {
+        kept *= (weight - loss) / weight
         productionLossG += loss
       } else {
         moistureLossG += loss
@@ -129,12 +156,18 @@ export function toLossStep(step: {
   lossType: string | null
   lossAmount: string | null
   lossUnit: string | null
+  loss2Type?: string | null
+  loss2Amount?: string | null
+  loss2Unit?: string | null
 }): LossStep {
   return {
     id: step.id,
     lossType: step.lossType,
     lossAmount: step.lossAmount != null ? parseFloat(step.lossAmount) : null,
     lossUnit: step.lossUnit,
+    loss2Type: step.loss2Type ?? null,
+    loss2Amount: step.loss2Amount != null ? parseFloat(step.loss2Amount) : null,
+    loss2Unit: step.loss2Unit ?? null,
   }
 }
 
@@ -143,14 +176,25 @@ export const LOSS_TYPE_LABEL: Record<LossType, string> = {
   moisture: 'Moisture loss',
 }
 
-/** e.g. "Moisture loss: 12.5%" — null when the step has no loss. */
+/** e.g. "Moisture loss: 12.5%", or "Moisture loss: 60%, then production loss: 7%" — null when the step has no loss. */
 export function describeStepLoss(step: {
   lossType: string | null
-  lossAmount: string | null
+  lossAmount: string | number | null
   lossUnit: string | null
+  loss2Type?: string | null
+  loss2Amount?: string | number | null
+  loss2Unit?: string | null
 }): string | null {
-  if ((step.lossType !== 'production' && step.lossType !== 'moisture') || step.lossAmount == null) return null
-  const amount = parseFloat(step.lossAmount)
-  if (!(amount > 0)) return null
-  return `${LOSS_TYPE_LABEL[step.lossType]}: ${Number(amount.toFixed(2))}${step.lossUnit === 'pct' ? '%' : ' g'}`
+  const n = (v: string | number | null | undefined) => (v == null ? null : typeof v === 'number' ? v : parseFloat(v))
+  const losses = stepLosses({
+    lossType: step.lossType, lossAmount: n(step.lossAmount), lossUnit: step.lossUnit,
+    loss2Type: step.loss2Type, loss2Amount: n(step.loss2Amount), loss2Unit: step.loss2Unit,
+  })
+  if (losses.length === 0) return null
+  return losses
+    .map((l, i) => {
+      const label = i === 0 ? LOSS_TYPE_LABEL[l.type] : LOSS_TYPE_LABEL[l.type].toLowerCase()
+      return `${label}: ${Number(l.amount.toFixed(2))}${l.unit === 'pct' ? '%' : ' g'}`
+    })
+    .join(', then ')
 }

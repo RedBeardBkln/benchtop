@@ -218,7 +218,10 @@ export async function loadExportData(ctx: { account: { id: string; name: string 
       })),
       allNutrients,
       servingSizeG,
-      steps: steps.map(s => ({ id: s.id, lossType: s.lossType, lossAmount: num(s.lossAmount), lossUnit: s.lossUnit })),
+      steps: steps.map(s => ({
+        id: s.id, lossType: s.lossType, lossAmount: num(s.lossAmount), lossUnit: s.lossUnit,
+        loss2Type: s.loss2Type, loss2Amount: num(s.loss2Amount), loss2Unit: s.loss2Unit,
+      })),
     })
     const cogs = computeCogs({
       lines: lines.map(l => ({ key: l.id, ingredientId: l.ingredientId, name: ingredientById.get(l.ingredientId)?.name ?? '', weightG: Number(l.weightG) })),

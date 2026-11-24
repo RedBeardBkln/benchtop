@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { lossFieldsError } from '@/lib/process-loss-fields'
+import { describeStepLoss } from '@/lib/process-loss'
 import { paramPatchError } from '@/lib/step-measurements'
 
 // Changes Sous Chef proposes to a formulation, which the person approves or declines in the chat.
@@ -38,7 +39,12 @@ export const proposalChangesSchema = z.object({
       type: z.enum(['production', 'moisture']).nullable().describe('null clears the loss'),
       amount: z.number().positive().optional(),
       unit: z.enum(['g', 'pct']).optional(),
-    }).optional().describe('Weight lost at this step: production loss, or moisture lost (e.g. in baking)'),
+    }).optional().describe('Weight lost at this step: production loss, or moisture lost (e.g. in baking). type null clears both losses'),
+    thenLoss: z.object({
+      type: z.enum(['production', 'moisture']).nullable().describe('null clears the second loss'),
+      amount: z.number().positive().optional(),
+      unit: z.enum(['g', 'pct']).optional(),
+    }).optional().describe('A second loss at the same step, applied after the first (a % is of the weight left after it), e.g. 60% moisture off in a centrifuge, then 7% production loss left in it'),
   })).max(50).optional().describe('Process step changes, numbered as the steps are now'),
 })
 
@@ -72,6 +78,10 @@ export type PlanStep = {
   lossType: 'production' | 'moisture' | null
   lossAmount: number | null
   lossUnit: 'g' | 'pct'
+  /** A second loss, applied after the first */
+  loss2Type: 'production' | 'moisture' | null
+  loss2Amount: number | null
+  loss2Unit: 'g' | 'pct'
 }
 
 export type PlanHeader = {
@@ -148,8 +158,8 @@ const PARAM_LABELS: Record<string, string> = {
   temp_c: 'Temperature (°C)', time: 'Time', ph: 'pH', speed: 'Speed', start_time: 'Start', end_time: 'End', notes: 'Notes',
   solids_pct: 'Solids %', shear: 'Shear', pressure: 'Pressure', time_min: 'Time (min)',
 }
-const lossText = (s: Pick<PlanStep, 'lossType' | 'lossAmount' | 'lossUnit'>) =>
-  s.lossType ? `${s.lossType === 'moisture' ? 'Moisture' : 'Production'} loss ${s.lossAmount}${s.lossUnit === 'pct' ? '%' : ' g'}` : 'no loss'
+const lossText = (s: Pick<PlanStep, 'lossType' | 'lossAmount' | 'lossUnit' | 'loss2Type' | 'loss2Amount' | 'loss2Unit'>) =>
+  describeStepLoss(s) ?? 'no loss'
 const g = (n: number | null) => (n == null ? null : `${r4(n)} g`)
 
 /**
@@ -177,7 +187,7 @@ export function planChanges(state: PlanState, changes: ProposalChanges, ingredie
       if (!op.instruction?.trim()) return fail('A step to add needs an instruction.')
       const after = op.step ?? n
       if (after > n) return fail(`There is no step ${after} to add a step after; the formulation has ${n} step${n === 1 ? '' : 's'}.`)
-      const fresh: FinalStep = { sourceId: null, instruction: op.instruction.trim(), params: {}, lossType: null, lossAmount: null, lossUnit: 'g' }
+      const fresh: FinalStep = { sourceId: null, instruction: op.instruction.trim(), params: {}, lossType: null, lossAmount: null, lossUnit: 'g', loss2Type: null, loss2Amount: null, loss2Unit: 'g' }
       const err = applyStepEdits(fresh, op)
       if (err) return fail(err)
       addsAfter.set(after, [...(addsAfter.get(after) ?? []), fresh])
@@ -188,7 +198,7 @@ export function planChanges(state: PlanState, changes: ProposalChanges, ingredie
     touched.add(op.step)
     const src = steps[op.step - 1]
     if (op.action === 'remove') { removed.add(op.step); continue }
-    const next: FinalStep = { sourceId: src.id, instruction: src.instruction, params: { ...src.params }, lossType: src.lossType, lossAmount: src.lossAmount, lossUnit: src.lossUnit }
+    const next: FinalStep = { sourceId: src.id, instruction: src.instruction, params: { ...src.params }, lossType: src.lossType, lossAmount: src.lossAmount, lossUnit: src.lossUnit, loss2Type: src.loss2Type, loss2Amount: src.loss2Amount, loss2Unit: src.loss2Unit }
     if (op.instruction?.trim()) next.instruction = op.instruction.trim()
     const err = applyStepEdits(next, op)
     if (err) return fail(err)
@@ -209,7 +219,7 @@ export function planChanges(state: PlanState, changes: ProposalChanges, ingredie
   const pushAdds = (k: number) => {
     for (const s of addsAfter.get(k) ?? []) {
       finalSteps.push(s)
-      const notes = [...Object.entries(s.params).map(([key, v]) => `${PARAM_LABELS[key] ?? key}: ${v}`), ...(s.lossType ? [lossText(s)] : [])]
+      const notes = [...Object.entries(s.params).map(([key, v]) => `${PARAM_LABELS[key] ?? key}: ${v}`), ...(s.lossType || s.loss2Type ? [lossText(s)] : [])]
       previewSteps.push({ change: 'added', from: null, to: { no: finalSteps.length, text: s.instruction }, notes })
     }
   }
@@ -220,7 +230,7 @@ export function planChanges(state: PlanState, changes: ProposalChanges, ingredie
       previewSteps.push({ change: 'removed', from: { no, text: s.instruction }, to: null, notes: [] })
     } else {
       const u = updated.get(no)
-      finalSteps.push(u ?? { sourceId: s.id, instruction: s.instruction, params: s.params, lossType: s.lossType, lossAmount: s.lossAmount, lossUnit: s.lossUnit })
+      finalSteps.push(u ?? { sourceId: s.id, instruction: s.instruction, params: s.params, lossType: s.lossType, lossAmount: s.lossAmount, lossUnit: s.lossUnit, loss2Type: s.loss2Type, loss2Amount: s.loss2Amount, loss2Unit: s.loss2Unit })
       if (u) previewSteps.push({ change: 'changed', from: { no, text: s.instruction }, to: { no: finalSteps.length, text: u.instruction }, notes: stepNotes.get(no) ?? [] })
     }
     pushAdds(no)
@@ -363,13 +373,30 @@ function applyStepEdits(s: FinalStep, op: NonNullable<ProposalChanges['steps']>[
       else s.params[key] = value
     }
   }
-  if (op.loss) {
-    const loss = { lossType: op.loss.type, lossAmount: op.loss.amount ?? null, lossUnit: op.loss.unit ?? 'g' as const }
+  if (op.loss || op.thenLoss) {
+    // Clearing the first loss clears both, unless a second one is given in the same op
+    const keepSecond = op.loss?.type !== null
+    const loss = {
+      lossType: op.loss ? op.loss.type : s.lossType,
+      lossAmount: op.loss ? op.loss.amount ?? null : s.lossAmount,
+      lossUnit: op.loss ? op.loss.unit ?? 'g' as const : s.lossUnit,
+      loss2Type: op.thenLoss ? op.thenLoss.type : keepSecond ? s.loss2Type : null,
+      loss2Amount: op.thenLoss ? op.thenLoss.amount ?? null : keepSecond ? s.loss2Amount : null,
+      loss2Unit: op.thenLoss ? op.thenLoss.unit ?? 'g' as const : keepSecond ? s.loss2Unit : 'g' as const,
+    }
     const err = lossFieldsError(loss)
     if (err) return err
-    s.lossType = loss.lossType
-    s.lossAmount = loss.lossType ? loss.lossAmount : null
-    s.lossUnit = loss.lossType ? loss.lossUnit : 'g'
+    // A second loss with no first one moves up to be the first
+    const [first, second] = [
+      { type: loss.lossType, amount: loss.lossAmount, unit: loss.lossUnit },
+      { type: loss.loss2Type, amount: loss.loss2Amount, unit: loss.loss2Unit },
+    ].filter(l => l.type)
+    s.lossType = first?.type ?? null
+    s.lossAmount = first ? first.amount : null
+    s.lossUnit = first?.unit ?? 'g'
+    s.loss2Type = second?.type ?? null
+    s.loss2Amount = second ? second.amount : null
+    s.loss2Unit = second?.unit ?? 'g'
   }
   return null
 }

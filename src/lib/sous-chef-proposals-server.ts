@@ -53,6 +53,7 @@ async function loadState(f: Formulation, q: Reader = db): Promise<PlanState> {
     steps: steps.map(s => ({
       id: s.id, stepNo: s.stepNo, instruction: s.instruction, params: (s.params ?? {}) as Record<string, string>,
       lossType: s.lossType as PlanState['steps'][number]['lossType'], lossAmount: num(s.lossAmount), lossUnit: (s.lossUnit as 'g' | 'pct') ?? 'g',
+      loss2Type: s.loss2Type as PlanState['steps'][number]['loss2Type'], loss2Amount: num(s.loss2Amount), loss2Unit: (s.loss2Unit as 'g' | 'pct') ?? 'g',
     })),
   }
 }
@@ -269,6 +270,7 @@ async function applyPlan(proposalId: string, source: Formulation, plan: Plan, ch
       const values = {
         stepNo: i + 1, instruction: s.instruction, params: s.params,
         lossType: s.lossType, lossAmount: s.lossAmount?.toString() ?? null, lossUnit: s.lossUnit,
+        loss2Type: s.loss2Type, loss2Amount: s.loss2Amount?.toString() ?? null, loss2Unit: s.loss2Unit,
       }
       if (s.sourceId) {
         await tx.update(processSteps).set(values).where(and(eq(processSteps.id, stepIdMap.get(s.sourceId)!), eq(processSteps.formulationId, targetId)))

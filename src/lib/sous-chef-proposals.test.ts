@@ -6,7 +6,7 @@ const line = (over: Partial<PlanLine> & Pick<PlanLine, 'id' | 'ingredientId' | '
   weightUnit: null, amountDecimals: null, pctDecimals: null, minPct: null, maxPct: null, ...over,
 })
 const step = (over: Partial<PlanStep> & Pick<PlanStep, 'id' | 'stepNo' | 'instruction'>): PlanStep => ({
-  params: {}, lossType: null, lossAmount: null, lossUnit: 'g', ...over,
+  params: {}, lossType: null, lossAmount: null, lossUnit: 'g', loss2Type: null, loss2Amount: null, loss2Unit: 'g', ...over,
 })
 
 const base = (): PlanState => ({
@@ -96,8 +96,23 @@ describe('planChanges: steps', () => {
     expect(r.plan.steps[1]).toMatchObject({ sourceId: 's2', params: { temp_c: '165' }, lossAmount: 10 })
     expect(r.plan.removedStepIds).toEqual(['s1'])
     expect(r.preview.steps.find(s => s.change === 'changed')!.notes).toEqual([
-      'Temperature (°C): 175 → 165', 'Moisture loss 8% → Moisture loss 10%',
+      'Temperature (°C): 175 → 165', 'Moisture loss: 8% → Moisture loss: 10%',
     ])
+  })
+
+  it('adds a second loss after the first, and clearing the first loss clears both', () => {
+    const r = planChanges(base(), change({
+      steps: [{ action: 'update', step: 2, thenLoss: { type: 'production', amount: 7, unit: 'pct' } }],
+    }), names)
+    if (!r.ok) throw new Error(r.error)
+    expect(r.plan.steps[1]).toMatchObject({ lossType: 'moisture', lossAmount: 8, loss2Type: 'production', loss2Amount: 7, loss2Unit: 'pct' })
+    expect(r.preview.steps[0].notes).toEqual(['Moisture loss: 8% → Moisture loss: 8%, then production loss: 7%'])
+
+    const s = base()
+    s.steps[1] = { ...s.steps[1], loss2Type: 'production', loss2Amount: 7, loss2Unit: 'pct' }
+    const cleared = planChanges(s, change({ steps: [{ action: 'update', step: 2, loss: { type: null } }] }), names)
+    if (!cleared.ok) throw new Error(cleared.error)
+    expect(cleared.plan.steps[1]).toMatchObject({ lossType: null, loss2Type: null })
   })
 
   it('sends lines staged after a removed step back to the starting blend', () => {

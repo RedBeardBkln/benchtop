@@ -46,6 +46,7 @@ export function makeClock(timeZone: string | undefined): Clock {
 }
 
 const num = (v: string | null | undefined): number | null => (v == null || v === '' ? null : Number(v))
+const lossTypeText = (t: string | null | undefined) => (t === 'production' ? 'Production' : t === 'moisture' ? 'Moisture' : null)
 
 /** Up to `dp` decimals, trailing zeros dropped: 12.5, 0.333, 100 */
 export function fmtNum(v: number | string | null | undefined, dp = 2): string {
@@ -314,11 +315,12 @@ export function iterationSheet(f: ExportFormulation, client: string | null, cloc
   if (f.steps.length) {
     sections.push({
       t: 'table', title: 'Process steps',
-      columns: cols('Step', 'Instruction', 'Equipment', 'Parameters', 'Loss type', 'Loss amount', 'Loss unit'),
+      columns: cols('Step', 'Instruction', 'Equipment', 'Parameters', 'Loss type', 'Loss amount', 'Loss unit',
+        'Then loss type', 'Then loss amount', 'Then loss unit'),
       rows: f.steps.map(s => [
         s.stepNo, s.instruction, s.equipmentName, paramsText(s.params),
-        s.lossType === 'production' ? 'Production' : s.lossType === 'moisture' ? 'Moisture' : null,
-        num(s.lossAmount), s.lossType ? (s.lossUnit === 'pct' ? '%' : 'g') : null,
+        lossTypeText(s.lossType), num(s.lossAmount), s.lossType ? (s.lossUnit === 'pct' ? '%' : 'g') : null,
+        lossTypeText(s.loss2Type), s.loss2Type ? num(s.loss2Amount) : null, s.loss2Type ? (s.loss2Unit === 'pct' ? '%' : 'g') : null,
       ]),
     })
   }

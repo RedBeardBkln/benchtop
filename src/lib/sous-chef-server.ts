@@ -8,6 +8,7 @@ import {
 } from '@/lib/db/schema'
 import { calcNutrientProfile } from '@/lib/formulation-calc'
 import { stageIndex } from '@/lib/staged-additions'
+import { describeStepLoss } from '@/lib/process-loss'
 import { categoryPath } from '@/lib/ingredient-categories'
 import { getIngredientCosts } from '@/lib/costing-server'
 import { getOwnedFormulation, getOwnedProject, visibleProjectIds, visibleProjects, type TenantScope } from '@/lib/tenancy'
@@ -298,7 +299,7 @@ const TOOLS = [
           : Promise.resolve([]),
         db.select({ id: nutrients.id, name: nutrients.name, unit: nutrients.unit, category: nutrients.category, dailyValueAmount: nutrients.dailyValueAmount })
           .from(nutrients).orderBy(nutrients.displayOrder),
-        db.select({ id: processSteps.id, stepNo: processSteps.stepNo, instruction: processSteps.instruction, params: processSteps.params, lossType: processSteps.lossType, lossAmount: processSteps.lossAmount, lossUnit: processSteps.lossUnit })
+        db.select({ id: processSteps.id, stepNo: processSteps.stepNo, instruction: processSteps.instruction, params: processSteps.params, lossType: processSteps.lossType, lossAmount: processSteps.lossAmount, lossUnit: processSteps.lossUnit, loss2Type: processSteps.loss2Type, loss2Amount: processSteps.loss2Amount, loss2Unit: processSteps.loss2Unit })
           .from(processSteps).where(eq(processSteps.formulationId, f.id)).orderBy(processSteps.stepNo),
         db.select({ nutrient: nutrients.name, label: formulationTargets.label, comparator: formulationTargets.comparator, value: formulationTargets.value, valueMax: formulationTargets.valueMax, unit: formulationTargets.unit, basis: formulationTargets.basis })
           .from(formulationTargets).leftJoin(nutrients, eq(formulationTargets.nutrientId, nutrients.id))
@@ -316,7 +317,7 @@ const TOOLS = [
         })),
         allNutrients: allNutrients.map(n => ({ ...n, dailyValueAmount: num(n.dailyValueAmount) })),
         servingSizeG,
-        steps: steps.map(s => ({ id: s.id, lossType: s.lossType, lossAmount: num(s.lossAmount), lossUnit: s.lossUnit })),
+        steps: steps.map(s => ({ id: s.id, lossType: s.lossType, lossAmount: num(s.lossAmount), lossUnit: s.lossUnit, loss2Type: s.loss2Type, loss2Amount: num(s.loss2Amount), loss2Unit: s.loss2Unit })),
       })
       return {
         id: f.id, name: f.name, version: f.version, status: f.status, projectId: f.projectId, project: project?.name,
@@ -333,7 +334,7 @@ const TOOLS = [
           solverBounds: l.minPct != null || l.maxPct != null ? { minPct: num(l.minPct), maxPct: num(l.maxPct) } : undefined,
           costPerKg: costs[l.ingredientId]?.cost?.perKg ?? null,
         })),
-        processSteps: steps.map(s => ({ step: s.stepNo, instruction: s.instruction, params: s.params, loss: s.lossType ? `${s.lossType} ${num(s.lossAmount)} ${s.lossUnit}` : null })),
+        processSteps: steps.map(s => ({ step: s.stepNo, instruction: s.instruction, params: s.params, loss: describeStepLoss(s) })),
         yieldPct: round(calc.processYield.yieldPct),
         formulationTargets: targets,
         projectTargets: project?.targets ?? [],

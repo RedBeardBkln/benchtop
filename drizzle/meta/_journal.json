@@ -288,6 +288,13 @@
       "when": 1795439040242,
       "tag": "0040_line_decimals",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795552127612,
+      "tag": "0041_second_step_loss",
+      "breakpoints": true
     }
   ]
 }

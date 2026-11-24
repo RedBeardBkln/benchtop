@@ -108,6 +108,11 @@ export const processSteps = pgTable('process_steps', {
   lossAmount: numeric('loss_amount', { precision: 12, scale: 4 }),
   // 'g' = grams, 'pct' = % of the batch weight entering this step
   lossUnit: text('loss_unit').notNull().default('g'),
+  // A second loss at the same step, applied after the first in the order entered (e.g. moisture driven
+  // off in a centrifuge, then product left in it). Same meanings as above; only set when loss_type is.
+  loss2Type: text('loss2_type'),
+  loss2Amount: numeric('loss2_amount', { precision: 12, scale: 4 }),
+  loss2Unit: text('loss2_unit').notNull().default('g'),
   // Equipment used for this step; cleared (not cascaded) if the equipment is ever removed
   equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'set null' }),
 }, (t) => [

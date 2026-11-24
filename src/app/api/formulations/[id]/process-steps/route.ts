@@ -15,10 +15,14 @@ const postSchema = z.object({
   // Keys are merged into the step's existing params; null/'' clears a key
   params: z.record(z.string().regex(/^[a-z_]{1,40}$/), z.string().max(2000).nullable()).optional(),
   equipmentId: z.string().uuid().nullable().optional(),
-  // Loss is sent as a unit: type + amount + unit together, or lossType null to clear it
+  // Losses are sent as a unit: type + amount + unit together, or lossType null to clear them. The second
+  // loss (loss2*) applies after the first; leaving it out with lossType clears it.
   lossType: z.enum(['production', 'moisture']).nullable().optional(),
   lossAmount: z.number().positive().nullable().optional(),
   lossUnit: z.enum(['g', 'pct']).optional(),
+  loss2Type: z.enum(['production', 'moisture']).nullable().optional(),
+  loss2Amount: z.number().positive().nullable().optional(),
+  loss2Unit: z.enum(['g', 'pct']).optional(),
 })
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
