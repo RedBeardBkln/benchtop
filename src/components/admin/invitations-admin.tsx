@@ -44,7 +44,7 @@ const STATUS_CLS: Record<Invite['status'], string> = {
   revoked: 'bg-red-100 text-red-700',
 }
 
-export function InvitationsAdmin() {
+export function InvitationsAdmin({ approveRequestId }: { approveRequestId?: string }) {
   const [invites, setInvites] = useState<Invite[] | null>(null)
   const [email, setEmail] = useState('')
   const [note, setNote] = useState('')
@@ -123,7 +123,7 @@ export function InvitationsAdmin() {
 
   return (
     <div className="space-y-6">
-      <InviteRequestsAdmin reloadKey={requestsKey} onInvite={prefill} />
+      <InviteRequestsAdmin reloadKey={requestsKey} onInvite={prefill} approveRequestId={approveRequestId} />
 
       <Card title="Invite someone">
         <form onSubmit={create} className="space-y-3 max-w-lg">

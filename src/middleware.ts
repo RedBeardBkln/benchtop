@@ -1,3 +1,4 @@
+import { safeNextPath } from '@/lib/auth/next-path'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { METHOD_HEADER, PATH_HEADER } from '@/lib/activity'
@@ -68,18 +69,17 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    // Keep the query (e.g. /admin/invitations?request=… from an email) so it survives signing in
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
-    loginUrl.searchParams.set('next', pathname)
+    loginUrl.search = ''
+    loginUrl.searchParams.set('next', pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 
   if (user && isLoginRoute) {
-    const next = request.nextUrl.searchParams.get('next') ?? '/'
-    const appUrl = request.nextUrl.clone()
-    appUrl.pathname = next
-    appUrl.search = ''
-    return NextResponse.redirect(appUrl)
+    const next = safeNextPath(request.nextUrl.searchParams.get('next'), '/')
+    return NextResponse.redirect(new URL(next, request.nextUrl.origin))
   }
 
   return supabaseResponse

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { Logo } from '@/components/logo'
+import { safeNextPath } from '@/lib/auth/next-path'
 
 const GOOGLE_ERRORS: Record<string, string> = {
   'google-no-account': 'No Benchtop account uses that Google address. Sign in with the Google account for the email you were invited with, or with your password.',
@@ -28,7 +29,7 @@ function GoogleMark() {
 export default function LoginForm({ googleSignIn }: { googleSignIn: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') ?? '/projects'
+  const next = safeNextPath(searchParams.get('next'))
   // Set by /auth/confirm when a password reset link can't be used
   const linkError = searchParams.get('error') === 'invalid-reset-link'
   // Set by /auth/callback after "Continue with Google"

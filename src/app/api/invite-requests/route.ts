@@ -4,6 +4,8 @@ import { and, count, eq, gt } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { inviteRequests } from '@/lib/db/schema'
 import { inviteRequestSchema, isBotSubmission } from '@/lib/invite-requests'
+import { notifyInviteRequest } from '@/lib/invite-request-notify'
+import { getAppOrigin } from '@/lib/app-url'
 
 // Beta invitation requests from the public site. Open to anyone (see middleware), so it is rate
 // limited by IP, drops honeypot hits, and answers the same way whether or not the email has asked
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
     .limit(1)
   if (open) return NextResponse.json({ ok: true }, { status: 201 })
 
-  await db.insert(inviteRequests).values({
+  const [row] = await db.insert(inviteRequests).values({
     name: d.name,
     email: d.email,
     company: d.company,
@@ -58,7 +60,9 @@ export async function POST(req: NextRequest) {
     referral: d.referral,
     ipHash: ip,
     userAgent: req.headers.get('user-agent')?.slice(0, 500) ?? null,
-  })
+  }).returning({ id: inviteRequests.id })
+
+  notifyInviteRequest({ ...d, id: row.id }, getAppOrigin(req.nextUrl.origin))
 
   return NextResponse.json({ ok: true }, { status: 201 })
 }

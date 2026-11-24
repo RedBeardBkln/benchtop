@@ -3,8 +3,16 @@ import { InvitationsAdmin } from '@/components/admin/invitations-admin'
 import { requirePage } from '@/lib/auth/context'
 
 // Platform admins only; everyone else gets a 404.
-export default async function AdminInvitationsPage() {
+// `?request=<id>` (the Approve button in the request notification email) fills that request into
+// the invite form.
+export default async function AdminInvitationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ request?: string | string[] }>
+}) {
   const ctx = await requirePage({ allowUnentitled: true, platformAdmin: true })
+  const { request } = await searchParams
+  const approveRequestId = typeof request === 'string' ? request : undefined
 
   return (
     <AppShell userEmail={ctx.user.email} isPlatformAdmin={ctx.isPlatformAdmin}>
@@ -16,7 +24,7 @@ export default async function AdminInvitationsPage() {
             existing accounts under <a href="/admin/accounts" className="text-blue-600 hover:underline">Accounts</a>.
           </p>
         </div>
-        <InvitationsAdmin />
+        <InvitationsAdmin approveRequestId={approveRequestId} />
       </div>
     </AppShell>
   )

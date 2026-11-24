@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { readErrorMessage } from '@/lib/utils'
@@ -53,13 +53,17 @@ const STATUS_CLS: Record<InviteRequestStatus, string> = {
 export function InviteRequestsAdmin({
   reloadKey,
   onInvite,
+  approveRequestId,
 }: {
   reloadKey: number
   onInvite: (email: string, note: string) => void
+  /** From the Approve link in the notification email: fill this request into the invite form once */
+  approveRequestId?: string
 }) {
   const queryClient = useQueryClient()
   const [requests, setRequests] = useState<InviteRequest[] | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const approveHandled = useRef(false)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/admin/invite-requests')
@@ -71,6 +75,19 @@ export function InviteRequestsAdmin({
   useEffect(() => {
     load()
   }, [load, reloadKey])
+
+  useEffect(() => {
+    if (!approveRequestId || requests === null || approveHandled.current) return
+    approveHandled.current = true
+    const r = requests.find(x => x.id === approveRequestId)
+    if (!r) return void toast.error('That request was not found')
+    if (r.status !== 'new') {
+      setShowAll(true)
+      return void toast.info(`The request from ${r.email} is already ${r.status}`)
+    }
+    onInvite(r.email, inviteNoteFor(r))
+    toast.success(`Approving ${r.name}: choose the account type, then create the invitation`)
+  }, [approveRequestId, requests, onInvite])
 
   async function setStatus(id: string, status: InviteRequestStatus) {
     const res = await fetch(`/api/admin/invite-requests/${id}`, {
@@ -88,7 +105,7 @@ export function InviteRequestsAdmin({
   return (
     <Card
       title={`Beta requests${waiting.length ? ` (${waiting.length} waiting)` : ''}`}
-      description="Sent from the request form on the public site. Nobody is emailed automatically."
+      description="Sent from the request form on the public site. Each new request is emailed to Benchtop; nothing is sent to the requester."
     >
       {requests === null ? (
         <p className="text-sm text-gray-500">Loading…</p>
