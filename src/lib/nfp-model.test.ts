@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { NutrientResult } from './formulation-calc'
-import { abbreviate, allergenBody, buildNfpModel, nfpModelSchema, nfpOptionsSchema, splitTabularRows } from './nfp-model'
+import {
+  abbreviate, allergenBody, buildNfpModel, defaultHouseholdMeasure, nfpModelSchema, nfpOptionsSchema, splitTabularRows, sugarCarbIssues,
+} from './nfp-model'
 
 const n = (name: string, unit: string, perServing: number, dv: number | null = null, category = 'macros'): NutrientResult => ({
   nutrientId: name, name, unit, category, perFinished100g: perServing * 2, perServing, dailyValueAmount: dv,
@@ -146,5 +148,73 @@ describe('allergenBody', () => {
     expect(allergenBody('Contains: Milk, Wheat.')).toBe('Milk, Wheat.')
     expect(allergenBody('  CONTAINS Milk')).toBe('Milk')
     expect(allergenBody('Milk. May contain peanuts.')).toBe('Milk. May contain peanuts.')
+  })
+})
+
+describe('sugars within carbohydrate', () => {
+  // Greek Yogurt, Mango: the fruit prep's spec lists more sugars than carbohydrate
+  const withSugars = (sugars: number, added: number) =>
+    results.map(r => (r.name === 'Total Sugars' ? n('Total Sugars', 'g', sugars) : r.name === 'Added Sugars' ? n('Added Sugars', 'g', added, 50) : r.name === 'Total Carbohydrate' ? n('Total Carbohydrate', 'g', 17.39, 275) : r))
+  const amount = (m: ReturnType<typeof buildNfpModel>, k: string) => m.rows.find(r => r.key === k)!
+
+  it('never declares more sugars than carbohydrate, and says why', () => {
+    const m = buildNfpModel({ servingSizeG: 150, servingsPerContainer: 1, results: withSugars(17.54, 7.7) })
+    expect(amount(m, 'Total Carbohydrate').amount).toBe('17g')
+    expect(amount(m, 'Total Sugars').amount).toBe('17g')
+    expect(amount(m, 'Total Sugars').amountRule!.applied).toContain('more than Total Carbohydrate')
+  })
+
+  it('never declares more added sugars than total sugars', () => {
+    const m = buildNfpModel({ servingSizeG: 150, servingsPerContainer: 1, results: withSugars(10.2, 12.4) })
+    expect(amount(m, 'Added Sugars').amount).toBe('10g')
+  })
+
+  it('leaves consistent values alone', () => {
+    const m = buildNfpModel({ servingSizeG: 150, servingsPerContainer: 1, results: withSugars(12.5, 7.7) })
+    expect(amount(m, 'Total Sugars').amount).toBe('13g')
+    expect(amount(m, 'Total Sugars').amountRule!.applied).not.toContain('more than')
+  })
+
+  it("doesn't cap sugars when the formulation has no carbohydrate data", () => {
+    const m = buildNfpModel({ servingSizeG: 150, servingsPerContainer: 1, results: results.filter(r => r.name !== 'Total Carbohydrate') })
+    expect(amount(m, 'Total Sugars').amount).toBe('13g')
+  })
+
+  it('names the ingredients whose data has sugars above carbohydrate', () => {
+    const lines = [
+      { ingredientName: 'White Mass', nutrients: [{ nutrientId: 'Total Carbohydrate', amountPer100g: 7.5 }, { nutrientId: 'Total Sugars', amountPer100g: 7.5 }] },
+      { ingredientName: 'Fruit Prep, Mango', nutrients: [{ nutrientId: 'Total Carbohydrate', amountPer100g: 27.95 }, { nutrientId: 'Total Sugars', amountPer100g: 28.42 }, { nutrientId: 'Added Sugars', amountPer100g: 25.03 }] },
+      { ingredientName: 'Syrup', nutrients: [{ nutrientId: 'Total Sugars', amountPer100g: 60 }] },
+      { ingredientName: 'Collagen', nutrients: [] },
+    ]
+    expect(sugarCarbIssues(lines, results)).toEqual([
+      { ingredientName: 'Fruit Prep, Mango', carbs: 27.95, sugars: 28.42, addedSugars: 25.03 },
+      { ingredientName: 'Syrup', carbs: null, sugars: 60, addedSugars: 0 },
+    ])
+  })
+})
+
+describe('serving size and servings per container', () => {
+  it('says "serving" for one serving and "servings" for more', () => {
+    expect(build({ servingsPerContainer: 1 }).servingsText).toBe('1 serving per container')
+    expect(build({ servingsPerContainer: 1.2 }).servingsText).toBe('about 1 serving per container')
+    expect(build({ servingsPerContainer: 2 }).servingsText).toBe('2 servings per container')
+  })
+
+  it('prints the household measure before the gram weight', () => {
+    expect(build({ servingSizeG: 55, householdMeasure: '2/3 cup' }).servingSizeText).toBe('2/3 cup (55g)')
+    expect(build({ servingSizeG: 55, householdMeasure: '' }).servingSizeText).toBe('55g')
+  })
+
+  it('defaults to "1 container" only when the package is exactly one serving', () => {
+    expect(build({ servingSizeG: 150, servingsPerContainer: 1 }).servingSizeText).toBe('1 container (150g)')
+    expect(build({ servingSizeG: 150, servingsPerContainer: 1.2 }).servingSizeText).toBe('150g')
+    expect(defaultHouseholdMeasure(undefined)).toBe('')
+    expect(build({ servingSizeG: 150, servingsPerContainer: 1 }).servingSizeRule!.applied).toContain('household measure')
+  })
+
+  it('keeps the household measure with a saved panel’s options', () => {
+    expect(nfpOptionsSchema.parse({ householdMeasure: '1 bar' }).householdMeasure).toBe('1 bar')
+    expect(nfpOptionsSchema.parse({}).householdMeasure).toBeUndefined()
   })
 })

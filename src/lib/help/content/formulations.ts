@@ -803,6 +803,14 @@ export const formulations: HelpSection = {
       a: 'The finished weight (after the process losses on the Process tab) divided by the serving size, rounded the FDA way. With no process losses that’s simply the batch weight.',
     },
     {
+      q: 'How do I set the household measure, like “1 container (150g)”?',
+      a: 'Type it in **Household measure** at the top of the panel builder, such as “2/3 cup” or “1 bar”. It prints before the gram weight on the Serving size line, as FDA requires. When the package holds exactly one serving it starts as “1 container”. It’s saved with each panel.',
+    },
+    {
+      q: 'Why are Total Sugars shown at the same amount as Total Carbohydrate?',
+      a: 'Sugars are part of carbohydrate, so a label can’t declare more sugars than carbohydrate (or more added sugars than total sugars). If an ingredient’s data says otherwise, which happens with supplier spec sheets, the panel uses the carbohydrate amount and the builder names the ingredient so you can correct it on its **Nutrients** tab.',
+    },
+    {
       q: 'Will a saved Nutrition Facts panel change if I edit an ingredient later?',
       a: 'No. Saved panels are frozen exactly as they were. Only the live panel updates. To bring a saved panel up to date, click its pencil and then `Save changes`.',
     },

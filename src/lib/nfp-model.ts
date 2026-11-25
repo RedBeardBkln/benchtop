@@ -69,7 +69,8 @@ export const nfpModelSchema = z.object({
   perServing: z.boolean(),
   basisLabel: str(64),
   servingsText: str(120),
-  servingSizeText: str(32),
+  // e.g. "1 container (150g)"; the household measure is typed in, so it gets room
+  servingSizeText: str(160),
   calories: str(16),
   caloriesRule: appliedRuleSchema,
   servingsRule: appliedRuleSchema.optional(),
@@ -105,6 +106,8 @@ export const nfpOptionsSchema = z.object({
   // True when the statement was typed by hand instead of arranged as a list
   ingredientCustomText: z.boolean().optional(),
   layout: z.enum(NFP_LAYOUTS).default('standard'),
+  // Common household measure printed before the gram weight, e.g. "1 container", "2/3 cup"; absent = the default
+  householdMeasure: str(120).optional(),
 })
 export type NfpOptions = z.infer<typeof nfpOptionsSchema>
 
@@ -121,6 +124,11 @@ export type ExtraNutrientInput = {
 export type BuildNfpInput = {
   servingSizeG: number | undefined
   servingsPerContainer: number | undefined
+  /**
+   * Household measure for the serving size, e.g. "2/3 cup" (21 CFR 101.9(b)(5)). undefined uses the
+   * default, "1 container" when the package is exactly one serving; "" prints the gram weight alone.
+   */
+  householdMeasure?: string
   results: NutrientResult[]
   hideZeros?: boolean
   layout?: NfpLayout
@@ -237,15 +245,60 @@ function dvExplanation(name: string, amount: number, unit: string, dv: number, t
   }
 }
 
+/** "1 container" when the package holds exactly one serving; otherwise none, since it depends on the food. */
+export function defaultHouseholdMeasure(servingsPerContainer: number | undefined): string {
+  if (servingsPerContainer == null) return ''
+  const s = declareServings(servingsPerContainer)
+  return s.declared === 1 && !s.rounded ? '1 container' : ''
+}
+
+/** carbs is null when the ingredient has sugars but no carbohydrate value */
+export type SugarCarbIssue = { ingredientName: string; carbs: number | null; sugars: number; addedSugars: number }
+
+/**
+ * Ingredients whose data lists more sugars than carbohydrate, or more added sugars than total sugars
+ * (per 100 g). Those can push the panel's sugars above its carbohydrate, which can't be right.
+ */
+export function sugarCarbIssues(
+  lines: Array<{ ingredientName: string; nutrients?: Array<{ nutrientId: string; amountPer100g: number }> }>,
+  results: Pick<NutrientResult, 'nutrientId' | 'name'>[],
+): SugarCarbIssue[] {
+  const id = (name: string) => results.find(r => r.name === name)?.nutrientId
+  const [carbId, sugarId, addedId] = [id('Total Carbohydrate'), id('Total Sugars'), id('Added Sugars')]
+  const seen = new Set<string>()
+  const out: SugarCarbIssue[] = []
+  for (const l of lines) {
+    if (seen.has(l.ingredientName)) continue
+    seen.add(l.ingredientName)
+    const v = (nid: string | undefined) => l.nutrients?.find(n => n.nutrientId === nid)?.amountPer100g
+    const carbs = v(carbId), sugars = v(sugarId), addedSugars = v(addedId) ?? 0
+    const tooManySugars = sugars != null && (carbs == null ? sugars > 0 : sugars > carbs + 1e-9)
+    const tooManyAdded = sugars != null && addedSugars > sugars + 1e-9
+    if (tooManySugars || tooManyAdded) out.push({ ingredientName: l.ingredientName, carbs: carbs ?? null, sugars: sugars ?? 0, addedSugars })
+  }
+  return out
+}
+
 export function buildNfpModel(input: BuildNfpInput): NfpModel {
   const { servingSizeG, servingsPerContainer, results, hideZeros = false, extras = [] } = input
   const perServing = !!servingSizeG
   const byName = new Map(results.map(r => [r.name, r]))
-  const amountOf = (name: string) => {
+  const rawAmount = (name: string) => {
     const r = byName.get(name)
     if (!r) return 0
     return perServing ? (r.perServing ?? 0) : r.perFinished100g
   }
+  // Sugars are part of carbohydrate, and added sugars part of total sugars. Ingredient data can say
+  // otherwise (supplier specs measure them by different methods), so the panel never declares more.
+  const carbs = byName.has('Total Carbohydrate') ? rawAmount('Total Carbohydrate') : Infinity
+  const sugars = Math.min(rawAmount('Total Sugars'), carbs)
+  const added = Math.min(rawAmount('Added Sugars'), sugars)
+  const capped: Record<string, { actual: number; limit: string } | undefined> = {
+    'Total Sugars': rawAmount('Total Sugars') > carbs ? { actual: rawAmount('Total Sugars'), limit: 'Total Carbohydrate' } : undefined,
+    'Added Sugars': rawAmount('Added Sugars') > sugars ? { actual: rawAmount('Added Sugars'), limit: 'Total Sugars' } : undefined,
+  }
+  const amountOf = (name: string) =>
+    name === 'Total Sugars' ? sugars : name === 'Added Sugars' ? added : rawAmount(name)
 
   const rows: NfpRow[] = []
   for (const spec of ROW_SPECS) {
@@ -266,6 +319,12 @@ export function buildNfpModel(input: BuildNfpInput): NfpModel {
       section: spec.section,
       amount: `${decl.text}${spec.unit}`,
       amountRule: amountRuleExplanation(rule, actual, decl.text, decl.bandIndex, perServing),
+    }
+    const cap = capped[spec.name]
+    if (cap && row.amountRule) {
+      row.amountRule.applied =
+        `The ingredient data adds up to ${sig(cap.actual)} ${spec.unit}, more than ${cap.limit} (${sig(actual)} ${spec.unit}), ` +
+        `which it is part of, so ${sig(actual)} ${spec.unit} is used. ${row.amountRule.applied}`
     }
     if (spec.hasDv && dv != null && dv > 0) {
       const d = dvExplanation(spec.name, actual, spec.unit, dv, isDvTiered(spec.name, result?.category))
@@ -313,14 +372,17 @@ export function buildNfpModel(input: BuildNfpInput): NfpModel {
   let servingSizeRule: AppliedRule | undefined
   if (servingSizeG) {
     const s = declareServingSize(servingSizeG)
-    servingSizeText = s.text
+    const measure = (input.householdMeasure ?? defaultHouseholdMeasure(servingsPerContainer)).trim()
+    servingSizeText = measure ? `${measure} (${s.text})` : s.text
     servingSizeRule = {
       ruleId: SERVING_SIZE_RULE.id,
       title: SERVING_SIZE_RULE.title,
       citation: SERVING_SIZE_RULE.citation,
       actual: `${sig(servingSizeG)} g`,
-      declared: s.text.replace('g', ' g'),
-      applied: `Serving size ${sig(servingSizeG)} g (${s.tier}) → ${s.text.replace('g', ' g')}.`,
+      declared: servingSizeText,
+      applied: `Serving size ${sig(servingSizeG)} g (${s.tier}) → ${s.text.replace('g', ' g')}.` + (measure
+        ? ` The household measure “${measure}” is printed first, with the metric amount in parentheses.`
+        : ' No household measure is set. FDA requires one (such as “1 container” or “2/3 cup”) before the metric amount.'),
       lines: [...SERVING_SIZE_RULE.lines],
     }
   }
@@ -329,14 +391,14 @@ export function buildNfpModel(input: BuildNfpInput): NfpModel {
   let servingsRule: AppliedRule | undefined
   if (servingsPerContainer != null) {
     const s = declareServings(servingsPerContainer)
-    servingsText = `${s.text} servings per container`
+    servingsText = `${s.text} ${s.declared > 1 ? 'servings' : 'serving'} per container`
     servingsRule = {
       ruleId: SERVINGS_PER_CONTAINER_RULE.id,
       title: SERVINGS_PER_CONTAINER_RULE.title,
       citation: SERVINGS_PER_CONTAINER_RULE.citation,
       actual: sig(servingsPerContainer),
       declared: s.text,
-      applied: `${sig(servingsPerContainer)} servings (${s.tier}) → ${s.text}.`,
+      applied: `${sig(servingsPerContainer)} ${servingsPerContainer === 1 ? 'serving' : 'servings'} (${s.tier}) → ${s.text}.`,
       lines: [...SERVINGS_PER_CONTAINER_RULE.lines],
     }
   }

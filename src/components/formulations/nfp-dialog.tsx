@@ -8,7 +8,7 @@ import { format as formatDate } from 'date-fns'
 import { NfpPanel } from './nfp-panel'
 import type { NutrientResult } from '@/lib/formulation-calc'
 import {
-  buildNfpModel, NFP_LAYOUT_INFO, NFP_LAYOUTS, STANDARD_NFP_NAMES,
+  buildNfpModel, defaultHouseholdMeasure, sugarCarbIssues, NFP_LAYOUT_INFO, NFP_LAYOUTS, STANDARD_NFP_NAMES,
   type ExtraNutrientInput, type NfpLayout, type NfpModel, type NfpOptions,
 } from '@/lib/nfp-model'
 import { declareDvPct, isDvTiered, ruleReferences } from '@/lib/fda-rounding'
@@ -106,7 +106,8 @@ type Props = {
   /** Weight after process losses — what actually ends up packed */
   finishedWeightG: number
   results: NutrientResult[]
-  lines: StatementLine[]
+  /** With each ingredient's nutrients (per 100 g), to point out data that can't be right */
+  lines: Array<StatementLine & { nutrients?: Array<{ nutrientId: string; amountPer100g: number }> }>
   onClose: () => void
 }
 
@@ -140,6 +141,8 @@ export function NfpDialog({
   const [itemsEdit, setItemsEdit] = useState<StatementItem[] | null>(null)
   // Set when the ingredient statement is typed by hand instead of arranged as a list
   const [customIngredientText, setCustomIngredientText] = useState<string | null>(null)
+  // null until the user types one (or a saved panel is restored), so the default applies
+  const [householdEdit, setHouseholdEdit] = useState<string | null>(null)
 
   const ingredientIds = [...new Set(lines.map(l => l.ingredientId))].sort()
   const { data: labelInfo } = useQuery<Map<string, LabelInfo>>({
@@ -169,6 +172,8 @@ export function NfpDialog({
     servingSizeG && servingSizeG > 0 && finishedWeightG > 0
       ? finishedWeightG / servingSizeG
       : undefined
+  const householdMeasure = householdEdit ?? defaultHouseholdMeasure(servingsPerContainer)
+  const sugarIssues = useMemo(() => sugarCarbIssues(lines, results), [lines, results])
 
   // Nutrients available for the extras picker: non-standard, have a value
   const availableExtras = useMemo(() => {
@@ -212,6 +217,7 @@ export function NfpDialog({
     () => buildNfpModel({
       servingSizeG,
       servingsPerContainer,
+      householdMeasure,
       results,
       hideZeros,
       layout,
@@ -219,7 +225,7 @@ export function NfpDialog({
       allergenStatement: includeAllergen ? allergenText : undefined,
       ingredientStatement: includeIngredients ? ingredientText : undefined,
     }),
-    [servingSizeG, servingsPerContainer, results, hideZeros, layout, showExtras, extraInputs,
+    [servingSizeG, servingsPerContainer, householdMeasure, results, hideZeros, layout, showExtras, extraInputs,
       includeAllergen, allergenText, includeIngredients, ingredientText],
   )
   const activeModel = viewing ? viewing.model : liveModel
@@ -228,11 +234,13 @@ export function NfpDialog({
     hideZeros, showExtras, selectedExtras: [...selectedExtras],
     includeAllergen, allergenText, includeIngredients, ingredientText,
     ingredientItems: statementItems, ingredientCustomText: customIngredientText !== null, layout,
+    householdMeasure: householdEdit ?? undefined,
   })
 
   function restoreOptions(o: NfpOptions) {
     setHideZeros(o.hideZeros)
     setLayout(o.layout)
+    setHouseholdEdit(o.householdMeasure ?? null)
     setShowExtras(o.showExtras)
     setExtrasOpen(false)
     setSelectedExtras(new Set(o.selectedExtras))
@@ -395,6 +403,29 @@ export function NfpDialog({
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 p-4 sm:p-6">
           {/* Left: options — scrollable independently so the preview is never inside an overflow container */}
           <div className="flex-1 space-y-5 min-w-0 overflow-y-auto max-h-[80vh] pr-1 print:hidden">
+
+            {/* Household measure, printed before the gram weight */}
+            {servingSizeG ? (
+              <div>
+                <label htmlFor="nfp-household" className="block text-xs font-medium text-gray-600 mb-2">
+                  <Term tip="FDA requires the serving size in a common household measure, followed by the metric amount in parentheses, e.g. “1 container (150g)” or “2/3 cup (55g)” (21 CFR 101.9(b)(5), (b)(7)).">Household measure</Term>
+                </label>
+                <input
+                  id="nfp-household"
+                  value={householdMeasure}
+                  onChange={e => setHouseholdEdit(e.target.value)}
+                  maxLength={120}
+                  placeholder="e.g. 1 container, 2/3 cup, 1 bar"
+                  data-tip="Printed before the gram weight on the Serving size line."
+                  className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {householdMeasure.trim()
+                    ? `Prints as “Serving size ${liveModel.servingSizeText}”.`
+                    : 'FDA requires a household measure before the gram weight. Type one, such as “1 cup” or “1 bar”.'}
+                </p>
+              </div>
+            ) : null}
 
             {/* FDA layout */}
             <div>
@@ -640,6 +671,31 @@ export function NfpDialog({
               ))}
             </div>
 
+            {/* Ingredient data whose sugars exceed its carbohydrate */}
+            {sugarIssues.length > 0 && (
+              <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md">
+                <span className="text-amber-600 text-xs mt-0.5">⚠</span>
+                <div className="text-xs text-amber-700 space-y-1">
+                  <p>
+                    Sugars are part of carbohydrate, but {sugarIssues.length === 1 ? 'this ingredient’s data says otherwise' : 'these ingredients’ data say otherwise'} (per 100 g).
+                    The panel never declares more sugars than carbohydrate, or more added sugars than total sugars. Correct the values on the ingredient’s Nutrients tab.
+                  </p>
+                  <ul className="list-disc pl-4">
+                    {sugarIssues.map(i => (
+                      <li key={i.ingredientName}>
+                        <strong>{i.ingredientName}</strong>:{' '}
+                        {i.carbs == null
+                          ? `${i.sugars} g sugars but no carbohydrate value`
+                          : i.sugars > i.carbs
+                            ? `${i.sugars} g sugars, ${i.carbs} g carbohydrate`
+                            : `${i.addedSugars} g added sugars, ${i.sugars} g total sugars`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {/* Serving size warning */}
             {!servingSizeG && (
               <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md">
@@ -811,7 +867,7 @@ export function NfpDialog({
                         <p className="text-sm text-gray-800 truncate">{p.name}</p>
                         <p className="text-xs text-gray-400">
                           {formatDate(new Date(p.createdAt), 'MMM d, yyyy h:mm a')} · {p.model.calories} cal
-                          {p.servingSizeG ? ` · ${p.model.servingSizeText} serving` : ' · per 100g'}
+                          {p.servingSizeG ? ` · serving ${p.model.servingSizeText}` : ' · per 100g'}
                         </p>
                       </div>
                       <button
