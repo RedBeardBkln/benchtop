@@ -48,16 +48,19 @@ export const ingredients: HelpSection = {
     {
       slug: 'add-manual',
       title: 'Adding an ingredient by hand',
-      summary: 'Type an ingredient in, attach its spec sheet to read the nutrition, or add nutrition afterwards.',
+      summary: 'Type an ingredient in, or attach up to three spec sheets or COAs to fill in its details and nutrition.',
       blocks: [
         {
           type: 'steps',
           items: [
             'On [Ingredients](/ingredients), click `Add`. Stay on the **Manual entry** tab. (On a formulation, choose **Add manually** when searching for an ingredient; it opens the same form.)',
-            'Type the **Name**, such as “Organic Rolled Oats”. This is the only required field.',
-            'Optionally fill in **Preferred name on ingredient deck** (how it should read on your label, such as “Rolled Oats”), **Brand name**, **Supplier**, **Item code**, **Source type**, **Naturally derived**, **Cost / kg ($)**, **Moisture %** and **Notes**.',
-            'Optionally click **Attach a document and read its nutrition** and choose a spec sheet, COA or nutrition panel (PDF or image, up to 20 MB). The nutrition it finds, per 100 g, appears in the form. Check the values and correct or clear any that are wrong.',
-            'Click `Add ingredient`. The document is saved on the ingredient’s **Documents** tab and the nutrition on its **Nutrients** tab.',
+            'Optionally click **Attach documents to fill in the form** and choose up to three spec sheets, COAs or nutrition panels (PDF or image, up to 20 MB each). Each one is read for the ingredient’s **Name**, **Preferred name on ingredient deck**, **Brand name**, **Supplier**, **Item code**, **Category**, **Moisture %** and **Density**, and its nutrition per 100 g. Only empty fields are filled in, so nothing you’ve typed is replaced; the form lists which fields came from the documents. Removing a document clears the fields it filled in, unless you’ve changed them.',
+            'Type or check the **Name**, such as “Organic Rolled Oats”. This is the only required field.',
+            'Optionally fill in **Preferred name on ingredient deck** (how it should read on your label, such as “Rolled Oats”), **Brand name**, **Supplier** and **Item code**.',
+            'Under **Classification and stock**, optionally pick a **Category**, **Subcategory** and **Micro category** (or choose **Add new…** to type one), tick **On hand in the lab**, and enter the **Stock on hand** in grams.',
+            'Optionally set **Source type**, **Naturally derived**, **Cost / kg ($)**, **Moisture %**, **Density** and **Notes**.',
+            'If documents were attached, check the nutrition they found at the bottom of the form and correct or clear any value that’s wrong. When two documents give the same nutrient, the first one attached is used.',
+            'Click `Add ingredient`. The documents are saved on the ingredient’s **Documents** tab and the nutrition on its **Nutrients** tab.',
             'If you didn’t attach a document, open the new ingredient and add its nutrition on the **Nutrients** tab. See [Entering nutrition values](#nutrients).',
           ],
         },

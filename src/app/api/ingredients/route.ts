@@ -13,6 +13,8 @@ import { z } from 'zod'
 import { duplicateResponse, findDuplicate, loadIdentityRows } from '@/lib/ingredient-duplicates'
 import { duplicateCounts } from '@/lib/ingredient-identity'
 import { formatIngredientName } from '@/lib/ingredient-name'
+import { canonicalTerm, categoryOptions } from '@/lib/ingredient-categories'
+import { loadTaxonomyEntries } from '@/lib/ingredient-taxonomy'
 
 // Safety cap on one response; far above any real library
 const MAX_LIST = 10000
@@ -98,6 +100,14 @@ const createSchema = z.object({
   brandName: z.string().trim().max(255).optional(),
   supplierName: z.string().trim().max(255).optional(),
   itemCode: z.string().trim().max(100).optional(),
+  // Grams per mL, for showing formula amounts by volume
+  densityGPerMl: z.number().positive().max(100).optional(),
+  // Grams in stock; omitted when stock isn't tracked
+  stockG: z.number().min(0).optional(),
+  onHand: z.boolean().default(false),
+  category: z.string().trim().max(120).optional(),
+  subcategory: z.string().trim().max(120).optional(),
+  microCategory: z.string().trim().max(120).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -123,6 +133,13 @@ export async function POST(request: NextRequest) {
     const dupe = await findDuplicate(ctx.account.id, d)
     if (dupe) return duplicateResponse(d, dupe)
 
+    // New values are allowed; ones matching an existing value (ignoring case) take its spelling.
+    // Lower levels only go with a category, as on the edit form.
+    const known = d.category ? await loadTaxonomyEntries(ctx.account.id) : []
+    const category = d.category ? canonicalTerm(d.category, categoryOptions(known)) : null
+    const subcategory = category ? canonicalTerm(d.subcategory, known.map(k => k.subcategory)) : null
+    const microCategory = category ? canonicalTerm(d.microCategory, known.map(k => k.microCategory)) : null
+
     const [row] = await db
       .insert(ingredients)
       .values({
@@ -138,6 +155,12 @@ export async function POST(request: NextRequest) {
         verification: 'unverified',
         defaultCostPerKg: d.defaultCostPerKg?.toString(),
         moisturePct: d.moisturePct?.toString(),
+        densityGPerMl: d.densityGPerMl?.toString(),
+        stockG: d.stockG?.toString(),
+        onHand: d.onHand,
+        category,
+        subcategory,
+        microCategory,
       })
       .returning()
 
