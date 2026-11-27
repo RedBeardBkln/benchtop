@@ -143,6 +143,8 @@ export function NfpDialog({
   const [customIngredientText, setCustomIngredientText] = useState<string | null>(null)
   // null until the user types one (or a saved panel is restored), so the default applies
   const [householdEdit, setHouseholdEdit] = useState<string | null>(null)
+  const [proteinDv, setProteinDv] = useState(false)
+  const [pdcaasText, setPdcaasText] = useState('')
 
   const ingredientIds = [...new Set(lines.map(l => l.ingredientId))].sort()
   const { data: labelInfo } = useQuery<Map<string, LabelInfo>>({
@@ -173,6 +175,9 @@ export function NfpDialog({
       ? finishedWeightG / servingSizeG
       : undefined
   const householdMeasure = householdEdit ?? defaultHouseholdMeasure(servingsPerContainer)
+  const pdcaasValue = pdcaasText.trim() === '' ? null : Number(pdcaasText)
+  const pdcaasValid = pdcaasValue != null && Number.isFinite(pdcaasValue) && pdcaasValue >= 0 && pdcaasValue <= 1
+  const proteinPdcaas = proteinDv && pdcaasValid ? pdcaasValue! : undefined
   const sugarIssues = useMemo(() => sugarCarbIssues(lines, results), [lines, results])
 
   // Nutrients available for the extras picker: non-standard, have a value
@@ -218,6 +223,7 @@ export function NfpDialog({
       servingSizeG,
       servingsPerContainer,
       householdMeasure,
+      proteinPdcaas,
       results,
       hideZeros,
       layout,
@@ -225,7 +231,7 @@ export function NfpDialog({
       allergenStatement: includeAllergen ? allergenText : undefined,
       ingredientStatement: includeIngredients ? ingredientText : undefined,
     }),
-    [servingSizeG, servingsPerContainer, householdMeasure, results, hideZeros, layout, showExtras, extraInputs,
+    [servingSizeG, servingsPerContainer, householdMeasure, proteinPdcaas, results, hideZeros, layout, showExtras, extraInputs,
       includeAllergen, allergenText, includeIngredients, ingredientText],
   )
   const activeModel = viewing ? viewing.model : liveModel
@@ -235,12 +241,16 @@ export function NfpDialog({
     includeAllergen, allergenText, includeIngredients, ingredientText,
     ingredientItems: statementItems, ingredientCustomText: customIngredientText !== null, layout,
     householdMeasure: householdEdit ?? undefined,
+    proteinDv,
+    pdcaas: pdcaasValid ? pdcaasValue! : undefined,
   })
 
   function restoreOptions(o: NfpOptions) {
     setHideZeros(o.hideZeros)
     setLayout(o.layout)
     setHouseholdEdit(o.householdMeasure ?? null)
+    setProteinDv(o.proteinDv)
+    setPdcaasText(o.pdcaas != null ? String(o.pdcaas) : '')
     setShowExtras(o.showExtras)
     setExtrasOpen(false)
     setSelectedExtras(new Set(o.selectedExtras))
@@ -471,6 +481,46 @@ export function NfpDialog({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Protein %DV, from PDCAAS-corrected protein */}
+            <div className="space-y-2">
+              <label
+                className="flex items-center gap-2 cursor-pointer"
+                data-tip="Adds a %Daily Value to the Protein line. FDA requires it only when you make a protein claim or the food is for children under 4; otherwise it’s optional."
+              >
+                <input
+                  type="checkbox"
+                  checked={proteinDv}
+                  onChange={e => setProteinDv(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm font-medium text-gray-700">Show %DV for protein</span>
+              </label>
+              {proteinDv && (
+                <div className="pl-6">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="nfp-pdcaas" className="text-xs font-medium text-gray-600 shrink-0">
+                      <Term tip="Protein Digestibility Corrected Amino Acid Score, from 0 to 1, for the product’s protein as a whole. FDA works out protein %DV from grams × PDCAAS (21 CFR 101.9(c)(7)(ii)). Casein and whey are 1.0; soy isolate is about 0.9 to 1.0; wheat gluten is about 0.25.">PDCAAS</Term>
+                    </label>
+                    <input
+                      id="nfp-pdcaas"
+                      type="number" min="0" max="1" step="0.01" inputMode="decimal"
+                      value={pdcaasText}
+                      onChange={e => setPdcaasText(e.target.value)}
+                      placeholder="e.g. 1.0"
+                      className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <p className={`text-xs mt-1 ${pdcaasText.trim() && !pdcaasValid ? 'text-red-600' : 'text-gray-400'}`}>
+                    {pdcaasText.trim() && !pdcaasValid
+                      ? 'Enter a number from 0 to 1.'
+                      : !pdcaasValid
+                        ? 'Enter the PDCAAS of the product’s protein to show the %DV. The grams stay as they are; only the %DV is corrected.'
+                        : 'The %DV is protein × PDCAAS ÷ 50 g. Hover it in the preview to see the working.'}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Hide zero-value nutrients */}

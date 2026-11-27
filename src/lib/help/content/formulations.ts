@@ -807,6 +807,10 @@ export const formulations: HelpSection = {
       a: 'Type it in **Household measure** at the top of the panel builder, such as “2/3 cup” or “1 bar”. It prints before the gram weight on the Serving size line, as FDA requires. When the package holds exactly one serving it starts as “1 container”. It’s saved with each panel.',
     },
     {
+      q: 'How do I show a %DV for protein?',
+      a: 'Tick **Show %DV for protein** in the panel builder and enter the **PDCAAS** (0 to 1) of the product’s protein. FDA works the %DV out from protein × PDCAAS ÷ 50 g; the grams are still printed uncorrected. It’s required only when you make a protein claim or the food is for children under 4, and optional otherwise. The setting is saved with each panel.',
+    },
+    {
       q: 'Why are Total Sugars shown at the same amount as Total Carbohydrate?',
       a: 'Sugars are part of carbohydrate, so a label can’t declare more sugars than carbohydrate (or more added sugars than total sugars). If an ingredient’s data says otherwise, which happens with supplier spec sheets, the panel uses the carbohydrate amount and the builder names the ingredient so you can correct it on its **Nutrients** tab.',
     },

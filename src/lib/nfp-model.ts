@@ -108,6 +108,9 @@ export const nfpOptionsSchema = z.object({
   layout: z.enum(NFP_LAYOUTS).default('standard'),
   // Common household measure printed before the gram weight, e.g. "1 container", "2/3 cup"; absent = the default
   householdMeasure: str(120).optional(),
+  // %DV for protein (voluntary unless a protein claim is made), from protein corrected by its PDCAAS
+  proteinDv: z.boolean().default(false),
+  pdcaas: z.number().min(0).max(1).optional(),
 })
 export type NfpOptions = z.infer<typeof nfpOptionsSchema>
 
@@ -129,6 +132,11 @@ export type BuildNfpInput = {
    * default, "1 container" when the package is exactly one serving; "" prints the gram weight alone.
    */
   householdMeasure?: string
+  /**
+   * Protein Digestibility Corrected Amino Acid Score (0–1). When set, Protein gets a %DV, worked out
+   * from protein × PDCAAS as 21 CFR 101.9(c)(7)(ii) requires; otherwise Protein has no %DV.
+   */
+  proteinPdcaas?: number
   results: NutrientResult[]
   hideZeros?: boolean
   layout?: NfpLayout
@@ -245,6 +253,27 @@ function dvExplanation(name: string, amount: number, unit: string, dv: number, t
   }
 }
 
+/** Daily Value for protein, adults and children 4 years and over (21 CFR 101.9(c)(7)(iii)) */
+export const PROTEIN_DV_G = 50
+
+function proteinDvExplanation(protein: number, pdcaas: number, dv: number): { text: string; rule: AppliedRule } {
+  const corrected = Math.max(0, protein) * pdcaas
+  const d = declareDvPct(corrected, dv, false)
+  return {
+    text: `${d.declared}%`,
+    rule: {
+      ruleId: 'dv-protein',
+      title: '% Daily Value (protein, PDCAAS-corrected)',
+      citation: '21 CFR 101.9(c)(7)(ii)–(iii)',
+      actual: `${sig(d.actual)}%`,
+      declared: `${d.declared}%`,
+      applied: `Protein: ${sig(protein)} g × PDCAAS ${sig(pdcaas)} = ${sig(corrected)} g corrected ÷ DV ${sig(dv)} g = ${sig(d.actual)}% → ${d.declared}%.`,
+      lines: ['corrected protein = protein × PDCAAS', '%DV = corrected protein ÷ 50 g', 'nearest whole percent'],
+      note: 'A protein %DV is required only when a protein claim is made or the food is for children under 4; otherwise it is voluntary. The amount in grams is still declared uncorrected.',
+    },
+  }
+}
+
 /** "1 container" when the package holds exactly one serving; otherwise none, since it depends on the food. */
 export function defaultHouseholdMeasure(servingsPerContainer: number | undefined): string {
   if (servingsPerContainer == null) return ''
@@ -326,7 +355,11 @@ export function buildNfpModel(input: BuildNfpInput): NfpModel {
         `The ingredient data adds up to ${sig(cap.actual)} ${spec.unit}, more than ${cap.limit} (${sig(actual)} ${spec.unit}), ` +
         `which it is part of, so ${sig(actual)} ${spec.unit} is used. ${row.amountRule.applied}`
     }
-    if (spec.hasDv && dv != null && dv > 0) {
+    if (spec.name === 'Protein' && input.proteinPdcaas != null) {
+      const d = proteinDvExplanation(actual, input.proteinPdcaas, dv != null && dv > 0 ? dv : PROTEIN_DV_G)
+      row.dvPct = d.text
+      row.dvRule = d.rule
+    } else if (spec.hasDv && dv != null && dv > 0) {
       const d = dvExplanation(spec.name, actual, spec.unit, dv, isDvTiered(spec.name, result?.category))
       row.dvPct = d.text
       row.dvRule = d.rule

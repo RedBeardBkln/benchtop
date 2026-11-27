@@ -301,6 +301,13 @@ export function ruleReferences(): RuleReference[] {
     ...AMOUNT_RULES.map(r => ({ id: r.id, title: r.title, citation: r.citation, lines: describeBands(r), note: r.note })),
     { id: DV_RULES['dv-whole'].id, title: DV_RULES['dv-whole'].title, citation: DV_RULES['dv-whole'].citation, lines: [...DV_RULES['dv-whole'].lines] },
     { id: DV_RULES['dv-vitamin-mineral'].id, title: DV_RULES['dv-vitamin-mineral'].title, citation: DV_RULES['dv-vitamin-mineral'].citation, lines: [...DV_RULES['dv-vitamin-mineral'].lines], note: DV_CALC_NOTE },
+    {
+      id: 'dv-protein',
+      title: '% Daily Value (protein, PDCAAS-corrected)',
+      citation: `${CFR}(c)(7)(ii)–(iii)`,
+      lines: ['corrected protein = protein × PDCAAS', '%DV = corrected protein ÷ 50 g', 'nearest whole percent'],
+      note: 'Shown only when “Show %DV for protein” is on. Required only with a protein claim or for foods for children under 4.',
+    },
     { id: SERVING_SIZE_RULE.id, title: SERVING_SIZE_RULE.title, citation: SERVING_SIZE_RULE.citation, lines: [...SERVING_SIZE_RULE.lines] },
     { id: SERVINGS_PER_CONTAINER_RULE.id, title: SERVINGS_PER_CONTAINER_RULE.title, citation: SERVINGS_PER_CONTAINER_RULE.citation, lines: [...SERVINGS_PER_CONTAINER_RULE.lines] },
   ]

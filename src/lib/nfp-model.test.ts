@@ -218,3 +218,27 @@ describe('serving size and servings per container', () => {
     expect(nfpOptionsSchema.parse({}).householdMeasure).toBeUndefined()
   })
 })
+
+describe('protein %DV', () => {
+  const protein = (m: ReturnType<typeof buildNfpModel>) => m.rows.find(r => r.key === 'Protein')!
+
+  it('has no %DV unless a PDCAAS is given', () => {
+    expect(protein(build()).dvPct).toBeUndefined()
+  })
+
+  it('works the %DV out from PDCAAS-corrected protein against 50 g', () => {
+    const results18 = results.map(r => (r.name === 'Protein' ? n('Protein', 'g', 18) : r))
+    const whey = build({ results: results18, proteinPdcaas: 1 })
+    expect(protein(whey).amount).toBe('18g')  // the amount stays uncorrected
+    expect(protein(whey).dvPct).toBe('36%')   // 18 ÷ 50
+    expect(protein(whey).dvRule!.applied).toContain('PDCAAS 1')
+    const gluten = build({ results: results18, proteinPdcaas: 0.25 })
+    expect(protein(gluten).dvPct).toBe('9%')  // 4.5 g corrected ÷ 50 g
+  })
+
+  it('keeps the setting with a saved panel’s options', () => {
+    expect(nfpOptionsSchema.parse({ proteinDv: true, pdcaas: 0.92 })).toMatchObject({ proteinDv: true, pdcaas: 0.92 })
+    expect(nfpOptionsSchema.parse({}).proteinDv).toBe(false)
+    expect(nfpOptionsSchema.safeParse({ pdcaas: 1.2 }).success).toBe(false)
+  })
+})
